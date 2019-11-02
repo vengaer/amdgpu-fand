@@ -35,4 +35,6 @@ bool amdgpu_fan_set_percentage(uint8_t percentage);
 
 bool amdgpu_get_temp(uint8_t *temp);
 
+bool amdgpu_fan_update_speed(void);
+
 #endif

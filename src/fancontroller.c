@@ -1,4 +1,5 @@
 #include "fancontroller.h"
+#include "interpolation.h"
 #include "strutils.h"
 
 #include <math.h>
@@ -100,6 +101,20 @@ static bool write_uint8_to_file(char const *path, uint8_t data) {
     fprintf(fp, "%u", data);
     fclose(fp);
     return true;
+}
+
+static uint8_t get_lower_row_idx_of_temp(uint8_t temp, uint8_t *temps) {
+    if(temp < temps[0]) {
+        return 0;
+    }
+
+    for(uint8_t i = 0; i < mtrx_rows - 1; i++) {
+        if(temp < temps[i + 1]) {
+            return i;
+        }
+    }
+
+    return mtrx_rows - 1;
 }
 
 bool amdgpu_fan_setup_pwm_enable_file(char const *hwmon_path) {
@@ -222,7 +237,7 @@ bool amdgpu_fan_get_percentage(uint8_t *percentage) {
 bool amdgpu_fan_set_percentage(uint8_t percentage) {
     uint8_t const npwm = (uint8_t)((double)percentage / 100.0 * (double)(pwm_max - pwm_min));
     if(verbose) {
-        printf("Setting pwm %u\n", npwm);
+        printf("Setting pwm %u (%f%%)\n", npwm, 100.0 * (double)npwm / (double)(pwm_max - pwm_min));
     }
     return write_uint8_to_file(pwm, npwm);
 }
@@ -241,8 +256,37 @@ bool amdgpu_get_temp(uint8_t *temp) {
         buffer[len - 3] = '\0';
 
         *temp = atoi(buffer);
+        if(verbose) {
+            printf("Temperature is %u\n", *temp);
+        }
         return true;
     }
 
     return false;
+}
+
+bool amdgpu_fan_update_speed(void) {
+    uint8_t temp, idx;
+    if(!amdgpu_get_temp(&temp)) {
+        return false;
+    }
+
+    uint8_t temps[MATRIX_ROWS];
+    matrix_extract_temps(temps, mtrx, mtrx_rows);
+
+    idx = get_lower_row_idx_of_temp(temp, temps);
+
+    uint8_t speeds[MATRIX_ROWS];
+    matrix_extract_speeds(speeds, mtrx, mtrx_rows);
+
+    if(idx == 0u) {
+        return amdgpu_fan_set_percentage(speeds[0]);
+    }
+    else if(idx == mtrx_rows - 1u) {
+        return amdgpu_fan_set_percentage(speeds[mtrx_rows - 1u]);
+    }
+
+    uint8_t const percentage = inverse_lerp_uint8(temps[idx], temps[idx + 1], temp);
+    uint8_t const npwm = lerp_uint8(speeds[idx], speeds[idx + 1], (double)percentage / 100.0);
+    return amdgpu_fan_set_percentage(npwm);
 }
