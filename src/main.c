@@ -1,18 +1,26 @@
 #include "daemon.h"
 #include "fancontroller.h"
+#include "filesystem.h"
 #include "strutils.h"
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include <regex.h>
-
+#include <signal.h>
 
 bool verbose = false;
 bool volatile daemon_alive = true;
+
+void interrupt(int code) {
+    if(code == SIGINT || code == SIGTERM) {
+        daemon_alive = false;
+    }
+}
 
 static void print_usage(void) {
     fprintf(stderr,
@@ -20,9 +28,27 @@ static void print_usage(void) {
         "Options:\n"
         "    -v, --verbose                       Echo actions to stdout\n"
         "    -f FILE, --hwmon=FILE               Specify hwmon file, default is hwmon1\n"
-        "    -i INTERVAL, --interval=INTERVAL    Specify the interval with which to update fan speed, in seconds. The value must be in the interval 1...255."
+        "    -i INTERVAL, --interval=INTERVAL    Specify the interval with which to update fan speed, in seconds. The value must be in the interval 1...255.\n"
         "                                        Default is every 5 seconds\n"
         "    -h, --help                          Print help message\n");
+}
+
+static uint8_t handle_multi_switch(char const *switches) {
+    size_t const len = strlen(switches);
+    for(size_t i = 1; i < len; i++) {
+        if(switches[i] == 'v') {
+            verbose = true;
+        }
+        else if(switches[i] == 'h') {
+            print_usage();
+            return 2;
+        }
+        else {
+            fprintf(stderr, "Unknown switch sequence %s\n", switches);
+            return 1;
+        }
+    }
+    return 0;
 }
 
 static bool set_interval(char const *interval, uint8_t *out_interval) {
@@ -45,11 +71,15 @@ static bool set_interval(char const *interval, uint8_t *out_interval) {
 }
 
 int main(int argc, char** argv) {
-    char const *hwmon_file = "hwmon1";
     char hwmon_path[HWMON_PATH_LEN] = { 0 };
-    regex_t hwmon_input_rgx, hwmon_file_rgx, interval_input_rgx;
+    char hwmon_subdir[HWMON_SUBDIR_LEN] = { 0 };
+    char const *hwmon = hwmon_subdir;
+    regex_t hwmon_input_rgx, hwmon_subdir_rgx, interval_input_rgx;
     int reti;
     uint8_t update_interval = 5;
+
+    signal(SIGINT, interrupt);
+    signal(SIGTERM, interrupt);
 
     reti = regcomp(&hwmon_input_rgx, "^--hwmon=.+", REG_EXTENDED);
     if(reti) {
@@ -57,7 +87,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    reti = regcomp(&hwmon_file_rgx, "^hwmon[0-9]", REG_EXTENDED);
+    reti = regcomp(&hwmon_subdir_rgx, "^hwmon[0-9]", REG_EXTENDED);
     if(reti) {
         fprintf(stderr, "Failed to compile hwmon file regex\n");
         return 1;
@@ -66,6 +96,12 @@ int main(int argc, char** argv) {
     reti = regcomp(&interval_input_rgx, "^--interval=[0-9]+", REG_EXTENDED);
     if(reti) {
         fprintf(stderr, "Failed to compile interval input regex\n");
+        return 1;
+    }
+
+    /* Find hwmon subdir */
+    if(!find_dir_matching_pattern(hwmon_subdir, sizeof hwmon_subdir, "^hwmon[0-9]$", HWMON_DIR)) {
+        fprintf(stderr, "No hwmon directory found in %s\n", HWMON_DIR);
         return 1;
     }
 
@@ -82,12 +118,12 @@ int main(int argc, char** argv) {
                 fprintf(stderr, "No argument supplied for -f\n");
                 return 1;
             }
-            char const *hwmon = argv[++i];
-            if(regexec(&hwmon_file_rgx, hwmon, 0, NULL, 0)) {
+            char const *hwmon_arg = argv[++i];
+            if(regexec(&hwmon_subdir_rgx, hwmon, 0, NULL, 0)) {
                 fprintf(stderr, "%s is not a valid hwmon file\n", hwmon);
                 return 1;
             }
-            hwmon_file = hwmon;
+            hwmon = hwmon_arg;
         }
         else if(strcmp(argv[i], "-i") == 0) {
             if(i + 1 >= argc) {
@@ -99,16 +135,28 @@ int main(int argc, char** argv) {
             }
         }
         else if(regexec(&hwmon_input_rgx, argv[i], 0, NULL, 0) == 0) {
-            char const *hwmon = strchr(argv[i], '=') + 1;
-            if(regexec(&hwmon_file_rgx, hwmon, 0, NULL, 0)) {
+            char const *hwmon_arg = strchr(argv[i], '=') + 1;
+            if(regexec(&hwmon_subdir_rgx, hwmon, 0, NULL, 0)) {
                 fprintf(stderr, "%s is not a valid hwmon file\n", hwmon);
                 return 1;
             }
-            hwmon_file = hwmon;
+            hwmon = hwmon_arg;
         }
         else if(regexec(&interval_input_rgx, argv[i], 0, NULL, 0) == 0) {
             if(!set_interval(strchr(argv[i], '=') + 1, &update_interval)) {
                 return 1;
+            }
+        }
+        else if(strlen(argv[i]) >= 2 && argv[i][0] == '-' && argv[i][1] != '-') {
+            uint8_t const rv = handle_multi_switch(argv[i]);
+            switch(rv) {
+                default:
+                case 0:
+                    break;
+                case 1:
+                    return 1;
+                case 2:
+                    return 0;
             }
         }
         else {
@@ -122,12 +170,21 @@ int main(int argc, char** argv) {
         fprintf(stderr, "hwmon dir overflows the path buffer\n");
         return 1;
     }
-    if(strscat(hwmon_path, hwmon_file, sizeof hwmon_path) < 0) {
-        fprintf(stderr, "%s would overflow the buffer when appended to %s\n", hwmon_file, hwmon_path);
+    if(strscat(hwmon_path, hwmon, sizeof hwmon_path) < 0) {
+        fprintf(stderr, "%s would overflow the buffer when appended to %s\n", hwmon, hwmon_path);
         return 1;
     }
 
-    amdgpu_daemon_init(hwmon_path);
+    if(!file_exists(hwmon_path)) {
+        fprintf(stderr, "%s does not exist\n", hwmon_path);
+        return 1;
+    }
+
+    if(!amdgpu_daemon_init(hwmon_path)) {
+        fprintf(stderr, "Failed to initialize daemon\n");
+        return 1;
+    }
+
 
     //amdgpu_daemon_run(update_interval);
 
