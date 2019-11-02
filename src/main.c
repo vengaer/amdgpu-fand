@@ -170,6 +170,7 @@ int main(int argc, char** argv) {
     char hwmon_subdir[HWMON_SUBDIR_LEN] = { 0 };
     char config_hwmon[HWMON_PATH_LEN];
     uint8_t config_interval = 5;
+    bool aggressive_throttle = false;
     uint8_t mtrx_rows;
     matrix mtrx;
 
@@ -193,7 +194,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    if(!parse_config(config, config_hwmon, sizeof config_hwmon, &config_interval, mtrx, &mtrx_rows)) {
+    if(!parse_config(config, config_hwmon, sizeof config_hwmon, &config_interval, &aggressive_throttle, mtrx, &mtrx_rows)) {
         return 1;
     }
 
@@ -222,12 +223,13 @@ int main(int argc, char** argv) {
         fprintf(stderr, "hwmon dir overflows the path buffer\n");
         return 1;
     }
+
     if(strscat(hwmon_path, hwmon, sizeof hwmon_path) < 0) {
         fprintf(stderr, "%s would overflow the buffer when appended to %s\n", hwmon, hwmon_path);
         return 1;
     }
 
-    if(!amdgpu_daemon_init(hwmon_path, mtrx, mtrx_rows)) {
+    if(!amdgpu_daemon_init(hwmon_path, aggressive_throttle, mtrx, mtrx_rows)) {
         fprintf(stderr, "Failed to initialize daemon\n");
         return 1;
     }

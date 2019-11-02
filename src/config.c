@@ -8,12 +8,12 @@
 #include <regex.h>
 
 #define LINE_SIZE 128
-#define NUMBER_BUF_SIZE 4
+#define OPTION_BUF_SIZE 4
 
 extern bool verbose;
 
 static regex_t interval_rgx, hwmon_rgx, hwmon_content_rgx, hwmon_empty_rgx, empty_rgx, leading_space_rgx;
-static regex_t matrix_rgx, matrix_start_rgx, matrix_end_rgx;
+static regex_t matrix_rgx, matrix_start_rgx, matrix_end_rgx, throttle_rgx, throttle_option_rgx;
 static bool parsing_matrix = false;
 static uint8_t line_number = 0;
 
@@ -29,7 +29,7 @@ static inline size_t regmatch_size(regmatch_t regm) {
 }
 
 static inline bool regmatch_to_uint8(char const *line, regmatch_t regm, uint8_t *value) {
-    char buffer[NUMBER_BUF_SIZE];
+    char buffer[OPTION_BUF_SIZE];
     buffer[0] = '\0';
 
     if(strsncpy(buffer, line + regm.rm_so, regmatch_size(regm), sizeof buffer) < 0) {
@@ -43,7 +43,7 @@ static inline bool regmatch_to_uint8(char const *line, regmatch_t regm, uint8_t 
 
 static bool compile_regexps(void) {
     int reti;
-    reti = regcomp(&interval_rgx, "^INTERVAL=\"([0-9]{1,3})\"\\s*$", REG_EXTENDED);
+    reti = regcomp(&interval_rgx, "^INTERVAL=\"?([0-9]{1,3})\"?\\s*$", REG_EXTENDED);
     if(reti) {
         fprintf(stderr, "Failed to compile interval regex\n");
         return false;
@@ -86,6 +86,16 @@ static bool compile_regexps(void) {
     reti = regcomp(&leading_space_rgx, "^\\s*(.*)$", REG_EXTENDED);
     if(reti) {
         fprintf(stderr, "Failed to compile leading spaces regex\n");
+        return false;
+    }
+    reti = regcomp(&throttle_rgx, "^\\s*AGGRESSIVE_THROTTLING=\".*\"\\s*$", REG_EXTENDED);
+    if(reti) {
+        fprintf(stderr, "Failed to compile throttling regex\n");
+        return false;
+    }
+    reti = regcomp(&throttle_option_rgx, "^\\s*AGGRESSIVE_THROTTLING=\"(yes|no)\"\\s*$", REG_EXTENDED);
+    if(reti) {
+        fprintf(stderr, "Failed to compile throttling option regex\n");
         return false;
     }
     return true;
@@ -168,7 +178,7 @@ static enum parse_result parse_interval(char const *line, uint8_t *interval) {
         }
         return no_match;
     }
-    char buffer[NUMBER_BUF_SIZE];
+    char buffer[OPTION_BUF_SIZE];
     if(strsncpy(buffer, line + pmatch[1].rm_so, regmatch_size(pmatch[1]), sizeof buffer) < 0) {
         fprintf(stderr, "Interval on line %u overflows the buffer\n", line_number);
         return failure;
@@ -178,6 +188,32 @@ static enum parse_result parse_interval(char const *line, uint8_t *interval) {
     if(verbose) {
         printf("\nInterval set to %u\n", *interval);
     }
+    return match;
+}
+
+static enum parse_result parse_throttling(char const *line, bool *throttle) {
+    if(verbose) {
+        printf("Matching %s againts throttling...", line);
+    }
+    regmatch_t pmatch[2];
+    if(regexec(&throttle_rgx, line, 0, NULL, 0)) {
+        if(verbose) {
+            printf("no match\n");
+        }
+        return no_match;
+    }
+    if(regexec(&throttle_option_rgx, line, 2, pmatch, 0)) {
+        printf("Syntax error on line %u: %s\n", line_number, line);
+        return failure;
+    }
+
+    char buffer[OPTION_BUF_SIZE];
+    if(strsncpy(buffer, line + pmatch[1].rm_so, regmatch_size(pmatch[1]), sizeof buffer) < 0) {
+        fprintf(stderr, "Throttling option on line %u overflows the buffer\n", line_number);
+        return failure;
+    }
+
+    *throttle = strcmp(buffer, "yes")  == 0;
     return match;
 }
 
@@ -215,7 +251,7 @@ static enum parse_result parse_matrix(char const *line, matrix mtrx, uint8_t *mt
     }
 
     if(verbose) {
-        printf("Set values on row %u, temp: %u, speed: %u\n", *mtrx_rows, mtrx[*mtrx_rows][0], mtrx[*mtrx_rows][1]);
+        printf("\nSet values on row %u, temp: %u, speed: %u\n", *mtrx_rows, mtrx[*mtrx_rows][0], mtrx[*mtrx_rows][1]);
     }
 
     ++(*mtrx_rows);
@@ -232,7 +268,7 @@ static inline bool is_empty_line(char const *line) {
 }
 
 
-bool parse_config(char const *restrict path, char *restrict hwmon, size_t hwmon_count, uint8_t *interval, matrix mtrx, uint8_t *mtrx_rows) {
+bool parse_config(char const *restrict path, char *restrict hwmon, size_t hwmon_count, uint8_t *interval, bool *throttle, matrix mtrx, uint8_t *mtrx_rows) {
     compile_regexps();
     *mtrx_rows = 0;
 
@@ -281,6 +317,15 @@ bool parse_config(char const *restrict path, char *restrict hwmon, size_t hwmon_
             continue;
         }
 
+        result = parse_throttling(buffer, throttle);
+        if(result == failure) {
+            fclose(fp);
+            return false;
+        }
+        else if(result == match) {
+            continue;
+        }
+
         result = parse_matrix(buffer, mtrx, mtrx_rows);
         if(result == failure) {
             fclose(fp);
@@ -291,7 +336,9 @@ bool parse_config(char const *restrict path, char *restrict hwmon, size_t hwmon_
         }
 
         fprintf(stderr, "Syntax error on line %u: %s\n", line_number, buffer);
+        fclose(fp);
         return false;
     }
+    fclose(fp);
     return true;
 }

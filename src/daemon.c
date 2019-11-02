@@ -8,7 +8,7 @@
 #include <unistd.h>
 
 
-bool amdgpu_daemon_init(char const *hwmon_path, matrix mtrx, uint8_t mtrx_rows) {
+bool amdgpu_daemon_init(char const *hwmon_path, bool aggressive_throttle, matrix mtrx, uint8_t mtrx_rows) {
     if(!file_exists(hwmon_path)) {
         fprintf(stderr, "%s does not exist\n", hwmon_path);
         return 1;
@@ -25,6 +25,7 @@ bool amdgpu_daemon_init(char const *hwmon_path, matrix mtrx, uint8_t mtrx_rows) 
     result &= amdgpu_fan_store_pwm_max();
 
     amdgpu_fan_set_matrix(mtrx, mtrx_rows);
+    amdgpu_fan_set_aggressive_throttle(aggressive_throttle);
 
     return result;
 }
