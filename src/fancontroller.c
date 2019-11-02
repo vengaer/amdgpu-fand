@@ -31,6 +31,8 @@ static char pwm_max_path[HWMON_PATH_LEN];
 static uint8_t pwm_min;
 static uint8_t pwm_max;
 
+static bool aggressive_throttle;
+
 static matrix mtrx;
 static uint8_t mtrx_rows;
 
@@ -103,9 +105,9 @@ static bool write_uint8_to_file(char const *path, uint8_t data) {
     return true;
 }
 
-static uint8_t get_lower_row_idx_of_temp(uint8_t temp, uint8_t *temps) {
+static int16_t get_lower_row_idx_of_temp(uint8_t temp, uint8_t *temps) {
     if(temp < temps[0]) {
-        return 0;
+        return -1;
     }
 
     for(uint8_t i = 0; i < mtrx_rows - 1; i++) {
@@ -205,6 +207,10 @@ bool amdgpu_fan_store_pwm_max(void) {
     return read_uint8_from_file(pwm_max_path, &pwm_max);
 }
 
+void amdgpu_fan_set_aggressive_throttle(bool throttle) {
+    aggressive_throttle = throttle;
+}
+
 void amdgpu_fan_set_matrix(matrix m, uint8_t m_rows) {
     mtrx_rows = m_rows;
     for(size_t i = 0; i < m_rows; i++) {
@@ -266,7 +272,7 @@ bool amdgpu_get_temp(uint8_t *temp) {
 }
 
 bool amdgpu_fan_update_speed(void) {
-    uint8_t temp, idx;
+    uint8_t temp;
     if(!amdgpu_get_temp(&temp)) {
         return false;
     }
@@ -274,15 +280,15 @@ bool amdgpu_fan_update_speed(void) {
     uint8_t temps[MATRIX_ROWS];
     matrix_extract_temps(temps, mtrx, mtrx_rows);
 
-    idx = get_lower_row_idx_of_temp(temp, temps);
+    int16_t idx = get_lower_row_idx_of_temp(temp, temps);
 
     uint8_t speeds[MATRIX_ROWS];
     matrix_extract_speeds(speeds, mtrx, mtrx_rows);
 
-    if(idx == 0u) {
+    if(idx < 0 || (aggressive_throttle && idx == 0)) {
         return amdgpu_fan_set_percentage(speeds[0]);
     }
-    else if(idx == mtrx_rows - 1u) {
+    else if(idx >= mtrx_rows - 1) {
         return amdgpu_fan_set_percentage(speeds[mtrx_rows - 1u]);
     }
 
