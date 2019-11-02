@@ -23,8 +23,10 @@ bool amdgpu_daemon_init(char const *hwmon_path) {
 void daemon_run(uint8_t update_interval) {
     extern bool daemon_alive;
 
+    amdgpu_fan_set_mode(manual);
     while(daemon_alive) {
         // TODO: set fan speed
         sleep(update_interval);
     }
+    amdgpu_fan_set_mode(automatic);
 }
