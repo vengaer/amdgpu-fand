@@ -31,6 +31,24 @@ int strscat(char *restrict dst, char const *restrict src, size_t count) {
     return src_len;
 }
 
+int strsncpy(char *restrict dst, char const *restrict src, size_t count, size_t max_count) {
+    size_t const src_len = strlen(src);
+
+    if(count > src_len) {
+        dst[0] = '\0';
+        return -E2BIG;
+    }
+
+    strncpy(dst, src, count);
+    dst[max_count - 1] = '\0';
+
+    if(count >= max_count) {
+        return -E2BIG;
+    }
+
+    return count;
+}
+
 void replace_char(char *string, char from, char to) {
     for(size_t i = 0; i < strlen(string); i++) {
         if(string[i] == from) {
