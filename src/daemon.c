@@ -29,12 +29,12 @@ bool amdgpu_daemon_init(char const *hwmon_path, matrix mtrx, uint8_t mtrx_rows) 
     return result;
 }
 
-void daemon_run(uint8_t interval) {
+void amdgpu_daemon_run(uint8_t interval) {
     extern bool daemon_alive;
 
     amdgpu_fan_set_mode(manual);
     while(daemon_alive) {
-        // TODO: set fan speed
+        amdgpu_fan_update_speed();
         sleep(interval);
     }
     amdgpu_fan_set_mode(automatic);

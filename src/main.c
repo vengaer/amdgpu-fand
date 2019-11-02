@@ -197,6 +197,11 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    if(mtrx_rows < 1) {
+        fprintf(stderr, "No matrix specified\n");
+        return 1;
+    }
+
     /* hwmon not passed as argument and hwmon specified in config */
     if(!hwmon_passed && strlen(config_hwmon) > 0) {
         hwmon = config_hwmon;
@@ -227,7 +232,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    //amdgpu_daemon_run(update_interval);
+    amdgpu_daemon_run(update_interval);
 
     return 0;
 }
