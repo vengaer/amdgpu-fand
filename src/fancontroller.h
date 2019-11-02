@@ -29,4 +29,6 @@ bool amdgpu_fan_set_mode(enum fanmode mode);
 bool amdgpu_fan_get_percentage(uint8_t *percentage);
 bool amdgpu_fan_set_percentage(uint8_t percentage);
 
+bool amdgpu_get_temp(uint8_t *temp);
+
 #endif
