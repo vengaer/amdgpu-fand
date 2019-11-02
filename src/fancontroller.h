@@ -13,5 +13,7 @@
 bool amdgpu_fan_setup_pwm_enable_file(char const *hwmon_path);
 bool amdgpu_fan_setup_temp_input_file(char const *hwmon_path);
 bool amdgpu_fan_setup_pwm_file(char const *hwmon_path);
+bool amdgpu_fan_setup_pwm_min_file(char const *hwmon_path);
+bool amdgpu_fan_setup_pwm_max_file(char const *hwmon_path);
 
 #endif
