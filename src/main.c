@@ -105,6 +105,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    /* Parse arguments */
     for(int i = 1; i < argc; i++) {
         if(strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "--verbose") == 0) {
             verbose = true;
@@ -150,13 +151,10 @@ int main(int argc, char** argv) {
         else if(strlen(argv[i]) >= 2 && argv[i][0] == '-' && argv[i][1] != '-') {
             uint8_t const rv = handle_multi_switch(argv[i]);
             switch(rv) {
-                default:
                 case 0:
                     break;
-                case 1:
-                    return 1;
-                case 2:
-                    return 0;
+                default:
+                    return rv % 2;
             }
         }
         else {
@@ -184,7 +182,6 @@ int main(int argc, char** argv) {
         fprintf(stderr, "Failed to initialize daemon\n");
         return 1;
     }
-
 
     //amdgpu_daemon_run(update_interval);
 
