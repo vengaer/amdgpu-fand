@@ -1,10 +1,15 @@
 #include "fancontroller.h"
 #include "strutils.h"
 
+#include <math.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include <regex.h>
+
+#define PWM_BUF_SIZE 16
 
 static char const *pwm_enable_file = "/pwm1_enable";
 static char const *temp_input_file = "/temp1_input";
@@ -19,6 +24,54 @@ static char temp_input[HWMON_PATH_LEN];
 static char pwm[HWMON_PATH_LEN];
 static char pwm_min_path[HWMON_PATH_LEN];
 static char pwm_max_path[HWMON_PATH_LEN];
+
+uint8_t pwm_min;
+uint8_t pwm_max;
+
+static bool read_number_from_file(char const *path, uint8_t *data) {
+    FILE *fp = fopen(path, "r");
+    if(!fp) {
+        fprintf(stderr, "Failed to open %s for reading\n", path);
+        return false;
+    }
+    char buffer[PWM_BUF_SIZE] = { 0 };
+    fgets(buffer, sizeof buffer, fp);
+    fclose(fp);
+
+    replace_char(buffer, '\n', '\0');
+
+    if(!buffer[0]) {
+        fprintf(stderr, "%s is empty\n", path);
+        return false;
+    }
+    char *endptr;
+    
+    long const value = strtol(buffer, &endptr, 10);
+    if(*endptr) {
+        fprintf(stderr, "%s contains non-digit characters\n", buffer);
+        return false;
+    }
+
+    if(value < 0 || value > 0xFFFF) {
+        fprintf(stderr, "%ld is not an unsigned 8-bit value\n", value);
+        return false;
+    }
+    *data = (uint8_t)value;
+
+    return true;
+}
+
+static bool write_number_to_file(char const *path, uint8_t data) {
+    FILE *fp = fopen(path, "w");
+    if(!fp) {
+        fprintf(stderr, "Failed to open %s for writing\n", path);
+        return false;
+    }
+
+    fprintf(fp, "%u", data);
+    fclose(fp);
+    return true;
+}
 
 bool amdgpu_fan_setup_pwm_enable_file(char const *hwmon_path) {
     pwm_enable[0] = '\0';
@@ -99,3 +152,41 @@ bool amdgpu_fan_setup_pwm_max_file(char const *hwmon_path) {
     }
     return true;
 }
+
+bool amdgpu_fan_store_pwm_min(void) {
+    return read_number_from_file(pwm_min_path, &pwm_min);
+}
+
+bool amdgpu_fan_store_pwm_max(void) {
+    return read_number_from_file(pwm_max_path, &pwm_max);
+}
+
+bool amdgpu_fan_set_mode(enum fanmode mode) {
+    if(verbose) {
+        printf("Setting fan mode: %s\n", mode == manual ? "manual" : "auto");
+    }
+    return write_number_to_file(pwm_enable, mode);
+}
+
+bool amdgpu_fan_get_percentage(uint8_t *percentage) {
+    uint8_t npwm;
+    if(read_number_from_file(pwm, &npwm)) {
+        double const frac = (double)npwm / (double)(pwm_max - pwm_min);
+        *percentage = (uint8_t)round((frac * 100));
+        if(verbose) {
+            printf("Current pwm: %u, corresponding to percentage: %u\n", npwm, *percentage);
+        }
+        return true;
+    }
+
+    return false;
+}
+
+bool amdgpu_fan_set_percentage(uint8_t percentage) {
+    uint8_t const npwm = (uint8_t)((double)percentage / 100.0 * (double)(pwm_max - pwm_min));
+    if(verbose) {
+        printf("Setting pwm %u\n", npwm);
+    }
+    return write_number_to_file(pwm, npwm);
+}
+
