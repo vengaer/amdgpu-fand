@@ -40,11 +40,12 @@ int strsncpy(char *restrict dst, char const *restrict src, size_t count, size_t 
     }
 
     strncpy(dst, src, count);
-    dst[max_count - 1] = '\0';
 
     if(count >= max_count) {
+        dst[max_count - 1] = '\0';
         return -E2BIG;
     }
+    dst[count] = '\0';
 
     return count;
 }
