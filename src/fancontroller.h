@@ -1,6 +1,8 @@
 #ifndef FANCONTROLLER_H
 #define FANCONTROLLER_H
 
+#include "matrix.h"
+
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -24,6 +26,8 @@ bool amdgpu_fan_setup_pwm_max_file(char const *hwmon_path);
 
 bool amdgpu_fan_store_pwm_min(void);
 bool amdgpu_fan_store_pwm_max(void);
+
+void amdgpu_fan_set_matrix(matrix mtrx, uint8_t mtrx_rows);
 
 bool amdgpu_fan_set_mode(enum fanmode mode);
 bool amdgpu_fan_get_percentage(uint8_t *percentage);

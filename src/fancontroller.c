@@ -27,8 +27,11 @@ static char pwm[HWMON_PATH_LEN];
 static char pwm_min_path[HWMON_PATH_LEN];
 static char pwm_max_path[HWMON_PATH_LEN];
 
-uint8_t pwm_min;
-uint8_t pwm_max;
+static uint8_t pwm_min;
+static uint8_t pwm_max;
+
+static matrix mtrx;
+static uint8_t mtrx_rows;
 
 static bool read_long_from_file(char const *path, long *data) {
     FILE *fp = fopen(path, "r");
@@ -185,6 +188,14 @@ bool amdgpu_fan_store_pwm_min(void) {
 
 bool amdgpu_fan_store_pwm_max(void) {
     return read_uint8_from_file(pwm_max_path, &pwm_max);
+}
+
+void amdgpu_fan_set_matrix(matrix m, uint8_t m_rows) {
+    mtrx_rows = m_rows;
+    for(size_t i = 0; i < m_rows; i++) {
+        mtrx[i][0] = m[i][0];
+        mtrx[i][1] = m[i][1];
+    }
 }
 
 bool amdgpu_fan_set_mode(enum fanmode mode) {
