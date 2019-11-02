@@ -1,3 +1,4 @@
+#include "config.h"
 #include "daemon.h"
 #include "fancontroller.h"
 #include "filesystem.h"
@@ -29,8 +30,8 @@ static void print_usage(void) {
         "    -v, --verbose                       Echo actions to stdout\n"
         "    -f FILE, --hwmon=FILE               Specify hwmon file, default is hwmon1\n"
         "    -i INTERVAL, --interval=INTERVAL    Specify the interval with which to update fan speed, in seconds. The value must be in the interval 1...255.\n"
-        "                                        Default is every 5 seconds\n"
-        "    -h, --help                          Print help message\n");
+        "                                        Default is read from %s\n"
+        "    -h, --help                          Print help message\n", FANCTL_CONFIG);
 }
 
 static uint8_t handle_multi_switch(char const *switches) {
