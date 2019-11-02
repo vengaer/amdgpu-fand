@@ -1,3 +1,7 @@
+#include "daemon.h"
+#include "fancontroller.h"
+#include "strutils.h"
+
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -8,8 +12,7 @@
 
 
 bool verbose = false;
-uint16_t update_interval = 5;
-char const *hwmon_file = "hwmon1";
+bool volatile daemon_alive = true;
 
 static void print_usage(void) {
     fprintf(stderr,
@@ -17,12 +20,12 @@ static void print_usage(void) {
         "Options:\n"
         "    -v, --verbose                       Echo actions to stdout\n"
         "    -f FILE, --hwmon=FILE               Specify hwmon file, default is hwmon1\n"
-        "    -i INTERVAL, --interval=INTERVAL    Specify the interval with which to update fan speed, in seconds. The valud must be in the interval 1...65535."
-        "                                        Default is every %u seconds\n"
-        "    -h, --help                          Print help message\n", update_interval);
+        "    -i INTERVAL, --interval=INTERVAL    Specify the interval with which to update fan speed, in seconds. The value must be in the interval 1...255."
+        "                                        Default is every 5 seconds\n"
+        "    -h, --help                          Print help message\n");
 }
 
-static bool validate_interval(char const *interval) {
+static bool set_interval(char const *interval, uint8_t *out_interval) {
     if(!interval) {
         fprintf(stderr, "Interval is empty\n");
         return false;
@@ -33,17 +36,20 @@ static bool validate_interval(char const *interval) {
         fprintf(stderr, "%s contains non-digit characters\n", interval);
         return false;
     }
-    if(ivl < 1 || ivl > 65535) {
-        fprintf(stderr, "%ld is not in the interval 1...65535\n", ivl);
+    if(ivl < 1 || ivl > 255) {
+        fprintf(stderr, "%ld is not in the interval 1...255\n", ivl);
         return false;
     }
-    update_interval = ivl;
+    *out_interval = ivl;
     return true;
 }
 
 int main(int argc, char** argv) {
+    char const *hwmon_file = "hwmon1";
+    char hwmon_path[HWMON_PATH_LEN] = { 0 };
     regex_t hwmon_input_rgx, hwmon_file_rgx, interval_input_rgx;
     int reti;
+    uint8_t update_interval = 5;
 
     reti = regcomp(&hwmon_input_rgx, "^--hwmon=.+", REG_EXTENDED);
     if(reti) {
@@ -88,7 +94,7 @@ int main(int argc, char** argv) {
                 fprintf(stderr, "No argument supplied for -i\n");
                 return 1;
             }
-            if(!validate_interval(argv[++i])) {
+            if(!set_interval(argv[++i], &update_interval)) {
                 return 1;
             }
         }
@@ -101,7 +107,7 @@ int main(int argc, char** argv) {
             hwmon_file = hwmon;
         }
         else if(regexec(&interval_input_rgx, argv[i], 0, NULL, 0) == 0) {
-            if(!validate_interval(strchr(argv[i], '=') + 1)) {
+            if(!set_interval(strchr(argv[i], '=') + 1, &update_interval)) {
                 return 1;
             }
         }
@@ -111,6 +117,19 @@ int main(int argc, char** argv) {
             return 1;
         }
     }
+
+    if(strscat(hwmon_path, HWMON_DIR, sizeof hwmon_path) < 0) {
+        fprintf(stderr, "hwmon dir overflows the path buffer\n");
+        return 1;
+    }
+    if(strscat(hwmon_path, hwmon_file, sizeof hwmon_path) < 0) {
+        fprintf(stderr, "%s would overflow the buffer when appended to %s\n", hwmon_file, hwmon_path);
+        return 1;
+    }
+
+    amdgpu_daemon_init(hwmon_path);
+
+    //amdgpu_daemon_run(update_interval);
 
     return 0;
 }
