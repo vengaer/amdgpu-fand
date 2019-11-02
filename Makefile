@@ -1,6 +1,6 @@
 CC           ?= gcc
 
-TARGET       := amdgpu-fan
+TARGET       := amdgpu-fanctl
 
 SRC_DIR      := src
 INC_DIRS     := $(shell find $(SRC_DIR) -mindepth 1 -type d)
