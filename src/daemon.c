@@ -1,17 +1,23 @@
 #include "daemon.h"
 #include "fancontroller.h"
 
-#include <stdbool.h>
+#include <stdint.h>
 
 #include <unistd.h>
 
 
-void amdgpu_daemon_init(char const *hwmon_path) {
-    amdgpu_fan_setup_pwm_enable_file(hwmon_path);
-    amdgpu_fan_setup_temp_input_file(hwmon_path);
-    amdgpu_fan_setup_pwm_file(hwmon_path);
-    amdgpu_fan_setup_pwm_min_file(hwmon_path);
-    amdgpu_fan_setup_pwm_max_file(hwmon_path);
+bool amdgpu_daemon_init(char const *hwmon_path) {
+    uint8_t result = 1;
+    result &= amdgpu_fan_setup_pwm_enable_file(hwmon_path);
+    result &= amdgpu_fan_setup_temp_input_file(hwmon_path);
+    result &= amdgpu_fan_setup_pwm_file(hwmon_path);
+    result &= amdgpu_fan_setup_pwm_min_file(hwmon_path);
+    result &= amdgpu_fan_setup_pwm_max_file(hwmon_path);
+
+    result &= amdgpu_fan_store_pwm_min();
+    result &= amdgpu_fan_store_pwm_max();
+
+    return result;
 }
 
 void daemon_run(uint8_t update_interval) {
