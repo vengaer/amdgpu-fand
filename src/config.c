@@ -129,12 +129,10 @@ static bool strip_comments(char *restrict dst, char const *restrict src, size_t 
 static bool strip_leading_whitespace(char *restrict dst, char const *restrict src, size_t count) {
     regmatch_t pmatch[2];
     if(regexec(&leading_space_rgx, src, 2, pmatch, 0)) {
-        printf("fail1\n");
         return false;
     }
     if(strsncpy(dst, src + pmatch[1].rm_so, regmatch_size(pmatch[1]), count) < 0) {
-        printf("fail2\n");
-        fprintf(stderr, "Removing whitespaces causes overflow\n");
+        fprintf(stderr, "Removing whitespace causes overflow\n");
         return false;
     }
     return true;
@@ -191,7 +189,7 @@ static enum parse_result parse_interval(char const *line, uint8_t *interval) {
 
     *interval = atoi(buffer);
     if(log_level) {
-        printf("\nInterval set to %u\n", *interval);
+        printf("Interval set to %u\n", *interval);
     }
     return match;
 }
@@ -246,7 +244,7 @@ static enum parse_result parse_matrix(char const *line, matrix mtrx, uint8_t *mt
         return failure;
      }
 
-    if(!regmatch_to_uint8(line, pmatch[2], &(mtrx[*mtrx_rows][0]))) {
+    if(!regmatch_to_uint8(line, pmatch[2], &mtrx[*mtrx_rows][0])) {
         fprintf(stderr, "Failed to read temperature in %s on line %u\n", line, line_number);
         return failure;
     }
@@ -276,6 +274,7 @@ static inline bool is_empty_line(char const *line) {
 bool parse_config(char const *restrict path, char *restrict hwmon, size_t hwmon_count, uint8_t *interval, bool *throttle, matrix mtrx, uint8_t *mtrx_rows) {
     compile_regexps();
     *mtrx_rows = 0;
+    line_number = 0;
 
     FILE *fp = fopen(path, "r");
     if(!fp) {
@@ -294,9 +293,11 @@ bool parse_config(char const *restrict path, char *restrict hwmon, size_t hwmon_
         }
         ++line_number;
         if(!strip_comments(tmp, buffer, sizeof tmp)) {
+            fclose(fp);
             return false;
         }
         if(!strip_leading_whitespace(buffer, tmp, sizeof buffer)) {
+            fclose(fp);
             return false;
         }
 
