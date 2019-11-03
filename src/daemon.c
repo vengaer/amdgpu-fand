@@ -106,7 +106,9 @@ void amdgpu_daemon_run(uint8_t interval) {
 
     while(daemon_alive) {
         pthread_mutex_lock(&lock);
-        amdgpu_fan_update_speed();
+        if(!amdgpu_fan_update_speed()) {
+            fprintf(stderr, "Failed to adjust fan speed\n");
+        }
         pthread_mutex_unlock(&lock);
         sleep(update_interval);
     }
