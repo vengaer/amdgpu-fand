@@ -11,6 +11,8 @@
 #include <pthread.h>
 #include <unistd.h>
 
+extern uint8_t log_level;
+
 static pthread_t monitor_thread;
 static struct file_monitor monitor;
 static pthread_mutex_t lock;
@@ -87,13 +89,17 @@ bool amdgpu_daemon_restart(char const *config) {
     char hwmon[HWMON_PATH_LEN];
 
     if(!parse_config(config, hwmon, sizeof hwmon, &interval, &throttle, mtrx, &mtrx_rows)) {
-        fprintf(stderr, "Failed to reread config\n");
+        fprintf(stderr, "Failed to reread config, keeping current values\n");
         return false;
     }
 
     pthread_mutex_lock(&lock);
     reinitialize(hwmon, interval, throttle, mtrx, mtrx_rows);
     pthread_mutex_unlock(&lock);
+
+    if(log_level) {
+        printf("Configuration reloaded\n");
+    }
 
     return true;
 }

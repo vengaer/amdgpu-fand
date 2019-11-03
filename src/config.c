@@ -151,7 +151,7 @@ static enum parse_result parse_hwmon(char const *restrict line, char *restrict h
     }
     else if(regexec(&hwmon_empty_rgx, line, 0, NULL, 0) == 0) {
         if(log_level) {
-            printf("hwmon is empty\n");
+            printf("hwmon is empty, keeping current path\n");
         }
         hwmon[0] = '\0';
         return match;
@@ -372,6 +372,9 @@ void *monitor_config(void *monitor) {
             break;
         }
         if(difftime(attrib.st_mtime, last_read) > 0) {
+            if(log_level) {
+                printf("Config file updated, reloading...\n");
+            }
             callback(path);
             time(&last_read);
         }
