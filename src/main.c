@@ -153,7 +153,7 @@ static int parse_arguments(int argc, char** argv) {
         else if(regexec(&config_input_rgx, argv[i], 0, NULL, 0) == 0) {
             config = strchr(argv[i], '=') + 1;
         }
-        else if(strlen(argv[i]) >= 2 && argv[i][0] == '-' && argv[i][1] != '-') {
+        else if(strlen(argv[i]) > 2 && argv[i][0] == '-' && argv[i][1] != '-') {
             uint8_t const rv = handle_multi_switch(argv[i]);
             if(rv != 0) {
                 return rv % 2;
@@ -174,7 +174,7 @@ int main(int argc, char** argv) {
     char config_hwmon[HWMON_PATH_LEN];
     uint8_t config_interval = 5;
     bool aggressive_throttle = false;
-    enum interpolation_method interp;
+    enum interpolation_method interp = linear;
     uint8_t mtrx_rows;
     matrix mtrx;
 
