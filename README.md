@@ -10,8 +10,10 @@ A Systemd daemon that automatically manages the fan speed of Radeon graphics car
 
 ### Installation  
 
-- `make`
-- `sudo make install`  
+```
+make   
+sudo make install   
+```
 
 This will copy the executable to /usr/local/bin, the default config to /etc/amdgpu-fanctl.conf
 and the systemd service to /etc/systemd/system  
