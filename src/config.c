@@ -20,7 +20,7 @@
 static regex_t interval_rgx, hwmon_rgx, hwmon_content_rgx, hwmon_empty_rgx, empty_rgx, leading_space_rgx;
 static regex_t matrix_rgx, matrix_start_rgx, matrix_end_rgx, throttle_rgx, throttle_option_rgx;
 static regex_t interpolation_rgx, interpolation_option_rgx;
-static bool parsing_matrix = false;
+static bool parsing_matrix = false, regexps_compiled = false;
 static uint8_t line_number = 0;
 
 enum parse_result {
@@ -48,6 +48,7 @@ static inline bool regmatch_to_uint8(char const *line, regmatch_t regm, uint8_t 
 }
 
 static bool compile_regexps(void) {
+    LOG(LOG_LV2, "Compiling config regexps\n");
     int reti;
     reti = regcomp(&interval_rgx, "^INTERVAL=\"?([0-9]{1,3})\"?\\s*$", REG_EXTENDED);
     if(reti) {
@@ -114,6 +115,7 @@ static bool compile_regexps(void) {
         fprintf(stderr, "Failed to compile interpolation option regex\n");
         return false;
     }
+    regexps_compiled = true;
     return true;
 }
 
@@ -284,7 +286,9 @@ static inline bool is_empty_line(char const *line) {
 
 
 bool parse_config(char const *restrict path, char *restrict hwmon, size_t hwmon_count, uint8_t *interval, bool *throttle, enum interpolation_method *interp, matrix mtrx, uint8_t *mtrx_rows) {
-    compile_regexps();
+    if(!regexps_compiled && !compile_regexps()) {
+        return false;
+    }
     *mtrx_rows = 0;
     line_number = 0;
 
