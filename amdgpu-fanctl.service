@@ -1,0 +1,9 @@
+[Unit]
+Description=amdgpu-fanctl
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/amdgpu-fanctl -v
+
+[Install]
+WantedBy=multi-user.target
