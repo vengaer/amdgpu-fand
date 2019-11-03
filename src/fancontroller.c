@@ -277,7 +277,7 @@ bool amdgpu_fan_update_speed(void) {
         return false;
     }
 
-    uint8_t temps[MATRIX_ROWS];
+    uint8_t temps[MATRIX_ROWS] = { 0 };
     matrix_extract_temps(temps, mtrx, mtrx_rows);
 
     int16_t idx = get_lower_row_idx_of_temp(temp, temps);
