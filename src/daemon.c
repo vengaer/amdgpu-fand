@@ -2,6 +2,7 @@
 #include "daemon.h"
 #include "fancontroller.h"
 #include "filesystem.h"
+#include "logger.h"
 #include "strutils.h"
 
 #include <stdint.h>
@@ -10,8 +11,6 @@
 
 #include <pthread.h>
 #include <unistd.h>
-
-extern uint8_t log_level;
 
 static pthread_t monitor_thread;
 static struct file_monitor monitor;
@@ -76,9 +75,7 @@ bool amdgpu_daemon_init(char const *restrict config, char const *restrict hwmon_
     monitor.path = config;
     monitor.callback = amdgpu_daemon_restart;
 
-    if(log_level > 1) {
-        printf("Spawning monitor thread\n");
-    }
+    LOG(2, "Spawning monitor thread\n");
     if(pthread_create(&monitor_thread, NULL, monitor_config, (void *)&monitor)) {
         fprintf(stderr, "Failed to create monitor thread, live reloading is unavailable\n");
     }
@@ -103,9 +100,7 @@ bool amdgpu_daemon_restart(char const *config) {
     reinitialize(hwmon, interval, throttle, interp, mtrx, mtrx_rows);
     pthread_mutex_unlock(&lock);
 
-    if(log_level) {
-        printf("Configuration reloaded\n");
-    }
+    LOG(1, "Configuration reloaded\n");
 
     return true;
 }
@@ -124,9 +119,7 @@ void amdgpu_daemon_run(uint8_t interval) {
         pthread_mutex_unlock(&lock);
         sleep(update_interval);
     }
-    if(log_level > 1) {
-        printf("Joining monitor thread\n");
-    }
+    LOG(2, "Joining monitor thread\n");
     if(pthread_join(monitor_thread, NULL)) {
         fprintf(stderr, "Failed to join monitor thread\n");
     }
