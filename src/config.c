@@ -145,7 +145,7 @@ static enum parse_result parse_hwmon(char const *restrict line, char *restrict h
     regmatch_t pmatch[2];
     if(regexec(&hwmon_rgx, line, 0, NULL, 0)) {
         if(log_level > 1) {
-            printf("no match\n");
+            printf("No match\n");
         }
         return no_match;
     }
@@ -177,7 +177,7 @@ static enum parse_result parse_interval(char const *line, uint8_t *interval) {
     regmatch_t pmatch[2];
     if(regexec(&interval_rgx, line, 2, pmatch, 0)) {
         if(log_level > 1) {
-            printf("no match\n");
+            printf("No match\n");
         }
         return no_match;
     }
@@ -201,7 +201,7 @@ static enum parse_result parse_throttling(char const *line, bool *throttle) {
     regmatch_t pmatch[2];
     if(regexec(&throttle_rgx, line, 0, NULL, 0)) {
         if(log_level > 1) {
-            printf("no match\n");
+            printf("No match\n");
         }
         return no_match;
     }
@@ -227,7 +227,7 @@ static enum parse_result parse_matrix(char const *line, matrix mtrx, uint8_t *mt
     regmatch_t pmatch[4];
     if(regexec(&matrix_rgx, line, 4, pmatch, 0)) {
         if(log_level > 1) {
-            printf("no match\n");
+            printf("No match\n");
         }
         return no_match;
     }
