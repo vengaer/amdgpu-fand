@@ -17,8 +17,8 @@
 bool verbose = false;
 bool volatile daemon_alive = true;
 
-static regex_t hwmon_input_rgx, hwmon_subdir_rgx, interval_input_rgx, config_input_rgx;
-static bool hwmon_passed = false, interval_passed = false;
+static regex_t hwmon_input_rgx, interval_input_rgx, config_input_rgx;
+bool hwmon_passed = false, interval_passed = false;
 static char const *hwmon;
 static uint8_t update_interval;
 static char const *config = FANCTL_CONFIG;
@@ -46,11 +46,6 @@ static bool compile_regexps(void) {
     reti = regcomp(&hwmon_input_rgx, "^--hwmon=.+", REG_EXTENDED);
     if(reti) {
         fprintf(stderr, "Failed to compile hwmon input regex\n");
-        return false;
-    }
-    reti = regcomp(&hwmon_subdir_rgx, "^hwmon[0-9]", REG_EXTENDED);
-    if(reti) {
-        fprintf(stderr, "Failed to compile hwmon file regex\n");
         return false;
     }
     reti = regcomp(&interval_input_rgx, "^--interval=[0-9]+", REG_EXTENDED);
@@ -198,11 +193,6 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    if(mtrx_rows < 1) {
-        fprintf(stderr, "No matrix specified\n");
-        return 1;
-    }
-
     /* hwmon not passed as argument and hwmon specified in config */
     if(!hwmon_passed && strlen(config_hwmon) > 0) {
         hwmon = config_hwmon;
@@ -213,7 +203,7 @@ int main(int argc, char** argv) {
     }
 
     /* Verify hwmon subdir */
-    if(regexec(&hwmon_subdir_rgx, hwmon, 0, NULL, 0)) {
+    if(!is_valid_hwmon_dir(hwmon)) {
         fprintf(stderr, "%s is not a valid hwmon directory\n", hwmon);
         return 1;
     }
@@ -229,7 +219,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    if(!amdgpu_daemon_init(hwmon_path, aggressive_throttle, mtrx, mtrx_rows)) {
+    if(!amdgpu_daemon_init(config, hwmon_path, aggressive_throttle, mtrx, mtrx_rows)) {
         fprintf(stderr, "Failed to initialize daemon\n");
         return 1;
     }

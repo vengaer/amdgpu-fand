@@ -33,3 +33,14 @@ bool find_dir_matching_pattern(char *restrict dst, size_t count, char const *res
 
     return false;
 }
+
+bool is_valid_hwmon_dir(char const *dir) {
+    regex_t hwmon_rgx;
+    int reti = regcomp(&hwmon_rgx, "^hwmon[0-9]$", REG_EXTENDED);
+    if(reti) {
+        fprintf(stderr, "Failed to compile hwmon regex\n");
+        return false;
+    }
+
+    return regexec(&hwmon_rgx, dir, 0, NULL, 0) == 0;
+}

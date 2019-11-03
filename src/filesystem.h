@@ -12,4 +12,6 @@ static inline bool file_exists(char const *path) {
     return access(path, F_OK) != -1;
 }
 
+bool is_valid_hwmon_dir(char const *dir);
+
 #endif
