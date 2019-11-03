@@ -254,7 +254,7 @@ static enum parse_result parse_matrix(char const *line, matrix mtrx, uint8_t *mt
     }
 
     if(log_level) {
-        printf("Set values on row %u, temp: %u, speed: %u\n", *mtrx_rows, mtrx[*mtrx_rows][0], mtrx[*mtrx_rows][1]);
+        printf("Set values on row %u, temp: %u, speed: %u%%\n", *mtrx_rows, mtrx[*mtrx_rows][0], mtrx[*mtrx_rows][1]);
     }
 
     ++(*mtrx_rows);

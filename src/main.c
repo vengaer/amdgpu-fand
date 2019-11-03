@@ -25,6 +25,9 @@ static char const *config = FANCTL_CONFIG;
 
 void signal_handler(int code) {
     if(code == SIGINT || code == SIGTERM) {
+        if(log_level) {
+            printf("Killing daemon...\n");
+        }
         daemon_alive = false;
     }
 }
