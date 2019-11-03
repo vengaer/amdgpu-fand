@@ -87,7 +87,7 @@ bool amdgpu_daemon_restart(char const *config) {
     matrix mtrx;
     uint8_t mtrx_rows;
     uint8_t interval = update_interval;
-    bool throttle = amdgpu_fan_get_aggressive_throttle);
+    bool throttle = amdgpu_fan_get_aggressive_throttle();
     enum interpolation_method interp = amdgpu_fan_get_interpolation_method();
     char hwmon[HWMON_PATH_LEN];
 
