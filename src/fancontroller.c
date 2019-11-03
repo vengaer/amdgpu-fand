@@ -105,7 +105,7 @@ static bool write_uint8_to_file(char const *path, uint8_t data) {
     return true;
 }
 
-static int16_t get_lower_row_idx_of_temp(uint8_t temp, uint8_t *temps) {
+static int8_t get_lower_row_idx_of_temp(uint8_t temp, uint8_t *temps) {
     if(temp < temps[0]) {
         return -1;
     }
@@ -261,7 +261,7 @@ bool amdgpu_fan_update_speed(void) {
     uint8_t temps[MATRIX_ROWS] = { 0 };
     matrix_extract_temps(temps, mtrx, mtrx_rows);
 
-    int16_t idx = get_lower_row_idx_of_temp(temp, temps);
+    int8_t idx = get_lower_row_idx_of_temp(temp, temps);
 
     uint8_t speeds[MATRIX_ROWS];
     matrix_extract_speeds(speeds, mtrx, mtrx_rows);
