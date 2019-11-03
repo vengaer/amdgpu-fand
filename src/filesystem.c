@@ -4,8 +4,10 @@
 #include "strutils.h"
 
 #include <stdio.h>
+#include <string.h>
 
 #include <dirent.h>
+#include <errno.h>
 #include <regex.h>
 
 bool find_dir_matching_pattern(char *restrict dst, size_t count, char const *restrict pattern, char const *restrict parent) {
@@ -18,19 +20,27 @@ bool find_dir_matching_pattern(char *restrict dst, size_t count, char const *res
         return false;
     }
 
-    DIR *sdir = opendir(parent);
     struct dirent *entry;
+    DIR *sdir = opendir(parent);
+    if(!sdir) {
+        int errnum = errno;
+        fprintf(stderr, "Failed to open directory %s: %s\n", parent, strerror(errnum));
+        return false;
+    }
 
     while((entry = readdir(sdir))) {
         if(entry->d_type == DT_DIR && regexec(&rgx, entry->d_name, 0, NULL, 0) == 0) {
             if(strscpy(dst, entry->d_name, count) < 0) {
                 fprintf(stderr, "Directory %s overflowed buffer\n", entry->d_name);
+                closedir(sdir);
                 return false;
             }
+            closedir(sdir);
             return true;
         }
     }
 
+    closedir(sdir);
     return false;
 }
 
