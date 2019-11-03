@@ -6,6 +6,10 @@
 #include <string.h>
 
 #include <regex.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <time.h>
+#include <unistd.h>
 
 #define LINE_SIZE 128
 #define OPTION_BUF_SIZE 4
@@ -340,5 +344,36 @@ bool parse_config(char const *restrict path, char *restrict hwmon, size_t hwmon_
         return false;
     }
     fclose(fp);
+
+    if(*interval < 1) {
+        fprintf(stderr, "Update intervals below 1 are not allowed, setting interval to 1\n");
+        *interval = 1;
+    }
+    else if(*mtrx_rows < 1) {
+        fprintf(stderr, "No matrix specified\n");
+        return false;
+    }
     return true;
+}
+
+void *monitor_config(void *monitor) {
+    extern bool volatile daemon_alive;
+    char const *path = ((struct file_monitor*)monitor)->path;
+    bool(*callback)(char const*) = ((struct file_monitor*)monitor)->callback;
+    struct stat attrib;
+    time_t last_read;
+    time(&last_read);
+
+    while(daemon_alive) {
+        if(stat(path, &attrib) == -1) {
+            fprintf(stderr, "Unable to monitor config file\n");
+            break;
+        }
+        if(difftime(attrib.st_mtime, last_read) > 0) {
+            callback(path);
+            time(&last_read);
+        }
+        sleep(CONFIG_MONITOR_INTERVAL);
+    }
+    return NULL;
 }
