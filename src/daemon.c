@@ -39,7 +39,7 @@ static bool setup_hwmon(char const *hwmon_path) {
 }
 
 
-static bool reinitialize(char const *hwmon, uint8_t interval, bool throttle, matrix mtrx, uint8_t mtrx_rows) {
+static bool reinitialize(char const *hwmon, uint8_t interval, bool throttle, enum interpolation_method interp, matrix mtrx, uint8_t mtrx_rows) {
     extern bool hwmon_passed, interval_passed;
     if(!hwmon_passed && strlen(hwmon) > 0) {
         if(!is_valid_hwmon_dir(hwmon)) {
@@ -59,6 +59,7 @@ static bool reinitialize(char const *hwmon, uint8_t interval, bool throttle, mat
 
     amdgpu_fan_set_matrix(mtrx, mtrx_rows);
     amdgpu_fan_set_aggressive_throttle(throttle);
+    amdgpu_fan_set_interpolation_method(interp);
 
     if(!interval_passed) {
         update_interval = interval;
@@ -66,10 +67,11 @@ static bool reinitialize(char const *hwmon, uint8_t interval, bool throttle, mat
     return true;
 }
 
-bool amdgpu_daemon_init(char const *restrict config, char const *restrict hwmon_path, bool aggressive_throttle, matrix mtrx, uint8_t mtrx_rows) {
+bool amdgpu_daemon_init(char const *restrict config, char const *restrict hwmon_path, bool aggressive_throttle, enum interpolation_method interp, matrix mtrx, uint8_t mtrx_rows) {
     bool result = setup_hwmon(hwmon_path);
     amdgpu_fan_set_matrix(mtrx, mtrx_rows);
     amdgpu_fan_set_aggressive_throttle(aggressive_throttle);
+    amdgpu_fan_set_interpolation_method(interp);
 
     monitor.path = config;
     monitor.callback = amdgpu_daemon_restart;
@@ -89,15 +91,16 @@ bool amdgpu_daemon_restart(char const *config) {
     uint8_t mtrx_rows;
     uint8_t interval = update_interval;
     bool throttle;
+    enum interpolation_method interp;
     char hwmon[HWMON_PATH_LEN];
 
-    if(!parse_config(config, hwmon, sizeof hwmon, &interval, &throttle, mtrx, &mtrx_rows)) {
+    if(!parse_config(config, hwmon, sizeof hwmon, &interval, &throttle, &interp, mtrx, &mtrx_rows)) {
         fprintf(stderr, "Failed to reread config, keeping current values\n");
         return false;
     }
 
     pthread_mutex_lock(&lock);
-    reinitialize(hwmon, interval, throttle, mtrx, mtrx_rows);
+    reinitialize(hwmon, interval, throttle, interp, mtrx, mtrx_rows);
     pthread_mutex_unlock(&lock);
 
     if(log_level) {

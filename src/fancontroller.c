@@ -1,6 +1,5 @@
 #include "fancontroller.h"
 #include "filesystem.h"
-#include "interpolation.h"
 #include "strutils.h"
 
 #include <math.h>
@@ -15,13 +14,13 @@
 #define TEMP_BUF_SIZE 8
 #define PWM_BUF_SIZE 16
 
+extern uint8_t log_level;
+
 static char const *pwm_enable_file = "/pwm1_enable";
 static char const *temp_input_file = "/temp1_input";
 static char const *pwm_file = "/pwm1";
 static char const *pwm_min_file = "/pwm1_min";
 static char const *pwm_max_file = "/pwm1_max";
-
-extern uint8_t log_level;
 
 static char pwm_enable[HWMON_PATH_LEN];
 static char temp_input[HWMON_PATH_LEN];
@@ -33,6 +32,7 @@ static uint8_t pwm_min;
 static uint8_t pwm_max;
 
 static bool aggressive_throttle;
+static enum interpolation_method interp;
 
 static matrix mtrx;
 static uint8_t mtrx_rows;
@@ -199,6 +199,10 @@ void amdgpu_fan_set_aggressive_throttle(bool throttle) {
     aggressive_throttle = throttle;
 }
 
+void amdgpu_fan_set_interpolation_method(enum interpolation_method method) {
+    interp = method;
+}
+
 void amdgpu_fan_set_matrix(matrix m, uint8_t m_rows) {
     mtrx_rows = m_rows;
     for(size_t i = 0; i < m_rows; i++) {
@@ -281,6 +285,7 @@ bool amdgpu_fan_update_speed(void) {
     }
 
     uint8_t const percentage = inverse_lerp_uint8(temps[idx], temps[idx + 1], temp);
-    uint8_t const npwm = lerp_uint8(speeds[idx], speeds[idx + 1], (double)percentage / 100.0);
+    uint8_t const npwm = interp == linear ? lerp_uint8(speeds[idx], speeds[idx + 1], (double)percentage / 100.0) :
+                                            cosine_interpolate_uint8(speeds[idx], speeds[idx + 1], (double)percentage / 100.0);
     return amdgpu_fan_set_percentage(npwm);
 }

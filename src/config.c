@@ -14,11 +14,13 @@
 
 #define LINE_SIZE 128
 #define OPTION_BUF_SIZE 4
+#define INTERP_OPTION_SIZE 8
 
 extern uint8_t log_level;
 
 static regex_t interval_rgx, hwmon_rgx, hwmon_content_rgx, hwmon_empty_rgx, empty_rgx, leading_space_rgx;
 static regex_t matrix_rgx, matrix_start_rgx, matrix_end_rgx, throttle_rgx, throttle_option_rgx;
+static regex_t interpolation_rgx, interpolation_option_rgx;
 static bool parsing_matrix = false;
 static uint8_t line_number = 0;
 
@@ -101,6 +103,16 @@ static bool compile_regexps(void) {
     reti = regcomp(&throttle_option_rgx, "^\\s*AGGRESSIVE_THROTTLING=\"(yes|no)\"\\s*$", REG_EXTENDED);
     if(reti) {
         fprintf(stderr, "Failed to compile throttling option regex\n");
+        return false;
+    }
+    reti = regcomp(&interpolation_rgx, "^\\s*INTERPOLATION=\".*\"\\s*$", REG_EXTENDED);
+    if(reti) {
+        fprintf(stderr, "Failed to compile interpolation regex\n");
+        return false;
+    }
+    reti = regcomp(&interpolation_option_rgx, "^\\s*INTERPOLATION=\"(linear|cosine)\"\\s*$", REG_EXTENDED);
+    if(reti) {
+        fprintf(stderr, "Failed to compile interpolation option regex\n");
         return false;
     }
     return true;
@@ -217,6 +229,39 @@ static enum parse_result parse_throttling(char const *line, bool *throttle) {
     }
 
     *throttle = strcmp(buffer, "yes")  == 0;
+    if(log_level) {
+        printf("Throttling set to %s\n", *throttle ? "aggressive" : "non-aggressive");
+    }
+    return match;
+}
+
+static enum parse_result parse_interpolation(char const *line, enum interpolation_method *method) {
+    if(log_level > 1) {
+        printf("Matching %s against interpolation...\n", line);
+    }
+    regmatch_t pmatch[2];
+
+    if(regexec(&interpolation_rgx, line, 0, NULL, 0)) {
+        if(log_level > 1) {
+            printf("No match\n");
+        }
+        return no_match;
+    }
+    if(regexec(&interpolation_option_rgx, line, 2, pmatch, 0)) {
+        fprintf(stderr, "Syntax error on line %u: %s\n", line_number, line);
+        return failure;
+    }
+
+    char buffer[INTERP_OPTION_SIZE];
+    if(strsncpy(buffer, line + pmatch[1].rm_so, regmatch_size(pmatch[1]), sizeof buffer) < 0) {
+        fprintf(stderr, "Interpolation option on line %u overflows the buffer\n", line_number);
+        return failure;
+    }
+
+    *method = strcmp(buffer, "cosine") == 0;
+    if(log_level) {
+        printf("%s interpolation set\n", *method ? "Cosine" : "Linear");
+    }
     return match;
 }
 
@@ -271,7 +316,7 @@ static inline bool is_empty_line(char const *line) {
 }
 
 
-bool parse_config(char const *restrict path, char *restrict hwmon, size_t hwmon_count, uint8_t *interval, bool *throttle, matrix mtrx, uint8_t *mtrx_rows) {
+bool parse_config(char const *restrict path, char *restrict hwmon, size_t hwmon_count, uint8_t *interval, bool *throttle, enum interpolation_method *interp, matrix mtrx, uint8_t *mtrx_rows) {
     compile_regexps();
     *mtrx_rows = 0;
     line_number = 0;
@@ -324,6 +369,15 @@ bool parse_config(char const *restrict path, char *restrict hwmon, size_t hwmon_
         }
 
         result = parse_throttling(buffer, throttle);
+        if(result == failure) {
+            fclose(fp);
+            return false;
+        }
+        else if(result == match) {
+            continue;
+        }
+
+        result = parse_interpolation(buffer, interp);
         if(result == failure) {
             fclose(fp);
             return false;
