@@ -8,7 +8,7 @@ BUILD_DIR    := build
 SRC_EXT      := c
 OBJ_EXT      := o
 CFLAGS       := -std=c11 -Wall -Wextra -pedantic -Wshadow -Wunknown-pragmas -O3
-LIB          := -lm -pthread
+LIB          := -lm -lpthread
 INC          := $(shell [ -z "${INC_DIRS}" ] || echo "${INC_DIRS}" | sed -E 's/( |^)([^ ]*)/-I \2 /g')
 
 SRC          := $(shell find $(SRC_DIR) -mindepth 1 -type f -name *.$(SRC_EXT))
