@@ -1,4 +1,5 @@
 #include "fancontroller.h"
+#include "filesystem.h"
 #include "interpolation.h"
 #include "strutils.h"
 
@@ -119,14 +120,25 @@ static int16_t get_lower_row_idx_of_temp(uint8_t temp, uint8_t *temps) {
     return mtrx_rows - 1;
 }
 
-bool amdgpu_fan_setup_pwm_enable_file(char const *hwmon_path) {
-    pwm_enable[0] = '\0';
-    if(strscat(pwm_enable, hwmon_path, sizeof pwm_enable) < 0) {
-        fprintf(stderr, "hwmon path overflows pwm_enable buffer\n");
+static bool construct_file_path(char *restrict dst, char const *restrict dir, char const *restrict file, size_t count) {
+    dst[0] = '\0';
+    if(strscat(dst, dir, count) < 0) {
+        fprintf(stderr, "Directory %s overflows the destination buffer\n", dir);
         return false;
     }
-    if(strscat(pwm_enable, pwm_enable_file, sizeof pwm_enable) < 0) {
-        fprintf(stderr, "Appending %s to pwm_enable overflows the buffer\n", pwm_enable_file);
+    if(strscat(dst, file, count) < 0) {
+        fprintf(stderr, "Appending %s to %s would overflow the buffer\n", file, dst);
+        return false;
+    }
+    if(!file_exists(dst)) {
+        fprintf(stderr, "%s does not exist\n", dst);
+        return false;
+    }
+    return true;
+}
+
+bool amdgpu_fan_setup_pwm_enable_file(char const *hwmon_path) {
+    if(!construct_file_path(pwm_enable, hwmon_path, pwm_enable_file, sizeof pwm_enable)) {
         return false;
     }
     if(log_level) {
@@ -136,13 +148,7 @@ bool amdgpu_fan_setup_pwm_enable_file(char const *hwmon_path) {
 }
 
 bool amdgpu_fan_setup_temp_input_file(char const *hwmon_path) {
-    temp_input[0] = '\0';
-    if(strscat(temp_input, hwmon_path, sizeof temp_input) < 0) {
-        fprintf(stderr, "hwmon path overflows the temp_input buffer\n");
-        return false;
-    }
-    if(strscat(temp_input, temp_input_file, sizeof temp_input) < 0) {
-        fprintf(stderr, "Appending %s to temp_input overflows the buffer\n", temp_input_file);
+    if(!construct_file_path(temp_input, hwmon_path, temp_input_file, sizeof temp_input)) {
         return false;
     }
     if(log_level) {
@@ -152,13 +158,7 @@ bool amdgpu_fan_setup_temp_input_file(char const *hwmon_path) {
 }
 
 bool amdgpu_fan_setup_pwm_file(char const *hwmon_path) {
-    pwm[0] = '\0';
-    if(strscat(pwm, hwmon_path, sizeof pwm) < 0) {
-        fprintf(stderr, "hwmon path overflows the pwm buffer\n");
-        return false;
-    }
-    if(strscat(pwm, pwm_file, sizeof pwm) < 0) {
-        fprintf(stderr, "Appending %s to pwm overflows the buffer\n", pwm_file);
+    if(!construct_file_path(pwm, hwmon_path, pwm_file, sizeof pwm)) {
         return false;
     }
     if(log_level) {
@@ -168,13 +168,7 @@ bool amdgpu_fan_setup_pwm_file(char const *hwmon_path) {
 }
 
 bool amdgpu_fan_setup_pwm_min_file(char const *hwmon_path) {
-    pwm_min_path[0] = '\0';
-    if(strscat(pwm_min_path, hwmon_path, sizeof pwm_min_path) < 0) {
-        fprintf(stderr, "hwmon path overflows the pwm_min buffer\n");
-        return false;
-    }
-    if(strscat(pwm_min_path, pwm_min_file, sizeof pwm_min_path) < 0) {
-        fprintf(stderr, "Appending %s to the pwm_min path overflows the buffer\n", pwm_min_file);
+    if(!construct_file_path(pwm_min_path, hwmon_path, pwm_min_file, sizeof pwm_min_path)) {
         return false;
     }
     if(log_level) {
@@ -184,13 +178,7 @@ bool amdgpu_fan_setup_pwm_min_file(char const *hwmon_path) {
 }
 
 bool amdgpu_fan_setup_pwm_max_file(char const *hwmon_path) {
-    pwm_max_path[0] = '\0';
-    if(strscat(pwm_max_path, hwmon_path, sizeof pwm_max_path) < 0) {
-        fprintf(stderr, "hwmon path overflows the pwm_max buffer\n");
-        return false;
-    }
-    if(strscat(pwm_max_path, pwm_max_file, sizeof pwm_max_path) < 0) {
-        fprintf(stderr, "Appending %s to the pwm_max path overflows the buffer\n", pwm_max_file);
+    if(!construct_file_path(pwm_max_path, hwmon_path, pwm_max_file, sizeof pwm_max_path)) {
         return false;
     }
     if(log_level) {
