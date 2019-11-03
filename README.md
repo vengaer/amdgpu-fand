@@ -15,8 +15,8 @@ make
 sudo make install   
 ```
 
-This will copy the executable to /usr/local/bin, the default config to /etc/amdgpu-fanctl.conf
-and the systemd service to /etc/systemd/system  
+This will copy the executable to /usr/local/bin/amdgpu-fanctl, the default config to /etc/amdgpu-fanctl.conf
+and the systemd service to /etc/systemd/system/amdgpu-fanctl.service  
 
 ### Disclaimer  
 This piece of software is not affiliated with AMD in any way. Radeon is a trademark of AMD.
