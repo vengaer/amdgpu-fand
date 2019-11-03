@@ -14,7 +14,7 @@
 #include <regex.h>
 #include <signal.h>
 
-bool verbose = false;
+uint8_t log_level = 0;
 bool volatile daemon_alive = true;
 
 static regex_t hwmon_input_rgx, interval_input_rgx, config_input_rgx;
@@ -29,11 +29,15 @@ void signal_handler(int code) {
     }
 }
 
+static inline void increment_log_level(void) {
+    log_level < 2 ? ++log_level : 2;
+}
+
 static void print_usage(void) {
     fprintf(stderr,
         "Usage: amdgpu-fan [option]...\n"
         "Options:\n"
-        "    -v, --verbose                       Echo actions to stdout\n"
+        "    -v, --verbose                       Echo actions to stdout. Can be passed twice to set log level to 2\n"
         "    -f FILE, --hwmon=FILE               Specify hwmon file, default is hwmon1\n"
         "    -i INTERVAL, --interval=INTERVAL    Specify the interval with which to update fan speed, in seconds. The value must be in the interval 1...255.\n"
         "                                        Default is read from %s\n"
@@ -65,7 +69,7 @@ static uint8_t handle_multi_switch(char const *switches) {
     size_t const len = strlen(switches);
     for(size_t i = 1; i < len; i++) {
         if(switches[i] == 'v') {
-            verbose = true;
+            increment_log_level();
         }
         else if(switches[i] == 'h') {
             print_usage();
@@ -101,7 +105,7 @@ static bool set_interval(char const *interval, uint8_t *out_interval) {
 static int parse_arguments(int argc, char** argv) {
     for(int i = 1; i < argc; i++) {
         if(strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "--verbose") == 0) {
-            verbose = true;
+            increment_log_level();
         }
         else if(strcmp(argv[i], "-h") == 0|| strcmp(argv[i], "--help") == 0) {
             print_usage();

@@ -20,7 +20,7 @@ static char const *pwm_file = "/pwm1";
 static char const *pwm_min_file = "/pwm1_min";
 static char const *pwm_max_file = "/pwm1_max";
 
-extern bool verbose;
+extern uint8_t log_level;
 
 static char pwm_enable[HWMON_PATH_LEN];
 static char temp_input[HWMON_PATH_LEN];
@@ -129,7 +129,7 @@ bool amdgpu_fan_setup_pwm_enable_file(char const *hwmon_path) {
         fprintf(stderr, "Appending %s to pwm_enable overflows the buffer\n", pwm_enable_file);
         return false;
     }
-    if(verbose) {
+    if(log_level) {
         printf("PWM control file set to %s\n", pwm_enable);
     }
     return true;
@@ -145,7 +145,7 @@ bool amdgpu_fan_setup_temp_input_file(char const *hwmon_path) {
         fprintf(stderr, "Appending %s to temp_input overflows the buffer\n", temp_input_file);
         return false;
     }
-    if(verbose) {
+    if(log_level) {
         printf("Temperature file set to %s\n", temp_input);
     }
     return true;
@@ -161,7 +161,7 @@ bool amdgpu_fan_setup_pwm_file(char const *hwmon_path) {
         fprintf(stderr, "Appending %s to pwm overflows the buffer\n", pwm_file);
         return false;
     }
-    if(verbose) {
+    if(log_level) {
         printf("PWM level file set to %s\n", pwm);
     }
     return true;
@@ -177,7 +177,7 @@ bool amdgpu_fan_setup_pwm_min_file(char const *hwmon_path) {
         fprintf(stderr, "Appending %s to the pwm_min path overflows the buffer\n", pwm_min_file);
         return false;
     }
-    if(verbose) {
+    if(log_level) {
         printf("PWM min file set to %s\n", pwm_min_path);
     }
     return true;
@@ -193,7 +193,7 @@ bool amdgpu_fan_setup_pwm_max_file(char const *hwmon_path) {
         fprintf(stderr, "Appending %s to the pwm_max path overflows the buffer\n", pwm_max_file);
         return false;
     }
-    if(verbose) {
+    if(log_level) {
         printf("PWM max file set to %s\n", pwm_max_path);
     }
     return true;
@@ -220,7 +220,7 @@ void amdgpu_fan_set_matrix(matrix m, uint8_t m_rows) {
 }
 
 bool amdgpu_fan_set_mode(enum fanmode mode) {
-    if(verbose) {
+    if(log_level) {
         printf("Setting fan mode: %s\n", mode == manual ? "manual" : "auto");
     }
     return write_uint8_to_file(pwm_enable, mode);
@@ -231,7 +231,7 @@ bool amdgpu_fan_get_percentage(uint8_t *percentage) {
     if(read_uint8_from_file(pwm, &npwm)) {
         double const frac = (double)npwm / (double)(pwm_max - pwm_min);
         *percentage = (uint8_t)round((frac * 100));
-        if(verbose) {
+        if(log_level > 1) {
             printf("Current pwm: %u, corresponding to percentage: %u\n", npwm, *percentage);
         }
         return true;
@@ -242,7 +242,7 @@ bool amdgpu_fan_get_percentage(uint8_t *percentage) {
 
 bool amdgpu_fan_set_percentage(uint8_t percentage) {
     uint8_t const npwm = (uint8_t)((double)percentage / 100.0 * (double)(pwm_max - pwm_min));
-    if(verbose) {
+    if(log_level > 1) {
         printf("Setting pwm %u (%f%%)\n", npwm, 100.0 * (double)npwm / (double)(pwm_max - pwm_min));
     }
     return write_uint8_to_file(pwm, npwm);
@@ -262,7 +262,7 @@ bool amdgpu_get_temp(uint8_t *temp) {
         buffer[len - 3] = '\0';
 
         *temp = atoi(buffer);
-        if(verbose) {
+        if(log_level > 1) {
             printf("Temperature is %u\n", *temp);
         }
         return true;

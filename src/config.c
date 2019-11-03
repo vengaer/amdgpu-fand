@@ -1,6 +1,7 @@
 #include "config.h"
 #include "strutils.h"
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,7 +15,7 @@
 #define LINE_SIZE 128
 #define OPTION_BUF_SIZE 4
 
-extern bool verbose;
+extern uint8_t log_level;
 
 static regex_t interval_rgx, hwmon_rgx, hwmon_content_rgx, hwmon_empty_rgx, empty_rgx, leading_space_rgx;
 static regex_t matrix_rgx, matrix_start_rgx, matrix_end_rgx, throttle_rgx, throttle_option_rgx;
@@ -140,44 +141,44 @@ static bool strip_leading_whitespace(char *restrict dst, char const *restrict sr
 }
 
 static enum parse_result parse_hwmon(char const *restrict line, char *restrict hwmon, size_t count) {
-    if(verbose) {
-        printf("Matching %s against hwmon... ", line);
+    if(log_level > 1) {
+        printf("Matching %s against hwmon...\n", line);
     }
     regmatch_t pmatch[2];
     if(regexec(&hwmon_rgx, line, 0, NULL, 0)) {
-        if(verbose) {
+        if(log_level > 1) {
             printf("no match\n");
         }
         return no_match;
     }
     else if(regexec(&hwmon_empty_rgx, line, 0, NULL, 0) == 0) {
-        if(verbose) {
+        if(log_level) {
             printf("hwmon is empty\n");
         }
         hwmon[0] = '\0';
         return match;
     }
     else if(regexec(&hwmon_content_rgx, line, 2, pmatch, 0)) {
-        fprintf(stderr, "\nSyntax error on line %u: %s\n", line_number, line);
+        fprintf(stderr, "Syntax error on line %u: %s\n", line_number, line);
         return failure;
     }
     if(strsncpy(hwmon, line + pmatch[1].rm_so, regmatch_size(pmatch[1]), count) < 0) {
         fprintf(stderr, "hwmon value on line %u overflows the buffer\n", line_number);
         return failure;
     }
-    if(verbose) {
+    if(log_level) {
         printf("hwmon set to %s\n", hwmon);
     }
     return match;
 }
 
 static enum parse_result parse_interval(char const *line, uint8_t *interval) {
-    if(verbose) {
-        printf("Matching %s against interval...", line);
+    if(log_level > 1) {
+        printf("Matching %s against interval...\n", line);
     }
     regmatch_t pmatch[2];
     if(regexec(&interval_rgx, line, 2, pmatch, 0)) {
-        if(verbose) {
+        if(log_level > 1) {
             printf("no match\n");
         }
         return no_match;
@@ -189,19 +190,19 @@ static enum parse_result parse_interval(char const *line, uint8_t *interval) {
     }
 
     *interval = atoi(buffer);
-    if(verbose) {
+    if(log_level) {
         printf("\nInterval set to %u\n", *interval);
     }
     return match;
 }
 
 static enum parse_result parse_throttling(char const *line, bool *throttle) {
-    if(verbose) {
-        printf("Matching %s againts throttling...", line);
+    if(log_level > 1) {
+        printf("Matching %s againts throttling...\n", line);
     }
     regmatch_t pmatch[2];
     if(regexec(&throttle_rgx, line, 0, NULL, 0)) {
-        if(verbose) {
+        if(log_level > 1) {
             printf("no match\n");
         }
         return no_match;
@@ -222,12 +223,12 @@ static enum parse_result parse_throttling(char const *line, bool *throttle) {
 }
 
 static enum parse_result parse_matrix(char const *line, matrix mtrx, uint8_t *mtrx_rows) {
-    if(verbose) {
-        printf("Matching %s againts matrix... ", line);
+    if(log_level > 1) {
+        printf("Matching %s againts matrix...\n", line);
     }
     regmatch_t pmatch[4];
     if(regexec(&matrix_rgx, line, 4, pmatch, 0)) {
-        if(verbose) {
+        if(log_level > 1) {
             printf("no match\n");
         }
         return no_match;
@@ -254,8 +255,8 @@ static enum parse_result parse_matrix(char const *line, matrix mtrx, uint8_t *mt
         return failure;
     }
 
-    if(verbose) {
-        printf("\nSet values on row %u, temp: %u, speed: %u\n", *mtrx_rows, mtrx[*mtrx_rows][0], mtrx[*mtrx_rows][1]);
+    if(log_level) {
+        printf("Set values on row %u, temp: %u, speed: %u\n", *mtrx_rows, mtrx[*mtrx_rows][0], mtrx[*mtrx_rows][1]);
     }
 
     ++(*mtrx_rows);
@@ -288,7 +289,7 @@ bool parse_config(char const *restrict path, char *restrict hwmon, size_t hwmon_
 
     while(fgets(buffer, sizeof buffer, fp)) {
         replace_char(buffer, '\n', '\0');
-        if(verbose) {
+        if(log_level > 1) {
             printf("Read line '%s'\n", buffer);
         }
         ++line_number;
