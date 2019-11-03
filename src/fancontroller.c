@@ -30,8 +30,8 @@ static char pwm_max_path[HWMON_PATH_LEN];
 static uint8_t pwm_min;
 static uint8_t pwm_max;
 
-static bool aggressive_throttle;
-static enum interpolation_method interp;
+static bool aggressive_throttle = false;
+static enum interpolation_method interp = linear;
 
 static matrix mtrx;
 static uint8_t mtrx_rows;
@@ -198,6 +198,14 @@ void amdgpu_fan_set_matrix(matrix m, uint8_t m_rows) {
         mtrx[i][0] = m[i][0];
         mtrx[i][1] = m[i][1];
     }
+}
+
+bool amdgpu_fan_get_aggressive_throttle(void) {
+    return aggressive_throttle;
+}
+
+enum interpolation_method amdgpu_fan_get_interpolation_method(void) {
+    return interp;
 }
 
 bool amdgpu_fan_set_mode(enum fanmode mode) {

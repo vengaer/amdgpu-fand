@@ -392,7 +392,9 @@ void *monitor_config(void *monitor) {
         }
         if(difftime(attrib.st_mtime, last_read) > 0) {
             LOG(1, "Config file updated, reloading...\n");
-            callback(path);
+            if(!callback(path)) {
+                fprintf(stderr, "Failed to reload config\n");
+            }
             time(&last_read);
         }
         sleep(CONFIG_MONITOR_INTERVAL);

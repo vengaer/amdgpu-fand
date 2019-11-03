@@ -87,8 +87,8 @@ bool amdgpu_daemon_restart(char const *config) {
     matrix mtrx;
     uint8_t mtrx_rows;
     uint8_t interval = update_interval;
-    bool throttle;
-    enum interpolation_method interp;
+    bool throttle = amdgpu_fan_get_aggressive_throttle);
+    enum interpolation_method interp = amdgpu_fan_get_interpolation_method();
     char hwmon[HWMON_PATH_LEN];
 
     if(!parse_config(config, hwmon, sizeof hwmon, &interval, &throttle, &interp, mtrx, &mtrx_rows)) {
@@ -97,12 +97,14 @@ bool amdgpu_daemon_restart(char const *config) {
     }
 
     pthread_mutex_lock(&lock);
-    reinitialize(hwmon, interval, throttle, interp, mtrx, mtrx_rows);
+    bool result = reinitialize(hwmon, interval, throttle, interp, mtrx, mtrx_rows);
     pthread_mutex_unlock(&lock);
 
-    LOG(1, "Configuration reloaded\n");
+    if(result) {
+        LOG(1, "Configuration reloaded\n");
+    }
 
-    return true;
+    return result;
 }
 
 void amdgpu_daemon_run(uint8_t interval) {
