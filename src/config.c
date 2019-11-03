@@ -187,7 +187,7 @@ static enum parse_result parse_interval(char const *line, uint8_t *interval) {
     }
 
     *interval = atoi(buffer);
-    LOG(1, "Interval set to %u\n", *interval);
+    LOG(1, "Interval set to %u seconds\n", *interval);
     return match;
 }
 
