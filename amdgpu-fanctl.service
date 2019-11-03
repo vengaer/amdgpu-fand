@@ -3,6 +3,7 @@ Description=amdgpu-fanctl
 
 [Service]
 Type=simple
+ExecStartPre=/usr/bin/sleep 10
 ExecStart=/usr/local/bin/amdgpu-fanctl -v
 
 [Install]
