@@ -73,12 +73,12 @@ static bool compile_regexps(void) {
         fprintf(stderr, "Failed to compile matrix regex\n");
         return false;
     }
-    reti = regcomp(&matrix_start_rgx, "^MATRIX=\\('[0-9]{1,3}::[0-9]{1,3}'\\s*$", REG_EXTENDED);
+    reti = regcomp(&matrix_start_rgx, "^MATRIX=\\('[0-9]{1,3}::[0-9]{1,3}'\\)?\\s*$", REG_EXTENDED);
     if(reti) {
         fprintf(stderr, "Failed to compile matrix start regex\n");
         return false;
     }
-    reti = regcomp(&matrix_end_rgx, "\\s*'[0-9]{1,3}::[0-9]{1,3}'\\)\\s*$", REG_EXTENDED);
+    reti = regcomp(&matrix_end_rgx, "\\s*(MATRIX=\\()?'[0-9]{1,3}::[0-9]{1,3}'\\)\\s*$", REG_EXTENDED);
     if(reti) {
         fprintf(stderr, "Failed to compile matrix end regex\n");
         return false;
