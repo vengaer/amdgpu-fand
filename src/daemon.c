@@ -39,8 +39,7 @@ static bool setup_hwmon(char const *hwmon_path) {
 
 
 static bool reinitialize(char const *hwmon, uint8_t interval, bool throttle, enum interpolation_method interp, matrix mtrx, uint8_t mtrx_rows) {
-    extern bool hwmon_passed, interval_passed;
-    if(!hwmon_passed && strlen(hwmon) > 0) {
+    if(strlen(hwmon) > 0) {
         if(!is_valid_hwmon_dir(hwmon)) {
             fprintf(stderr, "%s is not a valid hwmon dir\n", hwmon);
             return false;
@@ -60,9 +59,7 @@ static bool reinitialize(char const *hwmon, uint8_t interval, bool throttle, enu
     amdgpu_fan_set_aggressive_throttle(throttle);
     amdgpu_fan_set_interpolation_method(interp);
 
-    if(!interval_passed) {
-        update_interval = interval;
-    }
+    update_interval = interval;
     return true;
 }
 

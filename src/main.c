@@ -20,7 +20,7 @@ uint8_t log_level = 0;
 bool volatile daemon_alive = true;
 
 static regex_t hwmon_input_rgx, interval_input_rgx, config_input_rgx;
-bool hwmon_passed = false, interval_passed = false;
+static bool hwmon_passed = false, interval_passed = false;
 static char const *hwmon;
 static uint8_t update_interval;
 static char const *config = FANCTL_CONFIG;
