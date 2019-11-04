@@ -42,11 +42,11 @@ clean:
 
 install: $(TARGET)
 	$(info Installing to $(INSTALL_DIR)/$(TARGET))
-	@cp $(TARGET) $(INSTALL_DIR)/$(TARGET)
+	@install $(TARGET) $(INSTALL_DIR)/$(TARGET)
 	$(info Creating default config in $(CONFIG_DIR)/$(CONFIG))
-	@cp $(CONFIG) $(CONFIG_DIR)/$(CONFIG)
+	@install -m644 $(CONFIG) $(CONFIG_DIR)/$(CONFIG)
 	$(info Adding systemd service $(SERVICE_DIR)/$(SERVICE))
-	@cp $(SERVICE) $(SERVICE_DIR)/$(SERVICE)
+	@install -m644 $(SERVICE) $(SERVICE_DIR)/$(SERVICE)
 
 dirs:
 	@mkdir -p $(BUILD_DIR)
