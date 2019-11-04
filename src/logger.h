@@ -6,6 +6,7 @@
 
 #define LOG_LV1 1
 #define LOG_LV2 2
+#define MAX_LOG_LV 2
 
 #define LOG(level, ...)             \
     {                               \

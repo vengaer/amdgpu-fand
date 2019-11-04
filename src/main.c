@@ -3,6 +3,7 @@
 #include "fancontroller.h"
 #include "filesystem.h"
 #include "interpolation.h"
+#include "logger.h"
 #include "strutils.h"
 
 #include <stdbool.h>
@@ -34,7 +35,11 @@ void signal_handler(int code) {
 }
 
 static inline void increment_log_level(void) {
-    log_level < 2 ? ++log_level : 2;
+    ++log_level;
+    if(log_level > MAX_LOG_LV) {
+        fprintf(stderr, "Warning, max log level is %d\n", MAX_LOG_LV);
+        log_level = MAX_LOG_LV;
+    }
 }
 
 static void print_usage(void) {
