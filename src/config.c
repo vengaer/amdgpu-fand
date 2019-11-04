@@ -16,6 +16,7 @@
 #define LINE_SIZE 128
 #define OPTION_BUF_SIZE 4
 #define INTERP_OPTION_SIZE 8
+#define TEMP_MAX INT8_MAX
 
 static regex_t interval_rgx, hwmon_rgx, hwmon_content_rgx, hwmon_empty_rgx, empty_rgx, leading_space_rgx;
 static regex_t matrix_rgx, matrix_start_rgx, matrix_end_rgx, throttle_rgx, throttle_option_rgx;
@@ -242,6 +243,10 @@ static enum parse_result parse_interpolation(char const *line, enum interpolatio
 
 static enum parse_result parse_matrix(char const *line, matrix mtrx, uint8_t *mtrx_rows) {
     LOG(LOG_LV2, "Matching %s against matrix...\n", line);
+    static int8_t current_temp = -1;
+    if(!parsing_matrix) {
+        current_temp = -1;
+    }
     regmatch_t pmatch[4];
     if(regexec(&matrix_rgx, line, 4, pmatch, 0)) {
         LOG(LOG_LV2, "No match\n");
@@ -269,6 +274,17 @@ static enum parse_result parse_matrix(char const *line, matrix mtrx, uint8_t *mt
         return failure;
     }
 
+    if(mtrx[*mtrx_rows][0] <= current_temp) {
+        fprintf(stderr, "Config error on line %u: temperatures in matrix must be increasing:\n"
+                        "    expected a value > %d, got %u\n", line_number, current_temp, mtrx[*mtrx_rows][0]);
+        return failure;
+    }
+    if(mtrx[*mtrx_rows][0] > TEMP_MAX) {
+        fprintf(stderr, "Config error on line %u, max temperature allowed in matrix is %d\n", line_number, TEMP_MAX);
+        return failure;
+    }
+    current_temp = (int8_t)mtrx[*mtrx_rows][0];
+
     LOG(LOG_LV1, "Set values on row %u, temp: %u, speed: %u%%\n", *mtrx_rows, mtrx[*mtrx_rows][0], mtrx[*mtrx_rows][1]);
 
     ++(*mtrx_rows);
@@ -291,6 +307,7 @@ bool parse_config(char const *restrict path, char *restrict hwmon, size_t hwmon_
     }
     *mtrx_rows = 0;
     line_number = 0;
+    parsing_matrix = false;
 
     FILE *fp = fopen(path, "r");
     if(!fp) {
@@ -378,6 +395,10 @@ bool parse_config(char const *restrict path, char *restrict hwmon, size_t hwmon_
         fprintf(stderr, "No matrix specified\n");
         return false;
     }
+    else if(parsing_matrix) {
+        fprintf(stderr, "Syntax error on line %u: Unterminted matrix\n", line_number);
+        return false;
+    }
     return true;
 }
 
@@ -398,6 +419,9 @@ void *monitor_config(void *monitor) {
             LOG(LOG_LV1, "Config file updated, reloading...\n");
             if(!callback(path)) {
                 fprintf(stderr, "Failed to reload config\n");
+            }
+            else {
+                printf("Config reloaded\n");
             }
             time(&last_read);
         }

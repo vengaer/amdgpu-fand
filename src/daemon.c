@@ -97,10 +97,6 @@ bool amdgpu_daemon_restart(char const *config) {
     bool result = reinitialize(hwmon, interval, throttle, interp, mtrx, mtrx_rows);
     pthread_mutex_unlock(&lock);
 
-    if(result) {
-        LOG(LOG_LV1, "Configuration reloaded\n");
-    }
-
     return result;
 }
 
