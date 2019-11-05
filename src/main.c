@@ -67,7 +67,7 @@ static bool generate_hwmon_path(char *restrict dst, char const *restrict hwmon, 
 }
 
 char const *argp_program_version = "amdgpu-fanctl 1.0";
-char const *argp_program_bug_address = "<vilhelm.engstrom@tuta.io";
+char const *argp_program_bug_address = "<vilhelm.engstrom@tuta.io>";
 
 static char doc[] = "amdgpu-fanctl -- A daemon controlling the fan speed on AMD Radeon GPUs";
 static char args_doc[] = "";
