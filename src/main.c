@@ -52,7 +52,6 @@ static bool uint8_from_chars(char const *str, uint8_t *value) {
 }
 
 static bool generate_hwmon_path(char *restrict dst, char const *restrict hwmon, size_t count) {
-    /* Generate hwmon path */
     if(strscat(dst, HWMON_DIR, count) < 0) {
         fprintf(stderr, "hwmon dir overflows the path buffer\n");
         return false;
