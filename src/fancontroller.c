@@ -140,7 +140,7 @@ bool amdgpu_fan_setup_pwm_enable_file(char const *hwmon_path) {
     if(!construct_file_path(pwm_enable, hwmon_path, pwm_enable_file, sizeof pwm_enable)) {
         return false;
     }
-    LOG(LOG_LV1, "PWM control file set to %s\n", pwm_enable);
+    LOG(LOG_LVL1, "PWM control file set to %s\n", pwm_enable);
     return true;
 }
 
@@ -148,7 +148,7 @@ bool amdgpu_fan_setup_temp_input_file(char const *hwmon_path) {
     if(!construct_file_path(temp_input, hwmon_path, temp_input_file, sizeof temp_input)) {
         return false;
     }
-    LOG(LOG_LV1, "Temperature file set to %s\n", temp_input);
+    LOG(LOG_LVL1, "Temperature file set to %s\n", temp_input);
     return true;
 }
 
@@ -156,7 +156,7 @@ bool amdgpu_fan_setup_pwm_file(char const *hwmon_path) {
     if(!construct_file_path(pwm, hwmon_path, pwm_file, sizeof pwm)) {
         return false;
     }
-    LOG(LOG_LV1, "PWM level file set to %s\n", pwm);
+    LOG(LOG_LVL1, "PWM level file set to %s\n", pwm);
     return true;
 }
 
@@ -164,7 +164,7 @@ bool amdgpu_fan_setup_pwm_min_file(char const *hwmon_path) {
     if(!construct_file_path(pwm_min_path, hwmon_path, pwm_min_file, sizeof pwm_min_path)) {
         return false;
     }
-    LOG(LOG_LV1, "PWM min file set to %s\n", pwm_min_path);
+    LOG(LOG_LVL1, "PWM min file set to %s\n", pwm_min_path);
     return true;
 }
 
@@ -172,7 +172,7 @@ bool amdgpu_fan_setup_pwm_max_file(char const *hwmon_path) {
     if(!construct_file_path(pwm_max_path, hwmon_path, pwm_max_file, sizeof pwm_max_path)) {
         return false;
     }
-    LOG(LOG_LV1, "PWM max file set to %s\n", pwm_max_path);
+    LOG(LOG_LVL1, "PWM max file set to %s\n", pwm_max_path);
     return true;
 }
 
@@ -209,7 +209,7 @@ enum interpolation_method amdgpu_fan_get_interpolation_method(void) {
 }
 
 bool amdgpu_fan_set_mode(enum fanmode mode) {
-    LOG(LOG_LV1, "Setting fan mode: %s\n", mode == manual ? "manual" : "auto");
+    LOG(LOG_LVL1, "Setting fan mode: %s\n", mode == manual ? "manual" : "auto");
     return write_uint8_to_file(pwm_enable, mode);
 }
 
@@ -218,7 +218,7 @@ bool amdgpu_fan_get_percentage(uint8_t *percentage) {
     if(read_uint8_from_file(pwm, &npwm)) {
         double const frac = (double)npwm / (double)(pwm_max - pwm_min);
         *percentage = (uint8_t)round((frac * 100));
-        LOG(LOG_LV2, "Current pwm: %u, corresponding to percentage: %u\n", npwm, *percentage);
+        LOG(LOG_LVL2, "Current pwm: %u, corresponding to percentage: %u\n", npwm, *percentage);
         return true;
     }
 
@@ -227,7 +227,7 @@ bool amdgpu_fan_get_percentage(uint8_t *percentage) {
 
 bool amdgpu_fan_set_percentage(uint8_t percentage) {
     uint8_t const npwm = (uint8_t)((double)percentage / 100.0 * (double)(pwm_max - pwm_min));
-    LOG(LOG_LV2, "Setting pwm %u (%f%%)\n", npwm, 100.0 * (double)npwm / (double)(pwm_max - pwm_min));
+    LOG(LOG_LVL2, "Setting pwm %u (%f%%)\n", npwm, 100.0 * (double)npwm / (double)(pwm_max - pwm_min));
     return write_uint8_to_file(pwm, npwm);
 }
 
@@ -245,7 +245,7 @@ bool amdgpu_get_temp(uint8_t *temp) {
         buffer[len - 3] = '\0';
 
         *temp = atoi(buffer);
-        LOG(LOG_LV2, "Temperature is %u\n", *temp);
+        LOG(LOG_LVL2, "Temperature is %u\n", *temp);
         return true;
     }
 

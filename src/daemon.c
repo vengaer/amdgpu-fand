@@ -72,7 +72,7 @@ bool amdgpu_daemon_init(char const *restrict config, char const *restrict hwmon_
     monitor.path = config;
     monitor.callback = amdgpu_daemon_restart;
 
-    LOG(LOG_LV2, "Spawning monitor thread\n");
+    LOG(LOG_LVL2, "Spawning monitor thread\n");
     if(pthread_create(&monitor_thread, NULL, monitor_config, (void *)&monitor)) {
         fprintf(stderr, "Failed to create monitor thread, live reloading is unavailable\n");
     }
@@ -114,7 +114,7 @@ void amdgpu_daemon_run(uint8_t interval) {
         pthread_mutex_unlock(&lock);
         sleep(update_interval);
     }
-    LOG(LOG_LV2, "Joining monitor thread\n");
+    LOG(LOG_LVL2, "Joining monitor thread\n");
     if(pthread_join(monitor_thread, NULL)) {
         fprintf(stderr, "Failed to join monitor thread\n");
     }

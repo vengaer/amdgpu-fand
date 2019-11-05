@@ -4,9 +4,9 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#define LOG_LV1 1
-#define LOG_LV2 2
-#define MAX_LOG_LV 2
+#define LOG_LVL1 1
+#define LOG_LVL2 2
+#define MAX_LOG_LVL 2
 
 #define LOG(level, ...)             \
     {                               \

@@ -36,9 +36,9 @@ void signal_handler(int code) {
 
 static inline void increment_log_level(void) {
     ++log_level;
-    if(log_level > MAX_LOG_LV) {
-        fprintf(stderr, "Warning, max log level is %d\n", MAX_LOG_LV);
-        log_level = MAX_LOG_LV;
+    if(log_level > MAX_LOG_LVL) {
+        fprintf(stderr, "Warning, max log level is %d\n", MAX_LOG_LVL);
+        log_level = MAX_LOG_LVL;
     }
 }
 

@@ -49,7 +49,7 @@ static inline bool regmatch_to_uint8(char const *line, regmatch_t regm, uint8_t 
 }
 
 static bool compile_regexps(void) {
-    LOG(LOG_LV2, "Compiling config regexps\n");
+    LOG(LOG_LVL2, "Compiling config regexps\n");
     int reti;
     reti = regcomp(&interval_rgx, "^INTERVAL=\"?([0-9]{1,3})\"?\\s*$", REG_EXTENDED);
     if(reti) {
@@ -156,14 +156,14 @@ static bool strip_leading_whitespace(char *restrict dst, char const *restrict sr
 }
 
 static enum parse_result parse_hwmon(char const *restrict line, char *restrict hwmon, size_t count) {
-    LOG(LOG_LV2, "Matching %s against hwon...\n", line);
+    LOG(LOG_LVL2, "Matching %s against hwon...\n", line);
     regmatch_t pmatch[2];
     if(regexec(&hwmon_rgx, line, 0, NULL, 0)) {
-        LOG(LOG_LV2, "No match\n");
+        LOG(LOG_LVL2, "No match\n");
         return no_match;
     }
     else if(regexec(&hwmon_empty_rgx, line, 0, NULL, 0) == 0) {
-        LOG(LOG_LV1, "hwmon is empty, keeping current path\n");
+        LOG(LOG_LVL1, "hwmon is empty, keeping current path\n");
         hwmon[0] = '\0';
         return match;
     }
@@ -175,15 +175,15 @@ static enum parse_result parse_hwmon(char const *restrict line, char *restrict h
         fprintf(stderr, "hwmon value on line %u overflows the buffer\n", line_number);
         return failure;
     }
-    LOG(LOG_LV1, "hwmon set to %s\n", hwmon);
+    LOG(LOG_LVL1, "hwmon set to %s\n", hwmon);
     return match;
 }
 
 static enum parse_result parse_interval(char const *line, uint8_t *interval) {
-    LOG(LOG_LV2, "Matching %s against interval...\n", line);
+    LOG(LOG_LVL2, "Matching %s against interval...\n", line);
     regmatch_t pmatch[2];
     if(regexec(&interval_rgx, line, 2, pmatch, 0)) {
-        LOG(LOG_LV2, "No match\n");
+        LOG(LOG_LVL2, "No match\n");
         return no_match;
     }
     char buffer[OPTION_BUF_SIZE];
@@ -193,15 +193,15 @@ static enum parse_result parse_interval(char const *line, uint8_t *interval) {
     }
 
     *interval = atoi(buffer);
-    LOG(LOG_LV1, "Interval set to %u seconds\n", *interval);
+    LOG(LOG_LVL1, "Interval set to %u seconds\n", *interval);
     return match;
 }
 
 static enum parse_result parse_throttling(char const *line, bool *throttle) {
-    LOG(LOG_LV2, "Matching %s against throttling...\n", line);
+    LOG(LOG_LVL2, "Matching %s against throttling...\n", line);
     regmatch_t pmatch[2];
     if(regexec(&throttle_rgx, line, 0, NULL, 0)) {
-        LOG(LOG_LV2, "No match\n");
+        LOG(LOG_LVL2, "No match\n");
         return no_match;
     }
     if(regexec(&throttle_option_rgx, line, 2, pmatch, 0)) {
@@ -216,16 +216,16 @@ static enum parse_result parse_throttling(char const *line, bool *throttle) {
     }
 
     *throttle = strcmp(buffer, "yes")  == 0;
-    LOG(LOG_LV1, "Throttling set to %s\n", *throttle ? "aggressive" : "non-aggressive");
+    LOG(LOG_LVL1, "Throttling set to %s\n", *throttle ? "aggressive" : "non-aggressive");
     return match;
 }
 
 static enum parse_result parse_interpolation(char const *line, enum interpolation_method *method) {
-    LOG(LOG_LV2, "Matching %s against interpolation...\n", line);
+    LOG(LOG_LVL2, "Matching %s against interpolation...\n", line);
     regmatch_t pmatch[2];
 
     if(regexec(&interpolation_rgx, line, 0, NULL, 0)) {
-        LOG(LOG_LV2, "No match\n");
+        LOG(LOG_LVL2, "No match\n");
         return no_match;
     }
     if(regexec(&interpolation_option_rgx, line, 2, pmatch, 0)) {
@@ -240,19 +240,19 @@ static enum parse_result parse_interpolation(char const *line, enum interpolatio
     }
 
     *method = strcmp(buffer, "cosine") == 0;
-    LOG(LOG_LV1, "%s interpolation set\n", *method ? "Cosine" : "Linear");
+    LOG(LOG_LVL1, "%s interpolation set\n", *method ? "Cosine" : "Linear");
     return match;
 }
 
 static enum parse_result parse_matrix(char const *line, matrix mtrx, uint8_t *mtrx_rows) {
-    LOG(LOG_LV2, "Matching %s against matrix...\n", line);
+    LOG(LOG_LVL2, "Matching %s against matrix...\n", line);
     static int8_t current_temp = -1;
     if(!parsing_matrix) {
         current_temp = -1;
     }
     regmatch_t pmatch[4];
     if(regexec(&matrix_rgx, line, 4, pmatch, 0)) {
-        LOG(LOG_LV2, "No match\n");
+        LOG(LOG_LVL2, "No match\n");
         return no_match;
     }
 
@@ -288,7 +288,7 @@ static enum parse_result parse_matrix(char const *line, matrix mtrx, uint8_t *mt
     }
     current_temp = (int8_t)mtrx[*mtrx_rows][0];
 
-    LOG(LOG_LV1, "Set values on row %u, temp: %u, speed: %u%%\n", *mtrx_rows, mtrx[*mtrx_rows][0], mtrx[*mtrx_rows][1]);
+    LOG(LOG_LVL1, "Set values on row %u, temp: %u, speed: %u%%\n", *mtrx_rows, mtrx[*mtrx_rows][0], mtrx[*mtrx_rows][1]);
 
     ++(*mtrx_rows);
 
@@ -324,7 +324,7 @@ bool parse_config(char const *restrict path, char *restrict hwmon, size_t hwmon_
 
     while(fgets(buffer, sizeof buffer, fp)) {
         replace_char(buffer, '\n', '\0');
-        LOG(LOG_LV2, "Read line '%s'\n", buffer);
+        LOG(LOG_LVL2, "Read line '%s'\n", buffer);
         ++line_number;
         if(!strip_comments(tmp, buffer, sizeof tmp)) {
             fclose(fp);
@@ -419,7 +419,7 @@ void *monitor_config(void *monitor) {
             break;
         }
         if(difftime(attrib.st_mtime, last_read) > 0) {
-            LOG(LOG_LV1, "Config file updated, reloading...\n");
+            LOG(LOG_LVL1, "Config file updated, reloading...\n");
             if(!callback(path)) {
                 fprintf(stderr, "Failed to reload config\n");
             }
