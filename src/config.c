@@ -247,9 +247,6 @@ static enum parse_result parse_interpolation(char const *line, enum interpolatio
 static enum parse_result parse_matrix(char const *line, matrix mtrx, uint8_t *mtrx_rows) {
     LOG(LOG_LVL2, "Matching %s against matrix...\n", line);
     static int8_t current_temp = -1;
-    if(!parsing_matrix) {
-        current_temp = -1;
-    }
     regmatch_t pmatch[4];
     if(regexec(&matrix_rgx, line, 4, pmatch, 0)) {
         LOG(LOG_LVL2, "No match\n");
@@ -258,6 +255,7 @@ static enum parse_result parse_matrix(char const *line, matrix mtrx, uint8_t *mt
 
     if(regexec(&matrix_start_rgx, line, 0, NULL, 0) == 0) {
         parsing_matrix = true;
+        current_temp = -1;
     }
     if(!parsing_matrix) {
         fprintf(stderr, "Stray matrix row %s on line %u\n", line, line_number);
