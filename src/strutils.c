@@ -3,51 +3,53 @@
 #include <stddef.h>
 #include <string.h>
 
-int strscpy(char *restrict dst, char const *restrict src, size_t count) {
-    size_t const src_len = strlen(src);
+char *strncpy_fast(char *restrict dst, char const *restrict src, size_t n) {
+    char *d = dst;
+    if(n) {
+        char const *s = src;
+        while((*d++ = *s++) && --n);
+    }
+    return d;
+}
 
-    strncpy(dst, src, count);
-    dst[count - 1] = '\0';
+ssize_t strscpy(char *restrict dst, char const *restrict src, size_t count) {
+    size_t const src_len = strlen(src);
+    strncpy_fast(dst, src, count);
 
     if(src_len >= count) {
+        dst[count - 1] = '\0';
         return -E2BIG;
     }
 
     return src_len;
 }
 
-int strscat(char *restrict dst, char const *restrict src, size_t count) {
+ssize_t strscat(char *restrict dst, char const *restrict src, size_t count) {
     size_t const src_len = strlen(src);
     size_t const dst_len = strlen(dst);
-    size_t const rem = count - dst_len;
+    size_t const rem = count - dst_len - 1;
 
     strncat(dst, src, rem);
-    dst[count - 1] = '\0';
 
-    if(src_len >= rem) {
-        return -E2BIG;
-    }
-
-    return src_len;
+    return src_len >= rem ? -E2BIG : (ssize_t)src_len;
 }
 
-int strsncpy(char *restrict dst, char const *restrict src, size_t count, size_t max_count) {
-    size_t const src_len = strlen(src);
+ssize_t strsncpy(char *restrict dst, char const *restrict src, size_t n, size_t count) {
+    size_t const src_bytes = strlen(src) + 1;
+    size_t const nbytes = src_bytes < n ? src_bytes : n;
 
-    if(count > src_len) {
-        dst[0] = '\0';
+    if(nbytes >= count) {
+        strncpy_fast(dst, src, count - 1);
+        dst[count - 1] = '\0';
         return -E2BIG;
     }
+    strncpy_fast(dst, src, nbytes);
 
-    strncpy(dst, src, count);
-
-    if(count >= max_count) {
-        dst[max_count - 1] = '\0';
-        return -E2BIG;
+    if(nbytes < src_bytes) {
+        dst[nbytes] = '\0';
     }
-    dst[count] = '\0';
 
-    return count;
+    return nbytes;
 }
 
 void replace_char(char *string, char from, char to) {

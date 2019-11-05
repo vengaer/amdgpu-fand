@@ -3,15 +3,18 @@
 
 #include <stddef.h>
 
+#include <sys/types.h>
+
 #ifndef E2BIG
 #define E2BIG 7
 #endif
 
-int strscpy(char *restrict dst, char const *restrict src, size_t count);
-int strscat(char *restrict dst, char const *restrict src, size_t count);
+char *strncpy_fast(char *restrict dst, char const *restrict src, size_t n);
 
-/* Copy count chars from src to dst, max_count is size of dst */
-int strsncpy(char *restrict dst, char const *restrict src, size_t count, size_t max_count);
+ssize_t strscpy(char *restrict dst, char const *restrict src, size_t count);
+ssize_t strscat(char *restrict dst, char const *restrict src, size_t count);
+
+ssize_t strsncpy(char *restrict dst, char const *restrict src, size_t n, size_t count);
 
 void replace_char(char *string, char from, char to);
 
