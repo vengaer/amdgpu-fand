@@ -12,6 +12,8 @@
 #include <pthread.h>
 #include <unistd.h>
 
+#define MAX_ADJUST_FAILURES 10
+
 static pthread_t monitor_thread;
 static struct file_monitor monitor;
 static pthread_mutex_t lock;
@@ -102,6 +104,7 @@ bool amdgpu_daemon_restart(char const *config) {
 
 void amdgpu_daemon_run(uint8_t interval) {
     extern bool volatile daemon_alive;
+    uint8_t failed_attempts = 0;
     update_interval = interval;
 
     amdgpu_fan_set_mode(manual);
@@ -110,10 +113,21 @@ void amdgpu_daemon_run(uint8_t interval) {
         pthread_mutex_lock(&lock);
         if(!amdgpu_fan_update_speed()) {
             fprintf(stderr, "Failed to adjust fan speed\n");
+            ++failed_attempts;
+        }
+        else {
+            failed_attempts = 0;
         }
         pthread_mutex_unlock(&lock);
+
+        if(failed_attempts >= MAX_ADJUST_FAILURES) {
+            fprintf(stderr, "Update failed %d subsequent attempts, terminating...\n", MAX_ADJUST_FAILURES);
+            daemon_alive = false;
+            break;
+        }
         sleep(update_interval);
     }
+
     LOG(LOG_LVL2, "Joining monitor thread\n");
     if(pthread_join(monitor_thread, NULL)) {
         fprintf(stderr, "Failed to join monitor thread\n");
