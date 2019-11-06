@@ -145,10 +145,7 @@ static bool strip_leading_whitespace(char *restrict dst, char const *restrict sr
     if(regexec(&leading_space_rgx, src, 2, pmatch, 0)) {
         return false;
     }
-    if(!regmatch_size(pmatch[1])) {
-        dst[0] = '\0';
-    }
-    else if(strsncpy(dst, src + pmatch[1].rm_so, regmatch_size(pmatch[1]), count) < 0) {
+    if(strsncpy(dst, src + pmatch[1].rm_so, regmatch_size(pmatch[1]), count) < 0) {
         fprintf(stderr, "Removing whitespace causes overflow\n");
         return false;
     }
