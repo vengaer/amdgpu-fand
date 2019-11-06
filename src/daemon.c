@@ -107,6 +107,8 @@ void amdgpu_daemon_run(uint8_t interval) {
     uint8_t failed_attempts = 0;
     update_interval = interval;
 
+    pthread_mutex_init(&lock, NULL);
+
     amdgpu_fan_set_mode(manual);
 
     while(daemon_alive) {
@@ -132,6 +134,8 @@ void amdgpu_daemon_run(uint8_t interval) {
     if(pthread_join(monitor_thread, NULL)) {
         fprintf(stderr, "Failed to join monitor thread\n");
     }
+
+    pthread_mutex_destroy(&lock);
 
     amdgpu_fan_set_mode(automatic);
 }
