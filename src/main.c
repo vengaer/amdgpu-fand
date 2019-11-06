@@ -16,24 +16,22 @@
 #include <argp.h>
 #include <signal.h>
 
-uint8_t log_level = 0;
+uint8_t verbosity_level = 0;
 bool volatile daemon_alive = true;
 
 void signal_handler(int code) {
     if(code == SIGINT || code == SIGTERM) {
-        if(log_level) {
-            printf("Killing daemon...\n");
-        }
+        LOG(VERBOSITY_LVL1, "Killing daemon...\n");
         daemon_alive = false;
     }
 }
 
-static inline void set_log_level(uint8_t verbose) {
-    if(verbose > MAX_LOG_LVL) {
-        fprintf(stderr, "Warning, max log level is %d\n", MAX_LOG_LVL);
-        verbose = MAX_LOG_LVL;
+static inline void set_verbosity_level(uint8_t verbosity) {
+    if(verbosity > MAX_VERBOSITY) {
+        fprintf(stderr, "Warning, max log level is %d\n", MAX_VERBOSITY);
+        verbosity = MAX_VERBOSITY;
     }
-    log_level = verbose;
+    verbosity_level = verbosity;
 }
 
 static bool uint8_from_chars(char const *str, uint8_t *value) {
@@ -83,7 +81,7 @@ static struct argp_option options[] = {
 struct arguments {
     char *hwmon;
     char *config;
-    uint8_t verbose;
+    uint8_t verbosity;
     uint8_t interval;
     bool interval_passed;
 };
@@ -93,7 +91,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
 
     switch(key) {
         case 'v':
-            ++args->verbose;
+            ++args->verbosity;
             break;
         case 'f':
             args->hwmon = arg;
@@ -129,7 +127,7 @@ int main(int argc, char** argv) {
     struct arguments args = { 
         .hwmon = 0, 
         .config = FANCTL_CONFIG,
-        .verbose = 0, 
+        .verbosity = 0, 
         .interval = 5, 
         .interval_passed = false
     };
@@ -140,7 +138,7 @@ int main(int argc, char** argv) {
 
     argp_parse(&argp, argc, argv, 0, 0, &args);
 
-    set_log_level(args.verbose);
+    set_verbosity_level(args.verbosity);
 
     if(!parse_config(args.config, hwmon_buf, sizeof hwmon_buf, &config_interval, &aggressive_throttle, &interp, mtrx, &mtrx_rows)) {
         return 1;
