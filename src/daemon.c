@@ -74,6 +74,8 @@ bool amdgpu_daemon_init(char const *restrict config, char const *restrict hwmon_
     monitor.path = config;
     monitor.callback = amdgpu_daemon_restart;
 
+    pthread_mutex_init(&lock, NULL);
+
     LOG(VERBOSITY_LVL2, "Spawning monitor thread\n");
     if(pthread_create(&monitor_thread, NULL, monitor_config, (void *)&monitor)) {
         fprintf(stderr, "Failed to create monitor thread, live reloading is unavailable\n");
@@ -106,8 +108,6 @@ void amdgpu_daemon_run(uint8_t interval) {
     extern bool volatile daemon_alive;
     uint8_t failed_attempts = 0;
     update_interval = interval;
-
-    pthread_mutex_init(&lock, NULL);
 
     amdgpu_fan_set_mode(manual);
 
