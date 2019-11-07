@@ -10,7 +10,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <errno.h>
 #include <regex.h>
+#include <unistd.h>
 
 #define TEMP_BUF_SIZE 8
 #define PWM_BUF_SIZE 16
@@ -35,6 +37,15 @@ static enum interpolation_method interp = linear;
 
 static matrix mtrx;
 static uint8_t mtrx_rows;
+
+static bool file_accessible(char const *path, int mode) {
+    int const err = access(path, mode);
+    if(err) {
+        int const errnum = errno;
+        fprintf(stderr, "Error accessing %s: %s\n", path, strerror(errnum));
+    }
+    return !err;
+}
 
 static bool read_long_from_file(char const *path, long *data) {
     FILE *fp = fopen(path, "r");
@@ -137,7 +148,7 @@ static bool construct_file_path(char *restrict dst, char const *restrict dir, ch
 }
 
 bool amdgpu_fan_setup_pwm_enable_file(char const *hwmon_path) {
-    if(!construct_file_path(pwm_enable, hwmon_path, PWM_ENABLE_FILE, sizeof pwm_enable)) {
+    if(!construct_file_path(pwm_enable, hwmon_path, PWM_ENABLE_FILE, sizeof pwm_enable) || !file_accessible(pwm_enable, W_OK)) {
         return false;
     }
     LOG(VERBOSITY_LVL1, "PWM control file set to %s\n", pwm_enable);
@@ -145,7 +156,7 @@ bool amdgpu_fan_setup_pwm_enable_file(char const *hwmon_path) {
 }
 
 bool amdgpu_fan_setup_temp_input_file(char const *hwmon_path) {
-    if(!construct_file_path(temp_input, hwmon_path, TEMP_INPUT_FILE, sizeof temp_input)) {
+    if(!construct_file_path(temp_input, hwmon_path, TEMP_INPUT_FILE, sizeof temp_input) || !file_accessible(temp_input, R_OK)) {
         return false;
     }
     LOG(VERBOSITY_LVL1, "Temperature file set to %s\n", temp_input);
@@ -153,7 +164,7 @@ bool amdgpu_fan_setup_temp_input_file(char const *hwmon_path) {
 }
 
 bool amdgpu_fan_setup_pwm_file(char const *hwmon_path) {
-    if(!construct_file_path(pwm, hwmon_path, PWM_FILE, sizeof pwm)) {
+    if(!construct_file_path(pwm, hwmon_path, PWM_FILE, sizeof pwm) || !file_accessible(pwm, W_OK)) {
         return false;
     }
     LOG(VERBOSITY_LVL1, "PWM level file set to %s\n", pwm);
@@ -161,7 +172,7 @@ bool amdgpu_fan_setup_pwm_file(char const *hwmon_path) {
 }
 
 bool amdgpu_fan_setup_pwm_min_file(char const *hwmon_path) {
-    if(!construct_file_path(pwm_min_path, hwmon_path, PWM_MIN_FILE, sizeof pwm_min_path)) {
+    if(!construct_file_path(pwm_min_path, hwmon_path, PWM_MIN_FILE, sizeof pwm_min_path) || !file_accessible(pwm_min_path, R_OK)) {
         return false;
     }
     LOG(VERBOSITY_LVL1, "PWM min file set to %s\n", pwm_min_path);
@@ -169,7 +180,7 @@ bool amdgpu_fan_setup_pwm_min_file(char const *hwmon_path) {
 }
 
 bool amdgpu_fan_setup_pwm_max_file(char const *hwmon_path) {
-    if(!construct_file_path(pwm_max_path, hwmon_path, PWM_MAX_FILE, sizeof pwm_max_path)) {
+    if(!construct_file_path(pwm_max_path, hwmon_path, PWM_MAX_FILE, sizeof pwm_max_path) || !file_accessible(pwm_max_path, R_OK)) {
         return false;
     }
     LOG(VERBOSITY_LVL1, "PWM max file set to %s\n", pwm_max_path);
