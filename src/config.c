@@ -273,8 +273,7 @@ static enum parse_result parse_matrix(char const *line, matrix mtrx, uint8_t *mt
     }
 
     if(mtrx[*mtrx_rows][0] <= current_temp) {
-        fprintf(stderr, "Config error on line %u: temperatures in matrix must be increasing:\n"
-                        "    expected a value > %d, got %u\n", line_number, current_temp, mtrx[*mtrx_rows][0]);
+        fprintf(stderr, "Config error on line %u: expected a value > %d, got %u (temperature must be strictly increasing)\n", line_number, current_temp, mtrx[*mtrx_rows][0]);
         return failure;
     }
     if(mtrx[*mtrx_rows][0] > TEMP_MAX) {
@@ -394,7 +393,7 @@ bool parse_config(char const *restrict path, char *restrict hwmon, size_t hwmon_
         return false;
     }
     else if(parsing_matrix) {
-        fprintf(stderr, "Syntax error on line %u: Unterminted matrix\n", line_number);
+        fprintf(stderr, "Syntax error on line %u: Unterminated matrix\n", line_number);
         return false;
     }
     return true;
