@@ -65,7 +65,8 @@ MONITOR_CONFIG="no"
 PERSISTENT_PATH="$persistent"
 
 # Hardware monitor, ls /sys/class/drm/card0/device/hwmon/ | grep hwmon[0-9] 
-# lists available options. Unless having 2 AMD cards, this can be left blank
+# lists available options. Unless your card has several hardware monitors, this
+# can be left blank
 HWMON="$hardware_monitor"
 
 # If enabled, no interpolation will be done when the temperature is below the
