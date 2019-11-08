@@ -57,7 +57,7 @@ static char doc[] = "amdgpu-fanctl -- A daemon controlling the fan speed on AMD 
 static char args_doc[] = "";
 
 static struct argp_option options[] = {
-    {"verbose",  'v', 0,          0, "Echo actions to standard out. May be repeated up to 2 times to set log level", 0 },
+    {"verbose",  'v', 0,          0, "Echo actions to standard out. May be repeated up to 3 times to set verbosity level", 0 },
     {"hwmon",    'f', "FILE",     0, "Specify the hardware hwmon", 0 },
     {"interval", 'i', "INTERVAL", 0, 
      "Specify the interval, in seconds, with which to update fan speed. The value must be in the interval 1...255", 0 },

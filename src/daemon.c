@@ -21,7 +21,7 @@ static bool monitor_thread_alive = false;
 static uint8_t update_interval;
 
 static void spawn_monitor_thread() {
-    LOG(VERBOSITY_LVL2, "Spawning monitor thread\n");
+    LOG(VERBOSITY_LVL3, "Spawning monitor thread\n");
     set_config_monitoring_enabled(true);
     if(pthread_create(&monitor_thread, NULL, monitor_config, (void *)&file_monitor)) {
         fprintf(stderr, "Failed to create monitor thread, live reloading is unavailable\n");
@@ -33,7 +33,7 @@ static inline void join_monitor_thread_safely(void) {
     if(!monitor_thread_alive) {
         return;
     }
-    LOG(VERBOSITY_LVL2, "Joining monitor thread\n");
+    LOG(VERBOSITY_LVL3, "Joining monitor thread\n");
     if(pthread_join(monitor_thread, NULL)) {
         fprintf(stderr, "Failed to join monitor thread\n");
     }

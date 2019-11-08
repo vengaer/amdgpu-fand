@@ -53,7 +53,7 @@ static inline bool regmatch_to_uint8(char const *line, regmatch_t regm, uint8_t 
 }
 
 static bool compile_regexps(void) {
-    LOG(VERBOSITY_LVL2, "Compiling config regexps\n");
+    LOG(VERBOSITY_LVL3, "Compiling config regexps\n");
     int reti;
     reti = regcomp(&interval_rgx, "^INTERVAL=\"?([0-9]{1,3})\"?\\s*$", REG_EXTENDED);
     if(reti) {
@@ -161,6 +161,7 @@ static bool strip_comments(char *restrict dst, char const *restrict src, size_t 
             return false;
         }
     }
+    LOG(VERBOSITY_LVL3, "Stripped comments: \"%s\" -> \"%s\"\n", src, dst);
     return true;
 }
 
@@ -173,14 +174,15 @@ static bool strip_leading_whitespace(char *restrict dst, char const *restrict sr
         fprintf(stderr, "Removing whitespace causes overflow\n");
         return false;
     }
+    LOG(VERBOSITY_LVL3, "Stripped whitespace: \"%s\" ->\"%s\"\n", src, dst);
     return true;
 }
 
 static enum parse_result parse_persistent(char const *restrict line, char *restrict path, size_t count) {
-    LOG(VERBOSITY_LVL2, "Matching %s against persistent path...\n", line);
+    LOG(VERBOSITY_LVL3, "Matching %s against persistent path...\n", line);
     regmatch_t pmatch[2];
     if(regexec(&persistent_rgx, line, 0, NULL, 0)) {
-        LOG(VERBOSITY_LVL2, "No match\n");
+        LOG(VERBOSITY_LVL3, "No match\n");
         return no_match;
     }
     else if(regexec(&empty_value_rgx, line, 0, NULL, 0) == 0) {
@@ -201,10 +203,10 @@ static enum parse_result parse_persistent(char const *restrict line, char *restr
 }
 
 static enum parse_result parse_hwmon(char const *restrict line, char *restrict hwmon, size_t count) {
-    LOG(VERBOSITY_LVL2, "Matching %s against hwmon...\n", line);
+    LOG(VERBOSITY_LVL3, "Matching %s against hwmon...\n", line);
     regmatch_t pmatch[2];
     if(regexec(&hwmon_rgx, line, 0, NULL, 0)) {
-        LOG(VERBOSITY_LVL2, "No match\n");
+        LOG(VERBOSITY_LVL3, "No match\n");
         return no_match;
     }
     else if(regexec(&empty_value_rgx, line, 0, NULL, 0) == 0) {
@@ -225,10 +227,10 @@ static enum parse_result parse_hwmon(char const *restrict line, char *restrict h
 }
 
 static enum parse_result parse_interval(char const *line, uint8_t *interval) {
-    LOG(VERBOSITY_LVL2, "Matching %s against interval...\n", line);
+    LOG(VERBOSITY_LVL3, "Matching %s against interval...\n", line);
     regmatch_t pmatch[2];
     if(regexec(&interval_rgx, line, 2, pmatch, 0)) {
-        LOG(VERBOSITY_LVL2, "No match\n");
+        LOG(VERBOSITY_LVL3, "No match\n");
         return no_match;
     }
     char buffer[OPTION_BUF_SIZE];
@@ -243,10 +245,10 @@ static enum parse_result parse_interval(char const *line, uint8_t *interval) {
 }
 
 static enum parse_result parse_monitoring(char const *line, bool *monitor) {
-    LOG(VERBOSITY_LVL2, "Matching %s against monitoring...\n", line);
+    LOG(VERBOSITY_LVL3, "Matching %s against monitoring...\n", line);
     regmatch_t pmatch[2];
     if(regexec(&monitor_rgx, line, 0, NULL, 0)) {
-        LOG(VERBOSITY_LVL2, "No match\n");
+        LOG(VERBOSITY_LVL3, "No match\n");
         return no_match;
     }
     if(regexec(&monitor_content_rgx, line, 2, pmatch, 0)) {
@@ -265,10 +267,10 @@ static enum parse_result parse_monitoring(char const *line, bool *monitor) {
 }
 
 static enum parse_result parse_throttling(char const *line, bool *throttle) {
-    LOG(VERBOSITY_LVL2, "Matching %s against throttling...\n", line);
+    LOG(VERBOSITY_LVL3, "Matching %s against throttling...\n", line);
     regmatch_t pmatch[2];
     if(regexec(&throttle_rgx, line, 0, NULL, 0)) {
-        LOG(VERBOSITY_LVL2, "No match\n");
+        LOG(VERBOSITY_LVL3, "No match\n");
         return no_match;
     }
     if(regexec(&throttle_option_rgx, line, 2, pmatch, 0)) {
@@ -288,11 +290,11 @@ static enum parse_result parse_throttling(char const *line, bool *throttle) {
 }
 
 static enum parse_result parse_interpolation(char const *line, enum interpolation_method *method) {
-    LOG(VERBOSITY_LVL2, "Matching %s against interpolation...\n", line);
+    LOG(VERBOSITY_LVL3, "Matching %s against interpolation...\n", line);
     regmatch_t pmatch[2];
 
     if(regexec(&interpolation_rgx, line, 0, NULL, 0)) {
-        LOG(VERBOSITY_LVL2, "No match\n");
+        LOG(VERBOSITY_LVL3, "No match\n");
         return no_match;
     }
     if(regexec(&interpolation_option_rgx, line, 2, pmatch, 0)) {
@@ -312,11 +314,11 @@ static enum parse_result parse_interpolation(char const *line, enum interpolatio
 }
 
 static enum parse_result parse_matrix(char const *line, matrix mtrx, uint8_t *mtrx_rows) {
-    LOG(VERBOSITY_LVL2, "Matching %s against matrix...\n", line);
+    LOG(VERBOSITY_LVL3, "Matching %s against matrix...\n", line);
     static int8_t current_temp = -1;
     regmatch_t pmatch[4];
     if(regexec(&matrix_rgx, line, 4, pmatch, 0)) {
-        LOG(VERBOSITY_LVL2, "No match\n");
+        LOG(VERBOSITY_LVL3, "No match\n");
         return no_match;
     }
 
@@ -389,7 +391,7 @@ bool parse_config(char const *restrict path, char *restrict persistent, size_t p
 
     while(fgets(buffer, sizeof buffer, fp)) {
         replace_char(buffer, '\n', '\0');
-        LOG(VERBOSITY_LVL2, "Read line '%s'\n", buffer);
+        LOG(VERBOSITY_LVL3, "Read line '%s'\n", buffer);
         ++line_number;
         if(!strip_comments(tmp, buffer, sizeof tmp)) {
             fclose(fp);
@@ -518,7 +520,7 @@ void *monitor_config(void *monitor) {
                 fprintf(stderr, "Failed to reload config\n");
             }
             else {
-                printf("Config reloaded\n");
+                LOG(VERBOSITY_LVL1, "Config reloaded\n");
             }
             time(&last_read);
         }
