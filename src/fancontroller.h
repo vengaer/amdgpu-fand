@@ -7,9 +7,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define HWMON_PATH_LEN 64
-#define HWMON_SUBDIR_LEN 16
-#define HWMON_DIR "/sys/class/drm/card0/device/hwmon/"
 #define PWM_ENABLE "pwm1_enable"
 #define TEMP_INPUT "temp1_input"
 #define PWM "pwm1"

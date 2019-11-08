@@ -2,6 +2,7 @@
 #include "daemon.h"
 #include "fancontroller.h"
 #include "filesystem.h"
+#include "hwmon.h"
 #include "interpolation.h"
 #include "logger.h"
 #include "strutils.h"
@@ -46,20 +47,6 @@ static bool uint8_from_chars(char const *str, uint8_t *value) {
         return false;
     }
     *value = (uint8_t)v;
-    return true;
-}
-
-static bool generate_hwmon_path(char *restrict dst, char const *restrict hwmon, size_t count) {
-    if(strscat(dst, HWMON_DIR, count) < 0) {
-        fprintf(stderr, "hwmon dir overflows the path buffer\n");
-        return false;
-    }
-
-    if(strscat(dst, hwmon, count) < 0) {
-        fprintf(stderr, "%s would overflow the buffer when appended to %s\n", hwmon, dst);
-        return false;
-    }
-
     return true;
 }
 
@@ -117,7 +104,8 @@ int main(int argc, char** argv) {
     char hwmon_full_path[HWMON_PATH_LEN];
 
     /* For values specified in config */
-    char hwmon_buf[HWMON_PATH_LEN]; 
+    char persistent_path[HWMON_PATH_LEN];
+    char hwmon_buf[HWMON_SUBDIR_LEN]; 
     uint8_t config_interval = 0;
     uint8_t mtrx_rows;
     enum interpolation_method interp = linear;
@@ -140,7 +128,7 @@ int main(int argc, char** argv) {
 
     set_verbosity_level(args.verbosity);
 
-    if(!parse_config(args.config, hwmon_buf, sizeof hwmon_buf, &config_interval, &aggressive_throttle, &interp, mtrx, &mtrx_rows)) {
+    if(!parse_config(args.config, persistent_path, sizeof persistent_path, hwmon_buf, sizeof hwmon_buf, &config_interval, &aggressive_throttle, &interp, mtrx, &mtrx_rows)) {
         return 1;
     }
 
@@ -154,11 +142,15 @@ int main(int argc, char** argv) {
         args.interval = config_interval;
     }
 
+    if(!generate_hwmon_dir(hwmon_full_path, persistent_path, sizeof hwmon_full_path)) {
+        return 1;
+    }
+
     /* Set hwmon, precedence is argument -> config -> default */
     if(!args.hwmon) {
         if(!strlen(hwmon_buf)) {
-            if(!find_dir_matching_pattern(hwmon_buf, sizeof hwmon_buf, "^hwmon[0-9]$", HWMON_DIR)) {
-                fprintf(stderr, "No hwmon directory found in %s\n", HWMON_DIR);
+            if(!find_dir_matching_pattern(hwmon_buf, sizeof hwmon_buf, "^hwmon[0-9]$", hwmon_full_path)) {
+                fprintf(stderr, "No hwmon directory found in %s\n", hwmon_full_path);
                 return 1;
             }
         }

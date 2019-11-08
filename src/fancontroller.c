@@ -1,5 +1,6 @@
 #include "fancontroller.h"
 #include "filesystem.h"
+#include "hwmon.h"
 #include "logger.h"
 #include "strutils.h"
 
