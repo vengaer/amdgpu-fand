@@ -2,6 +2,7 @@
 #include "daemon.h"
 #include "fancontroller.h"
 #include "filesystem.h"
+#include "hwmon.h"
 #include "logger.h"
 #include "strutils.h"
 
@@ -11,8 +12,6 @@
 
 #include <pthread.h>
 #include <unistd.h>
-
-#define MAX_ADJUST_FAILURES 10
 
 static pthread_t monitor_thread;
 static struct file_monitor monitor;
@@ -40,21 +39,31 @@ static bool setup_hwmon(char const *hwmon_path) {
 }
 
 
-static bool reinitialize(char const *hwmon, uint8_t interval, bool throttle, enum interpolation_method interp, matrix mtrx, uint8_t mtrx_rows) {
-    if(strlen(hwmon) > 0) {
-        if(!is_valid_hwmon_dir(hwmon)) {
-            fprintf(stderr, "%s is not a valid hwmon dir\n", hwmon);
+static bool reinitialize(char const *restrict persistent, char const *restrict hwmon, uint8_t interval, bool throttle, enum interpolation_method interp, matrix mtrx, uint8_t mtrx_rows) {
+    char hwmon_full_path[HWMON_PATH_LEN] = { 0 };
+    char hwmon_dir[HWMON_SUBDIR_LEN];
+    if(!persistent[0] && !generate_hwmon_dir(hwmon_full_path, persistent, sizeof hwmon_full_path)) {
+        return false;
+    }
+    if(!strlen(hwmon)) {
+        if(!find_dir_matching_pattern(hwmon_dir, sizeof hwmon_dir, "^hwmon[0-9]$", hwmon_full_path)) {
+            fprintf(stderr, "No hwmon directory found in %s\n", hwmon_full_path);
             return false;
         }
-        char hwmon_path[HWMON_PATH_LEN] = { 0 };
-        if(strscat(hwmon_path, HWMON_DIR, sizeof hwmon_path) < 0 || strscat(hwmon_path, hwmon, sizeof hwmon_path) < 0) {
-            fprintf(stderr, "Updated hwmon path overflows the buffer\n");
-            return false;
-        }
-        if(!setup_hwmon(hwmon_path)) {
-            fprintf(stderr, "Failed to update hwmon\n");
-            return false;
-        }
+        hwmon = hwmon_dir;
+    }
+
+    if(!is_valid_hwmon_dir(hwmon)) {
+        fprintf(stderr, "%s is not a valid hwmon dir\n", hwmon);
+        return false;
+    }
+    if(!generate_hwmon_path(hwmon_full_path, hwmon, sizeof hwmon_full_path)) {
+        return false;
+    }
+
+    if(!setup_hwmon(hwmon_full_path)) {
+        fprintf(stderr, "Failed to update hwmon\n");
+        return false;
     }
 
     amdgpu_fan_set_matrix(mtrx, mtrx_rows);
@@ -90,15 +99,16 @@ bool amdgpu_daemon_restart(char const *config) {
     uint8_t interval = update_interval;
     bool throttle = amdgpu_fan_get_aggressive_throttle();
     enum interpolation_method interp = amdgpu_fan_get_interpolation_method();
-    char hwmon[HWMON_PATH_LEN];
+    char hwmon[HWMON_SUBDIR_LEN];
+    char persistent[HWMON_PATH_LEN];
 
-    if(!parse_config(config, hwmon, sizeof hwmon, &interval, &throttle, &interp, mtrx, &mtrx_rows)) {
+    if(!parse_config(config, persistent, sizeof persistent, hwmon, sizeof hwmon, &interval, &throttle, &interp, mtrx, &mtrx_rows)) {
         fprintf(stderr, "Failed to reread config, keeping current values\n");
         return false;
     }
 
     pthread_mutex_lock(&lock);
-    bool result = reinitialize(hwmon, interval, throttle, interp, mtrx, mtrx_rows);
+    bool result = reinitialize(persistent, hwmon, interval, throttle, interp, mtrx, mtrx_rows);
     pthread_mutex_unlock(&lock);
 
     return result;

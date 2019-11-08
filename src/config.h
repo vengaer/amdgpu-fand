@@ -17,7 +17,8 @@ struct file_monitor {
     bool(*callback)(char const*);
 };
 
-bool parse_config(char const *restrict path, char *restrict hwmon, size_t hwmon_count, uint8_t *interval, bool *throttle, enum interpolation_method *interp, matrix m, uint8_t *matrix_rows);
+bool parse_config(char const *restrict path, char *restrict persistent, size_t persistent_count, char *restrict hwmon, size_t hwmon_count,
+                  uint8_t *interval, bool *throttle, enum interpolation_method *interp, matrix m, uint8_t *matrix_rows);
 
 void* monitor_config(void *monitor);
 

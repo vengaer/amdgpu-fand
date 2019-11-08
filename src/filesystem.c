@@ -1,6 +1,7 @@
 #define _DEFAULT_SOURCE
 
 #include "filesystem.h"
+#include "hwmon.h"
 #include "strutils.h"
 
 #include <stdio.h>
@@ -9,6 +10,54 @@
 #include <dirent.h>
 #include <errno.h>
 #include <regex.h>
+
+static ssize_t parent_dir(char *restrict dst, char const *restrict src, size_t count) {
+    char const *end = strrchr(src, '/');
+    ssize_t const nbytes = strsncpy(dst, src, end - src, count);
+    if(nbytes < 0) {
+        fprintf(stderr, "Parent dir does not fit in buffer\n");
+        return -E2BIG;
+    }
+    return nbytes;
+}
+
+/* Convert relative path 'path' to absolute path and store in 'dst'
+ * 'wd' is current working dir and 'count' is size of dst */
+static ssize_t absolute_path(char *restrict dst, char const *restrict wd, char const *restrict path, size_t count) {
+    char buf1[HWMON_PATH_LEN];
+    char buf2[HWMON_PATH_LEN];
+
+    regex_t path_rgx;
+    int reti = regcomp(&path_rgx, "^(\\.){2}/", REG_EXTENDED);
+    if(reti) {
+        fprintf(stderr, "Failed to compile regex for detecting path paths\n");
+        return -1;
+    }
+
+    if(strscpy(buf1, wd, sizeof buf1) < 0) {
+        fprintf(stderr, "Working directory overflows the buffer\n");
+        return -E2BIG;
+    }
+    char *src = buf1;
+    char *target = buf2;
+
+    while(regexec(&path_rgx, path, 0, NULL, 0) == 0) {
+        path = strchr(path, '/') + 1;
+        if(parent_dir(target, src, HWMON_PATH_LEN) < 0) {
+            return -E2BIG;
+        }
+
+        /* Swap pointers */
+        src = (char*)((size_t)src + (size_t)target);
+        target = (char*)((size_t)src - (size_t)target);
+        src = (char*)((size_t)src - (size_t)target);
+    }
+    if(strscat(dst, src, count) < 0 || strscat(dst, "/", count) < 0 || strscat(dst, path, count) < 0) {
+        fprintf(stderr, "Absolute path overflows the buffer\n");
+        return -E2BIG;
+    }
+    return strlen(dst);
+}
 
 bool find_dir_matching_pattern(char *restrict dst, size_t count, char const *restrict pattern, char const *restrict parent) {
     regex_t rgx;
@@ -23,7 +72,7 @@ bool find_dir_matching_pattern(char *restrict dst, size_t count, char const *res
     struct dirent *entry;
     DIR *sdir = opendir(parent);
     if(!sdir) {
-        int errnum = errno;
+        int const errnum = errno;
         fprintf(stderr, "Failed to open directory %s: %s\n", parent, strerror(errnum));
         return false;
     }
@@ -42,6 +91,42 @@ bool find_dir_matching_pattern(char *restrict dst, size_t count, char const *res
 
     closedir(sdir);
     return false;
+}
+
+ssize_t readlink_safe(char const *restrict link, char *restrict dst, size_t count) {
+    ssize_t len = readlink(link, dst, count);
+    if(len == -1) {
+        int const errnum = errno;
+        fprintf(stderr, "Failed to read symlink %s: %s\n", link, strerror(errnum));
+        dst[0] = '\0';
+        return -E2BIG;
+    }
+    dst[len] = '\0';
+
+    return (size_t)len == count ? -E2BIG : len;
+}
+
+ssize_t readlink_absolute(char const *restrict link, char *restrict dst, size_t count) {
+    char dir[HWMON_PATH_LEN];
+    char relative[2*HWMON_PATH_LEN];
+
+    if(parent_dir(dir, link, sizeof dir) < 0) {
+        fprintf(stderr, "Parent dir of %s overflows the buffer\n", link);
+        return -E2BIG;
+    }
+
+    if(readlink_safe(link, relative, sizeof relative) < 0) {
+        fprintf(stderr, "Link path %s overflows the buffer\n", link);
+        return -E2BIG;
+    }
+
+    ssize_t const len = absolute_path(dst, dir, relative, count);
+
+    if(len < 0) {
+        fprintf(stderr, "Absolute path of symbolic link overflows the buffer\n");
+        return -E2BIG;
+    }
+    return len;
 }
 
 bool is_valid_hwmon_dir(char const *dir) {

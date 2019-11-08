@@ -18,8 +18,9 @@
 #define INTERP_OPTION_SIZE 8
 #define TEMP_MAX INT8_MAX
 
-static regex_t interval_rgx, hwmon_rgx, hwmon_content_rgx, hwmon_empty_rgx, empty_rgx, leading_space_rgx;
-static regex_t matrix_rgx, matrix_start_rgx, matrix_end_rgx, throttle_rgx, throttle_option_rgx;
+static regex_t interval_rgx, hwmon_rgx, hwmon_content_rgx, empty_value_rgx, persistent_rgx, persistent_content_rgx;
+static regex_t empty_rgx, leading_space_rgx, matrix_rgx, matrix_start_rgx, matrix_end_rgx;
+static regex_t throttle_rgx, throttle_option_rgx;
 static regex_t interpolation_rgx, interpolation_option_rgx;
 static bool parsing_matrix = false, regexps_compiled = false;
 static uint8_t line_number = 0;
@@ -66,9 +67,19 @@ static bool compile_regexps(void) {
         fprintf(stderr, "Failed to compile hwmon content regex\n");
         return false;
     }
-    reti = regcomp(&hwmon_empty_rgx, "^HWMON=\"\"\\s*$", REG_EXTENDED);
+    reti = regcomp(&empty_value_rgx, "\"\\s*\"\\s*$", REG_EXTENDED);
     if(reti) {
         fprintf(stderr, "Failed to compile hwmon empty regex\n");
+        return false;
+    }
+    reti = regcomp(&persistent_rgx, "^PERSISTENT_PATH=\".*\"\\s*$", REG_EXTENDED);
+    if(reti) {
+        fprintf(stderr, "Failed to compile persistent path regex\n");
+        return false;
+    }
+    reti = regcomp(&persistent_content_rgx, "^PERSISTENT_PATH=\"(.*)\"\\s*$", REG_EXTENDED);
+    if(reti) {
+        fprintf(stderr, "Failed to compile persistent path content regex\n");
         return false;
     }
     reti = regcomp(&matrix_rgx, "^(MATRIX=\\()?'([0-9]{1,3})::([0-9]{1,3})'\\)?*$", REG_EXTENDED);
@@ -152,14 +163,38 @@ static bool strip_leading_whitespace(char *restrict dst, char const *restrict sr
     return true;
 }
 
+static enum parse_result parse_persistent(char const *restrict line, char *restrict path, size_t count) {
+    LOG(VERBOSITY_LVL2, "Matching %s against persistent path...\n", line);
+    regmatch_t pmatch[2];
+    if(regexec(&persistent_rgx, line, 0, NULL, 0)) {
+        LOG(VERBOSITY_LVL2, "No match\n");
+        return no_match;
+    }
+    else if(regexec(&empty_value_rgx, line, 0, NULL, 0) == 0) {
+        LOG(VERBOSITY_LVL1, "Persistent path is empty, using default\n");
+        path[0] = '\0';
+        return match;
+    }
+    else if(regexec(&persistent_content_rgx, line, 2, pmatch, 0)) {
+        fprintf(stderr, "Syntax error on line %u: %s\n", line_number, line);
+        return failure;
+    }
+    if(strsncpy(path, line + pmatch[1].rm_so, regmatch_size(pmatch[1]), count) < 0) {
+        fprintf(stderr, "Persistent path on line %u overflows the buffer\n", line_number);
+        return failure;
+    }
+    LOG(VERBOSITY_LVL1, "Persistent path set to %s\n", path);
+    return match;
+}
+
 static enum parse_result parse_hwmon(char const *restrict line, char *restrict hwmon, size_t count) {
-    LOG(VERBOSITY_LVL2, "Matching %s against hwon...\n", line);
+    LOG(VERBOSITY_LVL2, "Matching %s against hwmon...\n", line);
     regmatch_t pmatch[2];
     if(regexec(&hwmon_rgx, line, 0, NULL, 0)) {
         LOG(VERBOSITY_LVL2, "No match\n");
         return no_match;
     }
-    else if(regexec(&hwmon_empty_rgx, line, 0, NULL, 0) == 0) {
+    else if(regexec(&empty_value_rgx, line, 0, NULL, 0) == 0) {
         LOG(VERBOSITY_LVL1, "hwmon is empty, keeping current path\n");
         hwmon[0] = '\0';
         return match;
@@ -298,7 +333,8 @@ static inline bool is_empty_line(char const *line) {
 }
 
 
-bool parse_config(char const *restrict path, char *restrict hwmon, size_t hwmon_count, uint8_t *interval, bool *throttle, enum interpolation_method *interp, matrix mtrx, uint8_t *mtrx_rows) {
+bool parse_config(char const *restrict path, char *restrict persistent, size_t persistent_count, char *restrict hwmon, size_t hwmon_count,
+                  uint8_t *interval, bool *throttle, enum interpolation_method *interp, matrix mtrx, uint8_t *mtrx_rows) {
     if(!regexps_compiled && !compile_regexps()) {
         return false;
     }
@@ -361,6 +397,15 @@ bool parse_config(char const *restrict path, char *restrict hwmon, size_t hwmon_
         }
 
         result = parse_interpolation(buffer, interp);
+        if(result == failure) {
+            fclose(fp);
+            return false;
+        }
+        else if(result == match) {
+            continue;
+        }
+
+        result = parse_persistent(buffer, persistent, persistent_count);
         if(result == failure) {
             fclose(fp);
             return false;
