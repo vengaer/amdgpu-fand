@@ -57,6 +57,10 @@ cat << EOF >$conf
 # Update interval
 INTERVAL=2 #seconds
 
+# Reload deamon if config is updated
+# Available options: yes or no
+MONITOR_CONFIG="no"
+
 # Persistent path to $card. The value can be gotted from readlink -f /sys/class/drm/$card
 PERSISTENT_PATH="$persistent"
 
