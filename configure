@@ -1,0 +1,92 @@
+#!/bin/bash
+
+card=$(ls /sys/class/drm | grep "^card[0-9]$")
+conf=amdgpu-fanctl.conf
+
+case $(echo "$card" | wc -l) in
+    0)
+        echo "No card listed in /sys/class/drm" >&2
+        exit 1
+        ;;
+    1)
+        ;;
+    *)
+        card_opts=$(echo $card | grep -o [0-9] | paste -sd ", " -)
+        echo "More than one card listed in /sys/class/drm"
+        echo "Please input the card you with to use. Available options are: $card_opts"
+        read num
+        while ! [[ "$num" =~ ^[0-9]+$ ]]  || ! echo $card | grep -q $num ; do
+            echo "Invalid option, choose on of $card_opts"
+            read num
+        done
+        card=$(echo "$card" | grep $num)
+        echo "Using $card"
+        ;;
+esac
+
+symlink=/sys/class/drm/$card
+
+if ! [ -L $symlink ] || ! [ -d $symlink ]; then
+    echo "Symlink /sys/class/drm/$card does not exist" >&2
+    exit 1
+fi
+
+persistent="$(readlink -f /sys/class/drm/$card)/device/hwmon"
+
+hardware_monitor=$(ls "$persistent" | grep "hwmon[0-9]")
+
+case $(echo "$hardware_monitor" | wc -l) in
+    0)
+        echo "No hardware monitors listed in $persistent/device/hwmon" >&2
+        exit 1
+        ;;
+    1)
+        ;;
+    *)
+        echo "More than one hardware monitor listed in $persistent/device/hwmon" >&2
+        hardware_monitor=$(echo "$hardware_monitor" | head -1)
+        echo "Choosing $hardware_monitor" >&2
+        ;;
+esac
+
+cat << EOF >$conf
+#
+# amdgpu-fanctl config
+#
+
+# Update interval
+INTERVAL=2 #seconds
+
+# Persistent path to $card. The value can be gotted from readlink -f /sys/class/drm/$card
+PERSISTENT_PATH="$persistent"
+
+# hardware monitor, ls /sys/class/drm/card0/device/hwmon/ | grep hwmon[0-9] 
+# lists available options. Unless having 2 AMD cards, this can be left blank
+HWMON="$hardware_monitor"
+
+# If enabled, no interpolation will be done when the temperature is below the
+# second lowest in the matrix. The fan speed will simply be set to the lowest
+# value in the matrix.
+# Available options: yes or no
+AGGRESSIVE_THROTTLING="yes"
+
+#
+# Interpolation method
+#
+# Options: linear or cosine
+# Cosine interpolation yields a smoother
+# fan curve but is slightly more
+# computationally expensive
+INTERPOLATION="linear"
+
+#
+# Speed matrix
+#
+# First column is temperature, second is fan speed in %
+# Max number of rows is 16
+MATRIX=('0::0'
+        '55::10'
+        '60::40'
+        '70::80'
+        '80::100')
+EOF
