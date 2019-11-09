@@ -9,12 +9,15 @@
 #define VERBOSITY_LVL3 3
 #define MAX_VERBOSITY 3
 
-#define LOG(level, ...)                   \
-    {                                     \
-        extern uint8_t verbosity_level;   \
-        if(verbosity_level >= level) {    \
-            printf(__VA_ARGS__);          \
-        }                                 \
+#define LOG(level, ...)                             \
+    {                                               \
+        extern uint8_t verbosity_level;             \
+        if(verbosity_level >= level) {              \
+            if(verbosity_level == VERBOSITY_LVL3) { \
+                printf("%s: ", __FILE__);           \
+            }                                       \
+            printf(__VA_ARGS__);                    \
+        }                                           \
     }
 
 #endif
