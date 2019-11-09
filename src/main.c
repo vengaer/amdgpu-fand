@@ -59,7 +59,7 @@ static char args_doc[] = "";
 static struct argp_option options[] = {
     {"verbose",  'v', 0,          0, "Echo actions to standard out. May be repeated up to 3 times to set verbosity level", 0 },
     {"hwmon",    'f', "FILE",     0, "Specify the hardware hwmon", 0 },
-    {"interval", 'i', "INTERVAL", 0, 
+    {"interval", 'i', "INTERVAL", 0,
      "Specify the interval, in seconds, with which to update fan speed. The value must be in the interval 1...255", 0 },
     {"config",   'c', "FILE",     0, "Override config path", 0 },
     { 0 }
@@ -105,7 +105,7 @@ int main(int argc, char** argv) {
 
     /* For values specified in config */
     char persistent_path[HWMON_PATH_LEN];
-    char hwmon_buf[HWMON_SUBDIR_LEN]; 
+    char hwmon_buf[HWMON_SUBDIR_LEN];
     uint8_t config_interval = 0;
     uint8_t mtrx_rows;
     enum interpolation_method interp = linear;
@@ -113,11 +113,11 @@ int main(int argc, char** argv) {
     bool monitor_config = false;
     matrix mtrx;
 
-    struct arguments args = { 
-        .hwmon = 0, 
+    struct arguments args = {
+        .hwmon = 0,
         .config = FANCTL_CONFIG,
-        .verbosity = 0, 
-        .interval = 5, 
+        .verbosity = 0,
+        .interval = 5,
         .interval_passed = false
     };
 
@@ -143,7 +143,7 @@ int main(int argc, char** argv) {
         args.interval = config_interval;
     }
 
-    if(!generate_hwmon_dir(hwmon_full_path, persistent_path, sizeof hwmon_full_path)) {
+    if(!generate_hwmon_dir(hwmon_full_path, persistent_path, sizeof hwmon_full_path, args.config)) {
         return 1;
     }
 

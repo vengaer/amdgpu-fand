@@ -60,11 +60,11 @@ static bool setup_hwmon(char const *hwmon_path) {
 }
 
 
-static bool reinitialize(char const *restrict persistent, char const *restrict hwmon, uint8_t interval, bool throttle, enum interpolation_method interp, matrix mtrx, uint8_t mtrx_rows) {
+static bool reinitialize(char const *restrict config, char const *restrict persistent, char const *restrict hwmon, uint8_t interval, bool throttle, enum interpolation_method interp, matrix mtrx, uint8_t mtrx_rows) {
     char hwmon_full_path[HWMON_PATH_LEN] = { 0 };
     char hwmon_dir[HWMON_SUBDIR_LEN];
 
-    if(!generate_hwmon_dir(hwmon_full_path, persistent, sizeof hwmon_full_path)) {
+    if(!generate_hwmon_dir(hwmon_full_path, persistent, sizeof hwmon_full_path, config)) {
         return false;
     }
     if(!strlen(hwmon)) {
@@ -136,7 +136,7 @@ bool amdgpu_daemon_restart(char const *config) {
     }
 
     pthread_mutex_lock(&lock);
-    bool result = reinitialize(persistent, hwmon, interval, throttle, interp, mtrx, mtrx_rows);
+    bool result = reinitialize(config, persistent, hwmon, interval, throttle, interp, mtrx, mtrx_rows);
     pthread_mutex_unlock(&lock);
     return result;
 }
