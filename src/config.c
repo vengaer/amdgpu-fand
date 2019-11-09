@@ -391,11 +391,6 @@ static bool replace_line_matching_pattern(char const *restrict path, char const 
         return false;
     }
 
-    FILE *src = fopen(path, "r");
-    if(!src) {
-        fprintf(stderr, "Failed to open %s for reading\n", path);
-        return false;
-    }
     if(parent_dir(tmp_file, path, sizeof tmp_file) < 0) {
         fprintf(stderr, "Parent path of %s overflows the buffer\n", path);
         return false;
@@ -405,6 +400,11 @@ static bool replace_line_matching_pattern(char const *restrict path, char const 
         return false;
     }
 
+    FILE *src = fopen(path, "r");
+    if(!src) {
+        fprintf(stderr, "Failed to open %s for reading\n", path);
+        return false;
+    }
     FILE *dst = fopen(tmp_file, "w");
     if(!dst) {
         fprintf(stderr, "Failed to open %s for writing\n", buffer);
