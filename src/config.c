@@ -1,4 +1,6 @@
 #include "config.h"
+#include "filesystem.h"
+#include "hwmon.h"
 #include "logger.h"
 #include "strutils.h"
 
@@ -17,6 +19,8 @@
 #define OPTION_BUF_SIZE 4
 #define INTERP_OPTION_SIZE 8
 #define TEMP_MAX INT8_MAX
+
+#define TMP_FILE_NAME "amdgpu-fanctl.tmp"
 
 #define HANDLE_PARSE_RESULT(result)     \
     if(result == failure) {             \
@@ -377,6 +381,55 @@ static inline bool is_empty_line(char const *line) {
     return regexec(&empty_rgx, line, 0, NULL, 0) == 0;
 }
 
+static bool replace_line_matching_pattern(char const *restrict path, char const *restrict pattern, char const *restrict replacement) {
+    char tmp_file[LINE_SIZE];
+    char buffer[LINE_SIZE];
+    regex_t rgx;
+    int reti = regcomp(&rgx, pattern, REG_EXTENDED);
+    if(reti) {
+        fprintf(stderr, "Failed to compile replacement regex\n");
+        return false;
+    }
+
+    FILE *src = fopen(path, "r");
+    if(!src) {
+        fprintf(stderr, "Failed to open %s for reading\n", path);
+        return false;
+    }
+    if(parent_dir(tmp_file, path, sizeof tmp_file) < 0) {
+        fprintf(stderr, "Parent path of %s overflows the buffer\n", path);
+        return false;
+    }
+    if(*tmp_file && strscat(tmp_file, "/", sizeof tmp_file) < 0) {
+        fprintf(stderr, "Temp file overflows the buffer\n");
+        return false;
+    }
+    if(strscat(tmp_file, TMP_FILE_NAME, sizeof tmp_file) < 0) {
+        fprintf(stderr, "Temp file overflows the buffer\n");
+        return false;
+    }
+
+    FILE *dst = fopen(tmp_file, "w");
+    if(!dst) {
+        fprintf(stderr, "Failed to open %s for writing\n", buffer);
+        fclose(src);
+        return false;
+    }
+
+    while(fgets(buffer, sizeof buffer, src)) {
+        if(regexec(&rgx, buffer, 0, NULL, 0) == 0) {
+            fprintf(dst, "%s\n", replacement);
+        }
+        else {
+            fprintf(dst, "%s", buffer);
+        }
+    }
+    fclose(src);
+    fclose(dst);
+    rename(tmp_file, path);
+    return true;
+}
+
 
 bool parse_config(char const *restrict path, char *restrict persistent, size_t persistent_count, char *restrict hwmon, size_t hwmon_count,
                   uint8_t *interval, bool *throttle, bool *monitor, enum interpolation_method *interp, matrix mtrx, uint8_t *mtrx_rows) {
@@ -450,6 +503,18 @@ bool parse_config(char const *restrict path, char *restrict persistent, size_t p
         return false;
     }
     return true;
+}
+
+bool replace_persistent_path_value(char const *restrict path, char const *restrict replacement) {
+    char buffer[HWMON_PATH_LEN];
+    if(strscpy(buffer, "PERSISTENT_PATH=\"", sizeof buffer) < 0 ||
+       strscat(buffer, replacement, sizeof buffer) < 0          ||
+       strscat(buffer, "\"", sizeof buffer) < 0)
+    {
+        fprintf(stderr, "Overflow while attempting to replace persistent path\n");
+        return false;
+    }
+    return replace_line_matching_pattern(path, "^\\s*PERSISTENT_PATH=\"\\s*\"\\s*$", buffer);
 }
 
 void set_config_monitoring_enabled(bool monitor) {
