@@ -400,11 +400,7 @@ static bool replace_line_matching_pattern(char const *restrict path, char const 
         fprintf(stderr, "Parent path of %s overflows the buffer\n", path);
         return false;
     }
-    if(*tmp_file && strscat(tmp_file, "/", sizeof tmp_file) < 0) {
-        fprintf(stderr, "Temp file overflows the buffer\n");
-        return false;
-    }
-    if(strscat(tmp_file, TMP_FILE_NAME, sizeof tmp_file) < 0) {
+    if((*tmp_file && strscat(tmp_file, "/", sizeof tmp_file) < 0) || strscat(tmp_file, TMP_FILE_NAME, sizeof tmp_file) < 0) {
         fprintf(stderr, "Temp file overflows the buffer\n");
         return false;
     }
