@@ -7,7 +7,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <pthread.h>
 #include <regex.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -471,7 +470,7 @@ void *monitor_config(void *monitor) {
 
     while(daemon_alive) {
         if(!monitor_config_file) {
-            pthread_exit(NULL);
+            break;
         }
         if(stat(path, &attrib) == -1) {
             fprintf(stderr, "Unable to monitor config file\n");
