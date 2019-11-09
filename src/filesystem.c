@@ -11,16 +11,6 @@
 #include <errno.h>
 #include <regex.h>
 
-static ssize_t parent_dir(char *restrict dst, char const *restrict src, size_t count) {
-    char const *end = strrchr(src, '/');
-    ssize_t const nbytes = strsncpy(dst, src, end - src, count);
-    if(nbytes < 0) {
-        fprintf(stderr, "Parent dir does not fit in buffer\n");
-        return -E2BIG;
-    }
-    return nbytes;
-}
-
 static ssize_t absolute_path(char *restrict dst, char const *restrict working_dir, char const *restrict path, size_t count) {
     char buffer[HWMON_PATH_LEN];
     char *c;
@@ -50,6 +40,21 @@ static ssize_t absolute_path(char *restrict dst, char const *restrict working_di
     }
     return strlen(dst);
 }
+
+ssize_t parent_dir(char *restrict dst, char const *restrict src, size_t count) {
+    char const *end = strrchr(src, '/');
+    if(!end) {
+        dst[0] = '\0';
+        return 0;
+    }
+    ssize_t const nbytes = strsncpy(dst, src, end - src, count);
+    if(nbytes < 0) {
+        fprintf(stderr, "Parent dir does not fit in buffer\n");
+        return -E2BIG;
+    }
+    return nbytes;
+}
+
 
 bool find_dir_matching_pattern(char *restrict dst, size_t count, char const *restrict pattern, char const *restrict parent) {
     regex_t rgx;
@@ -100,7 +105,7 @@ ssize_t readlink_safe(char const *restrict link, char *restrict dst, size_t coun
 
 ssize_t readlink_absolute(char const *restrict link, char *restrict dst, size_t count) {
     char dir[HWMON_PATH_LEN];
-    char relative[2*HWMON_PATH_LEN];
+    char relative[HWMON_PATH_LEN];
 
     if(parent_dir(dir, link, sizeof dir) < 0) {
         fprintf(stderr, "Parent dir of %s overflows the buffer\n", link);
