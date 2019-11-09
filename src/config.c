@@ -19,6 +19,15 @@
 #define INTERP_OPTION_SIZE 8
 #define TEMP_MAX INT8_MAX
 
+#define HANDLE_PARSE_RESULT(result)     \
+    if(result == failure) {             \
+        fclose(fp);                     \
+        return false;                   \
+    }                                   \
+    else if(result == match) {          \
+        continue;                       \
+    }
+
 static regex_t interval_rgx, hwmon_rgx, hwmon_content_rgx, empty_value_rgx, persistent_rgx, persistent_content_rgx;
 static regex_t empty_rgx, leading_space_rgx, matrix_rgx, matrix_start_rgx, matrix_end_rgx;
 static regex_t throttle_rgx, throttle_option_rgx, monitor_rgx, monitor_content_rgx;
@@ -393,11 +402,7 @@ bool parse_config(char const *restrict path, char *restrict persistent, size_t p
         replace_char(buffer, '\n', '\0');
         LOG(VERBOSITY_LVL3, "Read line '%s'\n", buffer);
         ++line_number;
-        if(!strip_comments(tmp, buffer, sizeof tmp)) {
-            fclose(fp);
-            return false;
-        }
-        if(!strip_leading_whitespace(buffer, tmp, sizeof buffer)) {
+        if(!strip_comments(tmp, buffer, sizeof tmp) || !strip_leading_whitespace(buffer, tmp, sizeof buffer)) {
             fclose(fp);
             return false;
         }
@@ -407,67 +412,25 @@ bool parse_config(char const *restrict path, char *restrict persistent, size_t p
         }
 
         result = parse_hwmon(buffer, hwmon, hwmon_count);
-        if(result == failure) {
-            fclose(fp);
-            return false;
-        }
-        else if(result == match) {
-            continue;
-        }
+        HANDLE_PARSE_RESULT(result);
 
         result = parse_interval(buffer, interval);
-        if(result == failure) {
-            fclose(fp);
-            return false;
-        }
-        else if(result == match) {
-            continue;
-        }
+        HANDLE_PARSE_RESULT(result);
 
         result = parse_throttling(buffer, throttle);
-        if(result == failure) {
-            fclose(fp);
-            return false;
-        }
-        else if(result == match) {
-            continue;
-        }
+        HANDLE_PARSE_RESULT(result);
 
         result = parse_monitoring(buffer, monitor);
-        if(result == failure) {
-            fclose(fp);
-            return false;
-        }
-        else if(result == match) {
-            continue;
-        }
+        HANDLE_PARSE_RESULT(result);
 
         result = parse_interpolation(buffer, interp);
-        if(result == failure) {
-            fclose(fp);
-            return false;
-        }
-        else if(result == match) {
-            continue;
-        }
+        HANDLE_PARSE_RESULT(result);
 
         result = parse_persistent(buffer, persistent, persistent_count);
-        if(result == failure) {
-            fclose(fp);
-            return false;
-        }
-        else if(result == match) {
-            continue;
-        }
+        HANDLE_PARSE_RESULT(result);
 
         result = parse_matrix(buffer, mtrx, mtrx_rows);
-        if(result == failure) {
-            fclose(fp);
-            return false;
-        }
-        else if(result == match) {
-            continue;
-        }
+        HANDLE_PARSE_RESULT(result);
 
         fprintf(stderr, "Syntax error on line %u: %s\n", line_number, buffer);
         fclose(fp);
