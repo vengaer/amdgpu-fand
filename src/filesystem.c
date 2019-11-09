@@ -21,11 +21,9 @@ static ssize_t parent_dir(char *restrict dst, char const *restrict src, size_t c
     return nbytes;
 }
 
-/* Convert relative path 'path' to absolute path and store in 'dst'
- * 'wd' is current working dir and 'count' is size of dst */
-static ssize_t absolute_path(char *restrict dst, char const *restrict wd, char const *restrict path, size_t count) {
-    char buf1[HWMON_PATH_LEN];
-    char buf2[HWMON_PATH_LEN];
+static ssize_t absolute_path(char *restrict dst, char const *restrict working_dir, char const *restrict path, size_t count) {
+    char buffer[HWMON_PATH_LEN];
+    char *c;
 
     regex_t path_rgx;
     int reti = regcomp(&path_rgx, "^(\\.){2}/", REG_EXTENDED);
@@ -34,25 +32,19 @@ static ssize_t absolute_path(char *restrict dst, char const *restrict wd, char c
         return -1;
     }
 
-    if(strscpy(buf1, wd, sizeof buf1) < 0) {
+    if(strscpy(buffer, working_dir, sizeof buffer) < 0) {
         fprintf(stderr, "Working directory overflows the buffer\n");
         return -E2BIG;
     }
-    char *src = buf1;
-    char *target = buf2;
 
     while(regexec(&path_rgx, path, 0, NULL, 0) == 0) {
         path = strchr(path, '/') + 1;
-        if(parent_dir(target, src, HWMON_PATH_LEN) < 0) {
-            return -E2BIG;
+        c = strrchr(buffer, '/');
+        if(c) {
+            *c = '\0';
         }
-
-        /* Swap pointers */
-        src = (char*)((size_t)src + (size_t)target);
-        target = (char*)((size_t)src - (size_t)target);
-        src = (char*)((size_t)src - (size_t)target);
     }
-    if(strscat(dst, src, count) < 0 || strscat(dst, "/", count) < 0 || strscat(dst, path, count) < 0) {
+    if(strscat(dst, buffer, count) < 0 || strscat(dst, "/", count) < 0 || strscat(dst, path, count) < 0) {
         fprintf(stderr, "Absolute path overflows the buffer\n");
         return -E2BIG;
     }
