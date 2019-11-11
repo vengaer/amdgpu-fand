@@ -13,10 +13,21 @@
     {                                               \
         extern uint8_t verbosity_level;             \
         if(verbosity_level >= level) {              \
-            if(verbosity_level == VERBOSITY_LVL3) { \
+            if(verbosity_level >= VERBOSITY_LVL3) { \
                 printf("%s: ", __FILE__);           \
             }                                       \
             printf(__VA_ARGS__);                    \
+        }                                           \
+    }
+
+#define E_LOG(level, ...)                           \
+    {                                               \
+        extern uint8_t verbosity_level;             \
+        if(verbosity_level >= level) {              \
+            if(verbosity_level >= VERBOSITY_LVL3) { \
+                printf("%s: ", __FILE__);           \
+            }                                       \
+            fprintf(stderr, __VA_ARGS__);           \
         }                                           \
     }
 

@@ -11,6 +11,9 @@
 #include <errno.h>
 #include <regex.h>
 
+#define CURRENT_DIR "./"
+#define CURRENT_DIR_SIZE 2
+
 static ssize_t absolute_path(char *restrict dst, char const *restrict working_dir, char const *restrict path, size_t count) {
     char buffer[HWMON_PATH_LEN];
     char *c;
@@ -44,8 +47,10 @@ static ssize_t absolute_path(char *restrict dst, char const *restrict working_di
 ssize_t parent_dir(char *restrict dst, char const *restrict src, size_t count) {
     char const *end = strrchr(src, '/');
     if(!end) {
-        dst[0] = '\0';
-        return 0;
+        if(strscpy(dst, CURRENT_DIR, count) < 0) {
+            return -E2BIG;
+        }
+        return CURRENT_DIR_SIZE;
     }
     ssize_t const nbytes = strsncpy(dst, src, end - src, count);
     if(nbytes < 0) {

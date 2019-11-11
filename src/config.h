@@ -8,8 +8,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define CONFIG_MONITOR_INTERVAL 5
-#define FANCTL_CONFIG "/etc/amdgpu-fanctl.conf"
+#define CONFIG_FILE "amdgpu-fanctl.conf"
+#define CONFIG_FULL_PATH "/etc/"CONFIG_FILE
 #define COMMENT_CHAR '#'
 
 bool parse_config(char const *restrict path, char *restrict persistent, size_t persistent_count, char *restrict hwmon, size_t hwmon_count,

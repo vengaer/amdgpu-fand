@@ -114,7 +114,7 @@ int main(int argc, char** argv) {
 
     struct arguments args = {
         .hwmon = 0,
-        .config = FANCTL_CONFIG,
+        .config = CONFIG_FULL_PATH,
         .verbosity = 0,
         .interval = 5,
         .interval_passed = false
