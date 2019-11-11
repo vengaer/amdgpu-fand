@@ -110,7 +110,6 @@ int main(int argc, char** argv) {
     uint8_t mtrx_rows;
     enum interpolation_method interp = linear;
     bool aggressive_throttle = false;
-    bool monitor_config = false;
     matrix mtrx;
 
     struct arguments args = {
@@ -129,7 +128,7 @@ int main(int argc, char** argv) {
 
     set_verbosity_level(args.verbosity);
 
-    if(!parse_config(args.config, persistent_path, sizeof persistent_path, hwmon_buf, sizeof hwmon_buf, &config_interval, &aggressive_throttle, &monitor_config, &interp, mtrx, &mtrx_rows)) {
+    if(!parse_config(args.config, persistent_path, sizeof persistent_path, hwmon_buf, sizeof hwmon_buf, &config_interval, &aggressive_throttle, &interp, mtrx, &mtrx_rows)) {
         return 1;
     }
 
@@ -168,7 +167,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    if(!amdgpu_daemon_init(args.config, hwmon_full_path, aggressive_throttle, monitor_config, interp, mtrx, mtrx_rows)) {
+    if(!amdgpu_daemon_init(args.config, hwmon_full_path, aggressive_throttle, interp, mtrx, mtrx_rows)) {
         fprintf(stderr, "Failed to initialize daemon\n");
         return 1;
     }

@@ -10,35 +10,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <pthread.h>
 #include <unistd.h>
 
-static pthread_t monitor_thread;
-static struct file_monitor file_monitor;
-static pthread_mutex_t lock;
-static bool monitor_thread_alive = false;
-
 static uint8_t update_interval;
-
-static void spawn_monitor_thread() {
-    LOG(VERBOSITY_LVL3, "Spawning monitor thread\n");
-    set_config_monitoring_enabled(true);
-    if(pthread_create(&monitor_thread, NULL, monitor_config, (void *)&file_monitor)) {
-        fprintf(stderr, "Failed to create monitor thread, live reloading is unavailable\n");
-    }
-    monitor_thread_alive = true;
-}
-
-static inline void join_monitor_thread_safely(void) {
-    if(!monitor_thread_alive) {
-        return;
-    }
-    LOG(VERBOSITY_LVL3, "Joining monitor thread\n");
-    if(pthread_join(monitor_thread, NULL)) {
-        fprintf(stderr, "Failed to join monitor thread\n");
-    }
-    monitor_thread_alive = false;
-}
 
 static bool setup_hwmon(char const *hwmon_path) {
     if(!file_exists(hwmon_path)) {
@@ -96,20 +70,11 @@ static bool reinitialize(char const *restrict config, char const *restrict persi
     return true;
 }
 
-bool amdgpu_daemon_init(char const *restrict config, char const *restrict hwmon_path, bool aggressive_throttle, bool monitor, enum interpolation_method interp, matrix mtrx, uint8_t mtrx_rows) {
+bool amdgpu_daemon_init(char const *restrict config, char const *restrict hwmon_path, bool aggressive_throttle, enum interpolation_method interp, matrix mtrx, uint8_t mtrx_rows) {
     bool result = setup_hwmon(hwmon_path);
     amdgpu_fan_set_matrix(mtrx, mtrx_rows);
     amdgpu_fan_set_aggressive_throttle(aggressive_throttle);
     amdgpu_fan_set_interpolation_method(interp);
-
-    pthread_mutex_init(&lock, NULL);
-
-    file_monitor.path = config;
-    file_monitor.callback = amdgpu_daemon_restart;
-
-    if(monitor) {
-        spawn_monitor_thread();
-    }
 
     return result;
 }
@@ -119,26 +84,15 @@ bool amdgpu_daemon_restart(char const *config) {
     uint8_t mtrx_rows;
     uint8_t interval = update_interval;
     bool throttle = amdgpu_fan_get_aggressive_throttle();
-    bool monitor = true;
     enum interpolation_method interp = amdgpu_fan_get_interpolation_method();
     char hwmon[HWMON_SUBDIR_LEN];
     char persistent[HWMON_PATH_LEN];
 
-    if(!parse_config(config, persistent, sizeof persistent, hwmon, sizeof hwmon, &interval, &throttle, &monitor, &interp, mtrx, &mtrx_rows)) {
+    if(!parse_config(config, persistent, sizeof persistent, hwmon, sizeof hwmon, &interval, &throttle, &interp, mtrx, &mtrx_rows)) {
         fprintf(stderr, "Failed to reread config, keeping current values\n");
         return false;
     }
-
-    if(!monitor) {
-        set_config_monitoring_enabled(false);
-        LOG(VERBOSITY_LVL1, "Disabling config monitoring\n");
-        return true;
-    }
-
-    pthread_mutex_lock(&lock);
-    bool result = reinitialize(config, persistent, hwmon, interval, throttle, interp, mtrx, mtrx_rows);
-    pthread_mutex_unlock(&lock);
-    return result;
+    return reinitialize(config, persistent, hwmon, interval, throttle, interp, mtrx, mtrx_rows);
 }
 
 void amdgpu_daemon_run(uint8_t interval) {
@@ -148,21 +102,12 @@ void amdgpu_daemon_run(uint8_t interval) {
     amdgpu_fan_set_mode(manual);
 
     while(daemon_alive) {
-        pthread_mutex_lock(&lock);
         if(!amdgpu_fan_update_speed()) {
             fprintf(stderr, "Failed to adjust fan speed\n");
-        }
-        pthread_mutex_unlock(&lock);
-
-        if(!config_monitoring_enabled()) {
-            join_monitor_thread_safely();
         }
 
         sleep(update_interval);
     }
-
-    join_monitor_thread_safely();
-    pthread_mutex_destroy(&lock);
 
     amdgpu_fan_set_mode(automatic);
 }
