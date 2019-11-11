@@ -47,7 +47,7 @@ static inline void cleanup_inotify(void) {
 }
 
 static void handle_inotify_events(void) {
-    char buf[INOTIFY_BUF_LEN] __attribute__ ((aligned(8)));
+    char buf[INOTIFY_BUF_LEN];
     ssize_t nbytes;
 
     nbytes = read(inotify_fd, buf, sizeof buf);
