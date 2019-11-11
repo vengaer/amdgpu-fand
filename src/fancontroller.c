@@ -12,7 +12,6 @@
 #include <string.h>
 
 #include <errno.h>
-#include <regex.h>
 #include <unistd.h>
 
 #define TEMP_BUF_SIZE 8
