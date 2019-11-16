@@ -35,10 +35,13 @@ static bool setup_inotify(void) {
     inotify_wd = inotify_add_watch(inotify_fd, dir, IN_CLOSE_WRITE);
     if(inotify_wd == -1) {
         fprintf(stderr, "Failed to add %s to watchl list\n", config_file);
+        close(inotify_fd);
         return false;
     }
     if(fcntl(inotify_fd, F_SETFL, fcntl(inotify_fd, F_GETFL) | O_NONBLOCK) == -1) {
         fprintf(stderr, "Failed to make inotify non-blocking\n");
+        inotify_rm_watch(inotify_fd, inotify_wd);
+        close(inotify_fd);
         return false;
     }
     LOG(VERBOSITY_LVL2, "Watching %s\n", dir);
