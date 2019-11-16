@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <fcntl.h>
 #include <sys/inotify.h>
 #include <unistd.h>
 
@@ -36,6 +37,10 @@ static bool setup_inotify(void) {
         fprintf(stderr, "Failed to add %s to watchl list\n", config_file);
         return false;
     }
+    if(fcntl(inotify_fd, F_SETFL, fcntl(inotify_fd, F_GETFL) | O_NONBLOCK) == -1) {
+        fprintf(stderr, "Failed to make inotify non-blocking\n");
+        return false;
+    }
     LOG(VERBOSITY_LVL2, "Watching %s\n", dir);
 
     return true;
@@ -55,7 +60,7 @@ static void handle_inotify_events(void) {
     if(nbytes == -1) {
         extern bool volatile daemon_alive;
         if(daemon_alive) {
-            E_LOG(VERBOSITY_LVL1, "Failed to read inotify events\n");
+            E_LOG(VERBOSITY_LVL3, "No inotify events read\n");
         }
         return;
     }
