@@ -63,7 +63,7 @@ static void handle_inotify_events(void) {
     if(nbytes == -1) {
         extern bool volatile daemon_alive;
         if(daemon_alive) {
-            E_LOG(VERBOSITY_LVL3, "No inotify events read\n");
+            LOG(VERBOSITY_LVL3, "No inotify events read\n");
         }
         return;
     }
