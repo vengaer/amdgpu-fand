@@ -3,6 +3,7 @@
 #include "fancontroller.h"
 #include "filesystem.h"
 #include "hwmon.h"
+#include "ipc_server.h"
 #include "logger.h"
 #include "strutils.h"
 
@@ -176,6 +177,7 @@ bool amdgpu_daemon_restart(void) {
 void amdgpu_daemon_run(uint8_t interval) {
     extern bool volatile daemon_alive;
     update_interval = interval;
+    ipc_server_open_socket();
 
     amdgpu_fan_set_mode(manual);
 
@@ -184,10 +186,12 @@ void amdgpu_daemon_run(uint8_t interval) {
             fprintf(stderr, "Failed to adjust fan speed\n");
         }
         handle_inotify_events();
+        ipc_server_handle_request();
 
         sleep(update_interval);
     }
 
     cleanup_inotify();
+    ipc_server_close_socket();
     amdgpu_fan_set_mode(automatic);
 }
