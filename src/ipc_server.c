@@ -82,7 +82,7 @@ static void construct_ipc_response(char *response, struct ipc_request *request, 
         }
     }
     else if(request->type == ipc_set) {
-        // TODO
+        // TODO ensure elevated priviliges
     }
     if(strscpy(response, buffer, count) < 0) {
         fprintf(stderr, "%u overflows the destination buffer\n", value);
