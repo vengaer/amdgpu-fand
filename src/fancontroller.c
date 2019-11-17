@@ -32,6 +32,8 @@ static char pwm_max_path[HWMON_PATH_LEN];
 static uint8_t pwm_min;
 static uint8_t pwm_max;
 
+static int8_t requested_percentage = -1;
+
 static bool aggressive_throttle = false;
 static enum interpolation_method interp = linear;
 
@@ -64,7 +66,7 @@ static bool read_long_from_file(char const *path, long *data) {
         return false;
     }
     char *endptr;
-    
+
     long const value = strtol(buffer, &endptr, 10);
     if(*endptr) {
         fprintf(stderr, "%s contains non-digit characters\n", buffer);
@@ -225,18 +227,24 @@ bool amdgpu_fan_set_mode(enum fanmode mode) {
 }
 
 bool amdgpu_fan_get_percentage(uint8_t *percentage) {
-    uint8_t npwm;
-    if(read_uint8_from_file(pwm, &npwm)) {
+    if(requested_percentage < 0) {
+        uint8_t npwm;
+        if(!read_uint8_from_file(pwm, &npwm)) {
+            return false;
+        }
         double const frac = (double)npwm / (double)(pwm_max - pwm_min);
         *percentage = (uint8_t)round((frac * 100));
+        requested_percentage = *percentage;
         LOG(VERBOSITY_LVL3, "Current pwm: %u, corresponding to percentage: %u\n", npwm, *percentage);
-        return true;
     }
-
-    return false;
+    else {
+        *percentage = (uint8_t)requested_percentage;
+    }
+    return true;
 }
 
 bool amdgpu_fan_set_percentage(uint8_t percentage) {
+    requested_percentage = percentage;
     uint8_t const npwm = (uint8_t)((double)percentage / 100.0 * (double)(pwm_max - pwm_min));
     LOG(VERBOSITY_LVL3, "Setting pwm %u (%f%%)\n", npwm, 100.0 * (double)npwm / (double)(pwm_max - pwm_min));
     return write_uint8_to_file(pwm, npwm);
