@@ -37,7 +37,9 @@ static bool compile_ipc_regex(void) {
 static bool parse_ipc_request(char *buf, struct ipc_request *request, size_t count) {
     regmatch_t pmatch[3];
     if(regexec(&ipc_rgx, buf, 3, pmatch, 0)) {
-        strncat(buf, " is not a valid ipc request", count);
+        if(strscat(buf, " is not a valid ipc request", count) < 0) {
+            fprintf(stderr, "Response for faulty ipc request would overflow the buffer\n");
+        }
         return false;
     }
 
