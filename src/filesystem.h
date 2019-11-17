@@ -8,11 +8,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#ifndef E2BIG
-#define E2BIG 7
-#endif
-
-
 ssize_t parent_dir(char *restrict dst, char const *restrict src, size_t count);
 bool find_dir_matching_pattern(char *restrict dst, size_t count, char const *restrict pattern, char const *restrict parent);
 

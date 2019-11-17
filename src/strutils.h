@@ -3,11 +3,8 @@
 
 #include <stddef.h>
 
+#include <errno.h>
 #include <sys/types.h>
-
-#ifndef E2BIG
-#define E2BIG 7
-#endif
 
 char *strncpy_fast(char *restrict dst, char const *restrict src, size_t n);
 
