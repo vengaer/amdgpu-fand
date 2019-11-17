@@ -4,6 +4,7 @@
 #include "filesystem.h"
 #include "hwmon.h"
 #include "interpolation.h"
+#include "ipc_client.h"
 #include "logger.h"
 #include "strutils.h"
 
@@ -101,6 +102,24 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
 static struct argp argp = { options, parse_opt, args_doc, doc, 0, 0, 0 };
 
 int main(int argc, char** argv) {
+    // TODO: Use argp
+    if(argc > 2 && argv[1][0] != '-') {
+        char b[8192];
+        char request[8192];
+        strcpy(request, argv[1]);
+        strcat(request, " ");
+        strcat(request, argv[2]);
+        if(!ipc_client_open_socket()) {
+            fprintf(stderr, "Failed to open socket\n");
+            return -1;
+        }
+        if(ipc_client_send_request(b, request, sizeof b) > 0) {
+            printf("%s\n", b);
+        }
+        ipc_client_close_socket();
+
+        return 0;
+    }
     char hwmon_full_path[HWMON_PATH_LEN];
 
     /* For values specified in config */
