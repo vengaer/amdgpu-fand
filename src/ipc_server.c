@@ -1,4 +1,5 @@
 #include "fancontroller.h"
+#include "filesystem.h"
 #include "ipc.h"
 #include "ipc_server.h"
 #include "logger.h"
@@ -27,7 +28,7 @@ static void construct_ipc_response(char *response, struct ipc_request *request, 
     char buffer[4];
     uint8_t value;
     if(request->type == ipc_get) {
-        if(request->value == ipc_temp) {
+        if(request->target == ipc_temp) {
             if(!amdgpu_get_temp(&value)) {
                 if(strscpy(response, "Failed to get chip temp", count) < 0) {
                     fprintf(stderr, "Ipc response overflowed the buffer\n");
@@ -36,7 +37,7 @@ static void construct_ipc_response(char *response, struct ipc_request *request, 
             }
             sprintf(buffer, "%u", value);
         }
-        else if(request->value == ipc_speed) {
+        else if(request->target == ipc_speed) {
             if(!amdgpu_fan_get_percentage(&value)) {
                 if(strscpy(response, "Failed to get fan percentage", count) < 0) {
                     fprintf(stderr, "Ipc response overflows the buffer\n");
@@ -48,11 +49,16 @@ static void construct_ipc_response(char *response, struct ipc_request *request, 
     }
     else if(request->type == ipc_set) {
         // TODO ensure elevated priviliges
+        fprintf(stderr, "WARNING: ipc set not implemented yet\n");
         *response = 0;
     }
     if(strscpy(response, buffer, count) < 0) {
         fprintf(stderr, "%u overflows the destination buffer\n", value);
     }
+}
+
+bool ipc_server_running(void) {
+    return directory_exists(SOCK_DIR) == status_existing;
 }
 
 bool ipc_server_open_socket(void) {
@@ -108,11 +114,9 @@ void ipc_server_handle_request(void) {
     socklen_t sender_len = sizeof sender;
 
     while((nbytes = recvfrom(fd, request, sizeof request, 0, (struct sockaddr *)&sender, &sender_len)) > 0) {
-        LOG(VERBOSITY_LVL3, "Received request: %s %s\n", ((struct ipc_request *)request)->type == ipc_get ? "get" : "set",
-                                                         ((struct ipc_request *)request)->value == ipc_temp ? "temp" : "speed");
+        LOG(VERBOSITY_LVL3, "Received request: " IPC_REQUEST_FMT((struct ipc_request *)request));
     
         construct_ipc_response(response, (struct ipc_request *)request, sizeof response);
-
 
         ret = sendto(fd, response, strlen(response) + 1, 0, (struct sockaddr *)&sender, sender_len);
         if(ret == -1) {

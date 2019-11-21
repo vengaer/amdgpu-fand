@@ -14,43 +14,6 @@
 
 static int fd;
 
-static bool parse_ipc_request(char const *buf, struct ipc_request *request) {
-    regex_t ipc_rgx, speed_rgx;
-    regmatch_t pmatch[3];
-    int reti = regcomp(&ipc_rgx, "^\\s*(set|get)\\s*(temp(erature)?|(fan)?speed)\\s*$", REG_EXTENDED);
-    if(reti) {
-        fprintf(stderr, "Failed to compile ipc regex\n");
-        return false;
-    }
-
-    reti = regcomp(&speed_rgx, "speed", REG_EXTENDED);
-    if(reti) {
-        fprintf(stderr, "Failed to compile speed regex\n");
-        return false;
-    }
-
-    if(regexec(&ipc_rgx, buf, 3, pmatch, 0)) {
-        fprintf(stderr, "%s if not a valid ipc request\n", buf);
-        return false;
-    }
-
-    if(strncmp(buf + pmatch[1].rm_so, "set", pmatch[1].rm_eo - pmatch[1].rm_so) == 0) {
-        request->type = ipc_set;
-    }
-    else {
-        request->type = ipc_get;
-    }
-
-    if(regexec(&speed_rgx, buf + pmatch[2].rm_so, 0, NULL, 0) == 0) {
-        request->value = ipc_speed;
-    }
-    else {
-        request->value = ipc_temp;
-    }
-
-    return true;
-}
-
 bool ipc_client_open_socket(void) {
     struct sockaddr_un addr;
 
@@ -111,20 +74,30 @@ void ipc_client_close_socket(void) {
     unlink(CLIENT_SOCK_FILE);
 }
 
-ssize_t ipc_client_send_request(char *restrict response, char const *restrict request, size_t count) {
-    ssize_t nbytes;
-    struct ipc_request sreq;
-    if(!parse_ipc_request(request, &sreq)) {
-        return -1;
-    }
-    if(send(fd, (char *)&sreq, sizeof(struct ipc_request), 0) == -1) {
+ssize_t ipc_client_send_request(char *response, struct ipc_request *request, size_t count) {
+    if(send(fd, (char *)request, sizeof(struct ipc_request), 0) == -1) {
         perror("Failed to send request");
         return -1;
     }
-    LOG(VERBOSITY_LVL3, "Sent request %s\n", request);
-    if((nbytes = recv(fd, response, count, 0)) < 0) {
+    LOG(VERBOSITY_LVL3, "Sent request: " IPC_REQUEST_FMT(request));
+    if(recv(fd, response, count, 0) < 0) {
         perror("Failed to receive server response");
         return -E2BIG;
     }
     return strlen(response);
 }
+
+bool ipc_client_handle_request(struct ipc_request *request) {
+    char response[IPC_BUF_SIZE];
+    ipc_client_open_socket();
+    ssize_t recv = ipc_client_send_request(response, request, sizeof response);
+    ipc_client_close_socket();
+
+    if(recv < 0) {
+        return false;
+    }
+    printf("%s\n", response);
+    return true;
+}
+
+
