@@ -25,4 +25,6 @@ static inline void matrix_extract_speeds(uint8_t *dst, matrix mtrx, size_t count
     matrix_extract_column(dst, mtrx, 1u, count);
 }
 
+void matrix_print(matrix mtrx, size_t rows);
+
 #endif
