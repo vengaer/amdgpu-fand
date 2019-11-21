@@ -33,10 +33,8 @@
 
 #define IPC_REQUEST_FMT(request)                    \
     "%s %s %d\n",                                   \
-        (request)->type == ipc_get ?                \
-            "get" : "set",                          \
-        (request)->target == ipc_temp ?             \
-            "temp" : "speed",                       \
+        ipc_request_type_value[(request)->type],    \
+        ipc_request_target_value[(request)->target],\
         (request)->value
         
 

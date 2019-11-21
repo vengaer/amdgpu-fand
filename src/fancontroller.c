@@ -221,6 +221,14 @@ enum interpolation_method amdgpu_fan_get_interpolation_method(void) {
     return interp;
 }
 
+void amdgpu_fan_get_matrix(matrix m, uint8_t *m_rows) {
+    *m_rows = mtrx_rows;
+    for(uint8_t i = 0; i < mtrx_rows; i++) {
+        m[i][0] = mtrx[i][0];
+        m[i][1] = mtrx[i][1];
+    }
+}
+
 bool amdgpu_fan_set_mode(enum fanmode mode) {
     LOG(VERBOSITY_LVL1, "Setting fan mode: %s\n", mode == manual ? "manual" : "auto");
     return write_uint8_to_file(pwm_enable, mode);

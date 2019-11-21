@@ -2,6 +2,7 @@
 #include "ipc.h"
 #include "ipc_client.h"
 #include "logger.h"
+#include "matrix.h"
 #include "strutils.h"
 
 #include <stdio.h>
@@ -75,16 +76,17 @@ void ipc_client_close_socket(void) {
 }
 
 ssize_t ipc_client_send_request(char *response, struct ipc_request *request, size_t count) {
+    ssize_t nbytes;
     if(send(fd, (char *)request, sizeof(struct ipc_request), 0) == -1) {
         perror("Failed to send request");
         return -1;
     }
     LOG(VERBOSITY_LVL3, "Sent request: " IPC_REQUEST_FMT(request));
-    if(recv(fd, response, count, 0) < 0) {
+    if((nbytes = recv(fd, response, count, 0)) < 0) {
         perror("Failed to receive server response");
         return -E2BIG;
     }
-    return strlen(response);
+    return nbytes;
 }
 
 bool ipc_client_handle_request(struct ipc_request *request) {
@@ -96,7 +98,12 @@ bool ipc_client_handle_request(struct ipc_request *request) {
     if(recv < 0) {
         return false;
     }
-    printf("%s\n", response);
+    if(request->target == ipc_matrix) {
+        matrix_print((uint8_t (*)[2])(response + sizeof(uint8_t)), *((uint8_t*)response));
+    }
+    else {
+        printf("%s\n", response);
+    }
     return true;
 }
 

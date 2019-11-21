@@ -3,6 +3,7 @@
 #include "ipc.h"
 #include "ipc_server.h"
 #include "logger.h"
+#include "matrix.h"
 #include "strutils.h"
 
 #include <stdint.h>
@@ -24,7 +25,7 @@ static void create_tmp_dir(void) {
     umask(old);
 }
 
-static void construct_ipc_response(char *response, struct ipc_request *request, size_t count) {
+static size_t construct_ipc_response(char *response, struct ipc_request *request, size_t count) {
     char buffer[4];
     uint8_t value;
     if(request->type == ipc_get) {
@@ -33,18 +34,34 @@ static void construct_ipc_response(char *response, struct ipc_request *request, 
                 if(strscpy(response, "Failed to get chip temp", count) < 0) {
                     fprintf(stderr, "Ipc response overflowed the buffer\n");
                 }
-                return;
+                return strlen(response) + 1;
             }
+            sprintf(buffer, "%u", value);
         }
         else if(request->target == ipc_speed) {
             if(!amdgpu_fan_get_percentage(&value)) {
                 if(strscpy(response, "Failed to get fan percentage", count) < 0) {
                     fprintf(stderr, "Ipc response overflows the buffer\n");
                 }
-                return;
+                return strlen(response) + 1;
             }
+            sprintf(buffer, "%u", value);
         }
-        sprintf(buffer, "%u", value);
+        else if(request->target == ipc_matrix) {    
+            matrix m;
+            uint8_t rows;
+            amdgpu_fan_get_matrix(m, &rows);
+            if(count < sizeof(uint8_t) + sizeof(matrix)) {
+                if(strscpy(response, "Matrix overflows the buffer", count) < 0) {
+                    fprintf(stderr, "Ipc response overflows the buffer\n");
+                }
+                return strlen(response) + 1;
+            }
+
+            memcpy(response, &rows, sizeof(uint8_t));
+            memcpy(response + sizeof(uint8_t), m, sizeof(matrix));
+            return sizeof(uint8_t) + sizeof(matrix);
+        }
     }
     else if(request->type == ipc_set) {
         // TODO ensure elevated priviliges
@@ -54,6 +71,7 @@ static void construct_ipc_response(char *response, struct ipc_request *request, 
     if(strscpy(response, buffer, count) < 0) {
         fprintf(stderr, "%u overflows the destination buffer\n", value);
     }
+    return strlen(response) + 1;
 }
 
 bool ipc_server_running(void) {
@@ -115,9 +133,9 @@ void ipc_server_handle_request(void) {
     while((nbytes = recvfrom(fd, request, sizeof request, 0, (struct sockaddr *)&sender, &sender_len)) > 0) {
         LOG(VERBOSITY_LVL3, "Received request: " IPC_REQUEST_FMT((struct ipc_request *)request));
     
-        construct_ipc_response(response, (struct ipc_request *)request, sizeof response);
+        size_t len = construct_ipc_response(response, (struct ipc_request *)request, sizeof response);
 
-        ret = sendto(fd, response, strlen(response) + 1, 0, (struct sockaddr *)&sender, sender_len);
+        ret = sendto(fd, response, len, 0, (struct sockaddr *)&sender, sender_len);
         if(ret == -1) {
             perror("Failed to send server response");
             break;

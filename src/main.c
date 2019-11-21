@@ -58,8 +58,8 @@ char const *argp_program_bug_address = "<vilhelm.engstrom@tuta.io>";
 
 static char doc[] = "amdgpu-fanctl -- A daemon controlling the fan speed on AMD Radeon GPUs\
                     \vCommands:\n"
-                    "  get TARGET [VALUE]         Get target value, TARGET may be [fan]speed\n"
-                    "                             or temp[erature]. Any potential VALUE is\n"
+                    "  get TARGET [VALUE]         Get target value, TARGET may be [fan]speed,\n"
+                    "                             temp[erature] or matrix. Any potential VALUE is\n"
                     "                             silently discarded\n"
                     "  set TARGET VALUE           Set value of target TARGET to VALUE.\n"
                     "                             Valid targets are [fan]speed.\n"

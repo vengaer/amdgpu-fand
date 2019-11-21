@@ -12,6 +12,9 @@
 #define CLIENT_SOCK_FILE SOCK_DIR"/amdgpu-fanctl-client.sock"
 #define IPC_BUF_SIZE 8192
 
+extern char const *ipc_request_type_value[3];
+extern char const *ipc_request_target_value[4];
+
 enum ipc_request_type {
     ipc_get,
     ipc_set,
@@ -21,6 +24,7 @@ enum ipc_request_type {
 enum ipc_request_target {
     ipc_temp,
     ipc_speed,
+    ipc_matrix,
     ipc_invalid_target
 };
 

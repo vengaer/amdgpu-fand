@@ -31,6 +31,7 @@ void amdgpu_fan_set_matrix(matrix mtrx, uint8_t mtrx_rows);
 
 bool amdgpu_fan_get_aggressive_throttle(void);
 enum interpolation_method amdgpu_fan_get_interpolation_method(void);
+void amdgpu_fan_get_matrix(matrix mtrx, uint8_t *mtrx_rows);
 
 bool amdgpu_fan_set_mode(enum fanmode mode);
 bool amdgpu_fan_get_percentage(uint8_t *percentage);
