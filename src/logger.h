@@ -31,4 +31,13 @@
         }                                           \
     }
 
+#define IPC_REQUEST_FMT(request)                    \
+    "%s %s %d\n",                                   \
+        (request)->type == ipc_get ?                \
+            "get" : "set",                          \
+        (request)->target == ipc_temp ?             \
+            "temp" : "speed",                       \
+        (request)->value
+        
+
 #endif
