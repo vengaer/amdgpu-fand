@@ -4,7 +4,9 @@
 #include "filesystem.h"
 #include "hwmon.h"
 #include "interpolation.h"
+#include "ipc.h"
 #include "ipc_client.h"
+#include "ipc_server.h"
 #include "logger.h"
 #include "strutils.h"
 
@@ -51,11 +53,19 @@ static bool uint8_from_chars(char const *str, uint8_t *value) {
     return true;
 }
 
-char const *argp_program_version = "amdgpu-fanctl 1.0";
+char const *argp_program_version = "amdgpu-fanctl 2.0";
 char const *argp_program_bug_address = "<vilhelm.engstrom@tuta.io>";
 
-static char doc[] = "amdgpu-fanctl -- A daemon controlling the fan speed on AMD Radeon GPUs";
-static char args_doc[] = "";
+static char doc[] = "amdgpu-fanctl -- A daemon controlling the fan speed on AMD Radeon GPUs\
+                    \vCommands:\n"
+                    "  get TARGET [VALUE]         Get target value, TARGET may be [fan]speed\n"
+                    "                             or temp[erature]. Any potential VALUE is\n"
+                    "                             silently discarded\n"
+                    "  set TARGET VALUE           Set value of target TARGET to VALUE.\n"
+                    "                             Valid targets are [fan]speed.\n"
+                    "                             VALUE should be given as + or - followed by \n"
+                    "                             a percentage, e.g. -10\n";
+static char args_doc[] = "[COMMAND TARGET [VALUE]]";
 
 static struct argp_option options[] = {
     {"verbose",  'v', 0,          0, "Echo actions to standard out. May be repeated up to 3 times to set verbosity level", 0 },
@@ -67,6 +77,7 @@ static struct argp_option options[] = {
 };
 
 struct arguments {
+    struct ipc_request request;
     char *hwmon;
     char *config;
     uint8_t verbosity;
@@ -79,7 +90,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
 
     switch(key) {
         case 'v':
-            ++args->verbosity;
+            set_verbosity_level(++args->verbosity);
             break;
         case 'f':
             args->hwmon = arg;
@@ -93,6 +104,11 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
         case 'c':
             args->config = arg;
             break;
+        case ARGP_KEY_ARG:
+            if(state->arg_num >= 3 || !parse_ipc_param(arg, state->arg_num, &args->request)) {
+                argp_usage(state);
+            }
+            break;
         default:
             return ARGP_ERR_UNKNOWN;
         }
@@ -102,24 +118,6 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
 static struct argp argp = { options, parse_opt, args_doc, doc, 0, 0, 0 };
 
 int main(int argc, char** argv) {
-    // TODO: Use argp
-    if(argc > 2 && argv[1][0] != '-') {
-        char b[8192];
-        char request[8192];
-        strcpy(request, argv[1]);
-        strcat(request, " ");
-        strcat(request, argv[2]);
-        if(!ipc_client_open_socket()) {
-            fprintf(stderr, "Failed to open socket\n");
-            return -1;
-        }
-        if(ipc_client_send_request(b, request, sizeof b) > 0) {
-            printf("%s\n", b);
-        }
-        ipc_client_close_socket();
-
-        return 0;
-    }
     char hwmon_full_path[HWMON_PATH_LEN];
 
     /* For values specified in config */
@@ -132,7 +130,7 @@ int main(int argc, char** argv) {
     matrix mtrx;
 
     struct arguments args = {
-        .hwmon = 0,
+        .request = { .type = ipc_invalid_type, .target = ipc_invalid_target, .value = -1 },
         .config = CONFIG_FULL_PATH,
         .verbosity = 0,
         .interval = 5,
@@ -145,7 +143,22 @@ int main(int argc, char** argv) {
 
     argp_parse(&argp, argc, argv, 0, 0, &args);
 
-    set_verbosity_level(args.verbosity);
+    enum ipc_request_state const ipc_state = get_ipc_state(&args.request);
+
+    switch(ipc_state) {
+        default:
+        case ipc_invalid_state:
+            fprintf(stderr, "Invalid ipc request\n");
+            return 1;
+        case ipc_client_state:
+            return !ipc_client_handle_request(&args.request);
+        case ipc_server_state:
+            if(ipc_server_running()) {
+                fprintf(stderr, "Server already running\n");
+                return 1;
+            }
+            break;
+    }
 
     if(!parse_config(args.config, persistent_path, sizeof persistent_path, hwmon_buf, sizeof hwmon_buf, &config_interval, &aggressive_throttle, &interp, mtrx, &mtrx_rows)) {
         return 1;
@@ -176,7 +189,6 @@ int main(int argc, char** argv) {
         args.hwmon = hwmon_buf;
     }
 
-    /* Verify hwmon subdir */
     if(!is_valid_hwmon_dir(args.hwmon)) {
         fprintf(stderr, "%s is not a valid hwmon directory\n", args.hwmon);
         return 1;
