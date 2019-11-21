@@ -1,6 +1,6 @@
-#include "filesystem.h"
 #include "ipc.h"
 #include "ipc_client.h"
+#include "ipc_server.h"
 #include "logger.h"
 #include "matrix.h"
 #include "strutils.h"
@@ -17,17 +17,10 @@ static int fd;
 
 bool ipc_client_open_socket(void) {
     struct sockaddr_un addr;
-
-    switch(directory_exists(SOCK_DIR)) {
-        case status_existing:
-            break;
-        case status_unexistant:
-            fprintf(stderr, "Server not running\n");
-            return false;
-        case status_error:
-        default:
-            fprintf(stderr, "Failed determining server status\n");
-            return false;
+    
+    if(!ipc_server_running()) {
+        fprintf(stderr, "Server not running\n");
+        return false;
     }
 
     fd = socket(PF_UNIX, SOCK_DGRAM, 0);
@@ -91,7 +84,9 @@ ssize_t ipc_client_send_request(char *response, struct ipc_request *request, siz
 
 bool ipc_client_handle_request(struct ipc_request *request) {
     char response[IPC_BUF_SIZE];
-    ipc_client_open_socket();
+    if(!ipc_client_open_socket()) {
+        return false;
+    }
     ssize_t recv = ipc_client_send_request(response, request, sizeof response);
     ipc_client_close_socket();
 

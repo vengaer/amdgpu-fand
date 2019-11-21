@@ -75,7 +75,7 @@ static size_t construct_ipc_response(char *response, struct ipc_request *request
 }
 
 bool ipc_server_running(void) {
-    return directory_exists(SOCK_DIR) == status_existing;
+    return file_exists(SERVER_SOCK_FILE);
 }
 
 bool ipc_server_open_socket(void) {
