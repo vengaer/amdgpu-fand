@@ -9,7 +9,6 @@
 #include <string.h>
 
 #include <fcntl.h>
-#include <regex.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -17,47 +16,11 @@
 #include <unistd.h>
 
 static int fd;
-static regex_t ipc_rgx;
 
 static void create_tmp_dir(void) {
     mode_t old = umask(0);
     mkdir(SOCK_DIR, S_IRWXU | S_IRWXG | S_IRWXO);
     umask(old);
-}
-
-static bool compile_ipc_regex(void) {
-    int reti = regcomp(&ipc_rgx, "^\\s*(set|get)\\s*(temp(erature)?|speed)\\s*$", REG_EXTENDED);
-    if(reti) {
-        fprintf(stderr, "Failed to compile ipc regex\n");
-        return false;
-    }
-    return true;
-}
-
-static bool parse_ipc_request(char *buf, struct ipc_request *request, size_t count) {
-    regmatch_t pmatch[3];
-    if(regexec(&ipc_rgx, buf, 3, pmatch, 0)) {
-        if(strscat(buf, " is not a valid ipc request", count) < 0) {
-            fprintf(stderr, "Response for faulty ipc request would overflow the buffer\n");
-        }
-        return false;
-    }
-
-    if(strncmp(buf + pmatch[1].rm_so, "set", pmatch[1].rm_eo - pmatch[1].rm_so) == 0) {
-        request->type = ipc_set;
-    }
-    else {
-        request->type = ipc_get;
-    }
-
-    if(strncmp(buf + pmatch[2].rm_so, "speed", pmatch[2].rm_eo - pmatch[2].rm_so) == 0) {
-        request->value = ipc_speed;
-    }
-    else {
-        request->value = ipc_temp;
-    }
-
-    return true;
 }
 
 static void construct_ipc_response(char *response, struct ipc_request *request, size_t count) {
@@ -85,6 +48,7 @@ static void construct_ipc_response(char *response, struct ipc_request *request, 
     }
     else if(request->type == ipc_set) {
         // TODO ensure elevated priviliges
+        *response = 0;
     }
     if(strscpy(response, buffer, count) < 0) {
         fprintf(stderr, "%u overflows the destination buffer\n", value);
@@ -93,10 +57,6 @@ static void construct_ipc_response(char *response, struct ipc_request *request, 
 
 bool ipc_server_open_socket(void) {
     struct sockaddr_un addr;
-
-    if(!compile_ipc_regex()) {
-        return false;
-    }
 
     fd = socket(PF_UNIX, SOCK_DGRAM, 0);
     if(fd == -1) {
@@ -142,20 +102,19 @@ void ipc_server_close_socket(void) {
 
 void ipc_server_handle_request(void) {
     ssize_t nbytes, ret;
-    char buffer[IPC_BUF_SIZE];
+    char request[sizeof(struct ipc_request)];
+    char response[IPC_BUF_SIZE];
     struct sockaddr_un sender;
     socklen_t sender_len = sizeof sender;
-    struct ipc_request ipc;
 
-    while((nbytes = recvfrom(fd, buffer, sizeof buffer, 0, (struct sockaddr *)&sender, &sender_len)) > 0) {
-        LOG(VERBOSITY_LVL3, "Received request: %s\n", buffer);
+    while((nbytes = recvfrom(fd, request, sizeof request, 0, (struct sockaddr *)&sender, &sender_len)) > 0) {
+        LOG(VERBOSITY_LVL3, "Received request: %s %s\n", ((struct ipc_request *)request)->type == ipc_get ? "get" : "set",
+                                                         ((struct ipc_request *)request)->value == ipc_temp ? "temp" : "speed");
     
-        if(parse_ipc_request(buffer, &ipc, sizeof buffer)) {
-            construct_ipc_response(buffer, &ipc, sizeof buffer);
-        }
+        construct_ipc_response(response, (struct ipc_request *)request, sizeof response);
 
 
-        ret = sendto(fd, buffer, strlen(buffer) + 1, 0, (struct sockaddr *)&sender, sender_len);
+        ret = sendto(fd, response, strlen(response) + 1, 0, (struct sockaddr *)&sender, sender_len);
         if(ret == -1) {
             perror("Failed to send server response");
             break;
