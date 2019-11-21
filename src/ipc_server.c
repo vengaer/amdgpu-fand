@@ -59,7 +59,7 @@ static size_t construct_ipc_response(char *response, struct ipc_request *request
             }
 
             memcpy(response, &rows, sizeof(uint8_t));
-            memcpy(response + sizeof(uint8_t), m, sizeof(matrix));
+            memcpy(response + sizeof(uint8_t), m, rows * MATRIX_COLS * sizeof(uint8_t));
             return sizeof(uint8_t) + sizeof(matrix);
         }
     }
