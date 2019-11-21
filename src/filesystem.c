@@ -1,7 +1,9 @@
 #define _DEFAULT_SOURCE
+#define __USE_XOPEN_EXTENDED
 
 #include "filesystem.h"
 #include "hwmon.h"
+#include "logger.h"
 #include "strutils.h"
 
 #include <stdio.h>
@@ -10,6 +12,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <regex.h>
+#include <unistd.h>
 
 #define CURRENT_DIR "./"
 #define CURRENT_DIR_SIZE 2
@@ -92,6 +95,25 @@ bool find_dir_matching_pattern(char *restrict dst, size_t count, char const *res
     }
 
     closedir(sdir);
+    return false;
+}
+
+bool file_exists(char const *path) {
+    return access(path, F_OK) != -1;
+}
+
+bool file_accessible(char const *path, int amode, int *errnum) {
+    if(access(path, amode) == 0) {
+        if(errnum) {
+            *errnum = 0;
+        }
+        return true;
+    }
+
+    if(errnum) {
+        *errnum = errno;
+    }
+    LOG(VERBOSITY_LVL2, "Access denied: %s\n", strerror(errno));
     return false;
 }
 
