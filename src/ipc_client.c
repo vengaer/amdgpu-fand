@@ -1,3 +1,4 @@
+#include "filesystem.h"
 #include "ipc.h"
 #include "ipc_client.h"
 #include "ipc_server.h"
@@ -14,6 +15,28 @@
 #include <unistd.h>
 
 static int fd;
+
+static bool sysfs_writable(void) {
+    struct ipc_request request = {
+        .type = ipc_get,
+        .target = ipc_pwm_path,
+        .value = -1
+    };
+
+    char path[IPC_BUF_SIZE];
+    ssize_t len = ipc_client_send_request(path, &request, sizeof path);
+    if(len < 0) {
+        fprintf(stderr, "Failed to get path path\n");
+        return false;
+    }
+
+    int errnum;
+    if(!file_accessible(path, R_OK | W_OK, &errnum)) {
+        fprintf(stderr, "Failed to access sysfs: %s\n", strerror(errnum));
+        return false;
+    }
+    return true;
+}
 
 bool ipc_client_open_socket(void) {
     struct sockaddr_un addr;
@@ -87,6 +110,13 @@ bool ipc_client_handle_request(struct ipc_request *request) {
     if(!ipc_client_open_socket()) {
         return false;
     }
+
+    if(request->type == ipc_set) {
+        if(!sysfs_writable()) {
+            return false;
+        }
+    }
+
     ssize_t recv = ipc_client_send_request(response, request, sizeof response);
     ipc_client_close_socket();
 

@@ -25,6 +25,23 @@ static void create_tmp_dir(void) {
     umask(old);
 }
 
+static size_t write_matrix_to_buffer(char *response, size_t count) {
+    matrix m;
+    uint8_t rows;
+    amdgpu_fan_get_matrix(m, &rows);
+    if(count < sizeof(uint8_t) + sizeof(matrix)) {
+        if(strscpy(response, "Matrix overflows the buffer", count) < 0) {
+            fprintf(stderr, "Ipc response overflows the buffer\n");
+        }
+        return strlen(response) + 1;
+    }
+
+    memcpy(response, &rows, sizeof(uint8_t));
+    memcpy(response + sizeof(uint8_t), m, rows * MATRIX_COLS * sizeof(uint8_t));
+    return sizeof(uint8_t) + sizeof(matrix);
+
+}
+
 static size_t construct_ipc_response(char *response, struct ipc_request *request, size_t count) {
     char buffer[4];
     uint8_t value;
@@ -48,19 +65,11 @@ static size_t construct_ipc_response(char *response, struct ipc_request *request
             sprintf(buffer, "%u", value);
         }
         else if(request->target == ipc_matrix) {    
-            matrix m;
-            uint8_t rows;
-            amdgpu_fan_get_matrix(m, &rows);
-            if(count < sizeof(uint8_t) + sizeof(matrix)) {
-                if(strscpy(response, "Matrix overflows the buffer", count) < 0) {
-                    fprintf(stderr, "Ipc response overflows the buffer\n");
-                }
-                return strlen(response) + 1;
-            }
-
-            memcpy(response, &rows, sizeof(uint8_t));
-            memcpy(response + sizeof(uint8_t), m, rows * MATRIX_COLS * sizeof(uint8_t));
-            return sizeof(uint8_t) + sizeof(matrix);
+            return write_matrix_to_buffer(response, count);
+        }
+        else if(request->target == ipc_pwm_path) {
+            (void)amdgpu_fan_get_pwm_path(response, count);
+            return strlen(response) + 1;
         }
     }
     else if(request->type == ipc_set) {
