@@ -95,20 +95,6 @@ bool find_dir_matching_pattern(char *restrict dst, size_t count, char const *res
     return false;
 }
 
-enum dir_status directory_exists(char const *path) {
-    DIR *dir = opendir(path);
-    if(dir) {
-        closedir(dir);
-        return status_existing;
-    }
-    int errnum = errno;
-    if(errnum != ENOENT) {
-        fprintf(stderr, "Failed to access directory\n");
-        return status_unexistant;
-    }
-    return status_error;
-}
-
 ssize_t readlink_safe(char const *restrict link, char *restrict dst, size_t count) {
     ssize_t len = readlink(link, dst, count);
     if(len == -1) {
