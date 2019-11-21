@@ -35,7 +35,6 @@ static void construct_ipc_response(char *response, struct ipc_request *request, 
                 }
                 return;
             }
-            sprintf(buffer, "%u", value);
         }
         else if(request->target == ipc_speed) {
             if(!amdgpu_fan_get_percentage(&value)) {
@@ -44,8 +43,8 @@ static void construct_ipc_response(char *response, struct ipc_request *request, 
                 }
                 return;
             }
-            sprintf(buffer, "%u", value);
         }
+        sprintf(buffer, "%u", value);
     }
     else if(request->type == ipc_set) {
         // TODO ensure elevated priviliges
