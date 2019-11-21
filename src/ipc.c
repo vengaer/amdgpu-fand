@@ -18,7 +18,7 @@ static bool compile_regexps(void) {
             regcomp(&target_temp_rgx, "^\\s*temp(erature)?\\s*$", REG_EXTENDED) |
             regcomp(&target_speed_rgx, "^\\s*(fan)?speed\\s*$", REG_EXTENDED) |
             regcomp(&target_matrix_rgx, "^\\s*matrix\\s*$", REG_EXTENDED) |
-            regcomp(&value_rgx, "^\\s*(\\+|-)?[0-9]{1,3}\\s*$", REG_EXTENDED);
+            regcomp(&value_rgx, "^\\s*(\\+|-)[0-9]{1,3}\\s*$", REG_EXTENDED);
     if(reti) {
         fprintf(stderr, "Failed to compile ipc regexps\n");
         return false;
