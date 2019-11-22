@@ -4,7 +4,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <errno.h>
 #include <regex.h>
+#include <signal.h>
+#include <unistd.h>
 
 char const *ipc_request_type_value[3] = { "get", "set", "invalid" };
 char const *ipc_request_target_value[4] = { "temp", "speed", "matrix", "invalid" };
@@ -108,5 +111,9 @@ enum ipc_request_state get_ipc_state(struct ipc_request *request) {
     }
 
     return ipc_client_state;
+}
+
+bool process_alive(pid_t pid) {
+    return kill(pid, 0) == 0 || errno != ESRCH;
 }
 

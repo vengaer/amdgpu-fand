@@ -5,6 +5,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <sys/types.h>
+
 #define SOCK_DIR "/tmp/amdgpu-fanctl"
 #define SERVER_SOCK_RESTRICT_FILE SOCK_DIR"/amdgpu-fanctl-server-restr.sock"
 #define CLIENT_SOCK_RESTRICT_FILE SOCK_DIR"/amdgpu-fanctl-client-restr.sock"
@@ -46,5 +48,7 @@ struct ipc_request {
 bool parse_ipc_param(char const *request_param, size_t param_idx, struct ipc_request *result);
 
 enum ipc_request_state get_ipc_state(struct ipc_request *request);
+
+bool process_alive(pid_t pid);
 
 #endif
