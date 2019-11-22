@@ -1,6 +1,3 @@
-#define _DEFAULT_SOURCE
-#define __USE_XOPEN_EXTENDED
-
 #include "filesystem.h"
 #include "hwmon.h"
 #include "logger.h"

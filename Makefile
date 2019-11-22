@@ -7,7 +7,7 @@ INC_DIRS     := $(shell find $(SRC_DIR) -mindepth 1 -type d)
 BUILD_DIR    := build
 SRC_EXT      := c
 OBJ_EXT      := o
-CFLAGS       := -std=c11 -Wall -Wextra -pedantic -Wshadow -Wunknown-pragmas -O3
+CFLAGS       := -std=c11 -Wall -Wextra -pedantic -Wshadow -Wunknown-pragmas -O3 -D_POSIX_C_SOURCE -D_DEFAULT_SOURCE
 LIB          := -lm -lpthread
 INC          := $(shell [ -z "${INC_DIRS}" ] || echo "${INC_DIRS}" | sed -E 's/( |^)([^ ]*)/-I \2 /g')
 
