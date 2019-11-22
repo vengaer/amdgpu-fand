@@ -15,5 +15,6 @@ bool file_accessible(char const *path, int amode, int *errnum);
 ssize_t readlink_safe(char const *restrict link, char *restrict dst, size_t count);
 ssize_t readlink_absolute(char const *restrict link, char *restrict dst, size_t count);
 
+int rmdir_force(char const *path);
 
 #endif

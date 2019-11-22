@@ -14,6 +14,8 @@
 #define CURRENT_DIR "./"
 #define CURRENT_DIR_SIZE 2
 
+#define PATH_BUF_SIZE 512
+
 static ssize_t absolute_path(char *restrict dst, char const *restrict working_dir, char const *restrict path, size_t count) {
     char buffer[HWMON_PATH_LEN];
     char *c;
@@ -37,7 +39,7 @@ static ssize_t absolute_path(char *restrict dst, char const *restrict working_di
             *c = '\0';
         }
     }
-    if(strscat(dst, buffer, count) < 0 || strscat(dst, "/", count) < 0 || strscat(dst, path, count) < 0) {
+    if(strscpy(dst, buffer, count) < 0 || strscat(dst, "/", count) < 0 || strscat(dst, path, count) < 0) {
         fprintf(stderr, "Absolute path overflows the buffer\n");
         return -E2BIG;
     }
@@ -150,3 +152,47 @@ ssize_t readlink_absolute(char const *restrict link, char *restrict dst, size_t 
     return len;
 }
 
+int rmdir_force(char const *path) {
+    struct dirent *entry;
+    char buffer[PATH_BUF_SIZE];
+    regex_t skip_rgx;
+    int reti = regcomp(&skip_rgx, "^\\.{1,2}$", REG_EXTENDED);
+    if(reti) {
+        fprintf(stderr, "Failed to compile skip dir regex\n");
+        return -1;
+    }
+    DIR *dir = opendir(path);
+    int rv = 0;
+    if(!dir) {
+        perror("Failed to open directory");
+        return -1;
+    }
+
+    while((entry = readdir(dir))) {
+        if(absolute_path(buffer, path, entry->d_name, sizeof buffer) < 0) {
+            fprintf(stderr, "%s/%s overflowed the buffer\n", path, entry->d_name);
+            rv |= -1;
+        }
+        if(entry->d_type == DT_DIR) {
+            /* Don't try to remove . or .. */
+            if(regexec(&skip_rgx, entry->d_name, 0, NULL, 0) == 0) {
+                continue;
+            }
+            rv |= rmdir_force(buffer);
+        }
+        else {
+            if(unlink(buffer) == -1) {
+                fprintf(stderr, "Failed to remove file %s: %s\n", entry->d_name, strerror(errno));
+                rv |= -1;
+            }
+        }
+    }
+
+    if(rmdir(path) == -1) {
+        fprintf(stderr, "Failed to remove %s: %s\n", path, strerror(errno));
+        rv |= -1;
+    }
+
+    closedir(dir);
+    return rv;
+}
