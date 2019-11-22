@@ -1,6 +1,7 @@
 #include "fancontroller.h"
 #include "filesystem.h"
 #include "hwmon.h"
+#include "ipc.h"
 #include "logger.h"
 #include "strutils.h"
 
@@ -32,7 +33,9 @@ static char pwm_max_path[HWMON_PATH_LEN];
 static uint8_t pwm_min;
 static uint8_t pwm_max;
 
-static int8_t requested_percentage = -1;
+static int8_t fan_speed = -1;
+
+static pid_t ppid_override = -1;
 
 static bool aggressive_throttle = false;
 static enum interpolation_method interp = linear;
@@ -234,24 +237,24 @@ bool amdgpu_fan_set_mode(enum fanmode mode) {
 }
 
 bool amdgpu_fan_get_percentage(uint8_t *percentage) {
-    if(requested_percentage < 0) {
+    if(fan_speed < 0) {
         uint8_t npwm;
         if(!read_uint8_from_file(pwm, &npwm)) {
             return false;
         }
         double const frac = (double)npwm / (double)(pwm_max - pwm_min);
         *percentage = (uint8_t)round((frac * 100));
-        requested_percentage = *percentage;
+        fan_speed = *percentage;
         LOG(VERBOSITY_LVL3, "Current pwm: %u, corresponding to percentage: %u\n", npwm, *percentage);
     }
     else {
-        *percentage = (uint8_t)requested_percentage;
+        *percentage = (uint8_t)fan_speed;
     }
     return true;
 }
 
 bool amdgpu_fan_set_percentage(uint8_t percentage) {
-    requested_percentage = percentage;
+    fan_speed = percentage;
     uint8_t const npwm = (uint8_t)((double)percentage / 100.0 * (double)(pwm_max - pwm_min));
     LOG(VERBOSITY_LVL3, "Setting pwm %u (%f%%)\n", npwm, 100.0 * (double)npwm / (double)(pwm_max - pwm_min));
     return write_uint8_to_file(pwm, npwm);
@@ -278,7 +281,21 @@ bool amdgpu_get_temp(uint8_t *temp) {
     return false;
 }
 
+void amdgpu_fan_set_override_speed(uint8_t speed, pid_t ppid) {
+    LOG(VERBOSITY_LVL1, "Setting override speed to %u, tied to pid %d\n", speed, ppid);
+    fan_speed = speed;
+    ppid_override = ppid;
+}
+
 bool amdgpu_fan_update_speed(void) {
+    if(ppid_override >= 0) {
+        amdgpu_fan_set_percentage(fan_speed);
+        if(!process_alive(ppid_override)) {
+            ppid_override = -1;
+        }
+        return true;
+    }
+
     uint8_t temp;
     if(!amdgpu_get_temp(&temp)) {
         return false;

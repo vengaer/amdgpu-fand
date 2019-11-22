@@ -7,6 +7,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include <sys/types.h>
+
 #define PWM_ENABLE "pwm1_enable"
 #define TEMP_INPUT "temp1_input"
 #define PWM "pwm1"
@@ -40,6 +42,7 @@ bool amdgpu_fan_set_percentage(uint8_t percentage);
 
 bool amdgpu_get_temp(uint8_t *temp);
 
+void amdgpu_fan_set_override_speed(uint8_t speed, pid_t ppid);
 bool amdgpu_fan_update_speed(void);
 
 #endif
