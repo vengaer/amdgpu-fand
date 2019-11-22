@@ -61,10 +61,10 @@ static char doc[] = "amdgpu-fanctl -- A daemon controlling the fan speed on AMD 
                     "  get TARGET [VALUE]         Get target value, TARGET may be [fan]speed,\n"
                     "                             temp[erature] or matrix. Any potential VALUE is\n"
                     "                             silently discarded\n"
-                    "  set TARGET VALUE           Set value of target TARGET to VALUE.\n"
-                    "                             Valid targets are [fan]speed.\n"
-                    "                             VALUE should be given as + or - followed by \n"
-                    "                             a percentage, e.g. -10\n";
+                    "  set TARGET VALUE           Set value of target TARGET to VALUE. Changes\n"
+                    "                             are kept as long as the process invoking the\n"
+                    "                             ipc command remains alive. Valid targets are\n"
+                    "                             [fan]speed. VALUE should be givan as a percentage\n";
 static char args_doc[] = "[COMMAND TARGET [VALUE]]";
 
 static struct argp_option options[] = {
