@@ -12,6 +12,8 @@
 #define CLIENT_SOCK_FILE SOCK_DIR"/amdgpu-fanctl-client.sock"
 #define IPC_BUF_SIZE 512
 
+#define MATRIX_OVERFLOW 0x80
+
 extern char const *ipc_request_type_value[3];
 extern char const *ipc_request_target_value[4];
 

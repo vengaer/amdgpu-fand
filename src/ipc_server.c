@@ -29,14 +29,12 @@ static size_t write_matrix_to_buffer(char *response, size_t count) {
     matrix m;
     uint8_t rows;
     amdgpu_fan_get_matrix(m, &rows);
-    if(count < sizeof(uint8_t) + sizeof(matrix)) {
-        if(strscpy(response, "Matrix overflows the buffer", count) < 0) {
-            fprintf(stderr, "Ipc response overflows the buffer\n");
-        }
-        return strlen(response) + 1;
+    if(count < sizeof(uint8_t) * (1 + rows * MATRIX_COLS)) {
+        memset(response, MATRIX_OVERFLOW, sizeof(uint8_t));
+        return sizeof(uint8_t);
     }
 
-    memcpy(response, &rows, sizeof(uint8_t));
+    memset(response, rows, sizeof(uint8_t));
     memcpy(response + sizeof(uint8_t), m, rows * MATRIX_COLS * sizeof(uint8_t));
     return sizeof(uint8_t) + sizeof(matrix);
 

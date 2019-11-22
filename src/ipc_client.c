@@ -124,7 +124,12 @@ bool ipc_client_handle_request(struct ipc_request *request) {
         return false;
     }
     if(request->target == ipc_matrix) {
-        matrix_print((uint8_t (*)[2])(response + sizeof(uint8_t)), *((uint8_t*)response));
+        uint8_t const rows = *(uint8_t*)response;
+        if(MATRIX_OVERFLOW & rows) {
+            fprintf(stderr, "Matrix overflows the buffer\n");
+            return false;
+        }
+        matrix_print((uint8_t (*)[2])(response + sizeof(uint8_t)), rows);
     }
     else {
         printf("%s\n", response);
