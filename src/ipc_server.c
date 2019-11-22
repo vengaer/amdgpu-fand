@@ -17,6 +17,8 @@
 #include <sys/un.h>
 #include <unistd.h>
 
+#define IPC_RESPONSE_BUF_SIZE 32
+
 static int fd;
 
 static void create_tmp_dir(void) {
@@ -41,7 +43,7 @@ static size_t write_matrix_to_buffer(char *response, size_t count) {
 }
 
 static size_t construct_ipc_response(char *response, struct ipc_request *request, size_t count) {
-    char buffer[4];
+    char buffer[IPC_RESPONSE_BUF_SIZE];
     uint8_t value;
     if(request->type == ipc_get) {
         if(request->target == ipc_temp) {
@@ -69,14 +71,16 @@ static size_t construct_ipc_response(char *response, struct ipc_request *request
             (void)amdgpu_fan_get_pwm_path(response, count);
             return strlen(response) + 1;
         }
+        if(strscpy(response, buffer, count) < 0) {
+            fprintf(stderr, "%u overflows the destination buffer\n", value);
+        }
     }
     else if(request->type == ipc_set) {
-        // TODO ensure elevated priviliges
-        fprintf(stderr, "WARNING: ipc set not implemented yet\n");
-        *response = 0;
-    }
-    if(strscpy(response, buffer, count) < 0) {
-        fprintf(stderr, "%u overflows the destination buffer\n", value);
+        sprintf(buffer, "Speed set to constant %d%%", request->value);
+        if(strscpy(response, buffer, count) < 0)  {
+            fprintf(stderr, "Ipc response overflows the buffer\n");
+        }
+        amdgpu_fan_set_override_speed(request->value, request->ppid);
     }
     return strlen(response) + 1;
 }
@@ -125,9 +129,7 @@ void ipc_server_close_socket(void) {
     LOG(VERBOSITY_LVL2, "Closing server socket\n");
     close(fd);
     unlink(SERVER_SOCK_FILE);
-    if(rmdir(SOCK_DIR) == -1) {
-        perror("Removing tmp dir");
-    }
+    rmdir_force(SOCK_DIR);
 }
 
 void ipc_server_handle_request(void) {
