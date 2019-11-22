@@ -21,7 +21,7 @@ static bool compile_regexps(void) {
             regcomp(&target_temp_rgx, "^\\s*temp(erature)?\\s*$", REG_EXTENDED) |
             regcomp(&target_speed_rgx, "^\\s*(fan)?speed\\s*$", REG_EXTENDED) |
             regcomp(&target_matrix_rgx, "^\\s*matrix\\s*$", REG_EXTENDED) |
-            regcomp(&value_rgx, "^\\s*(\\+|-)[0-9]{1,3}\\s*$", REG_EXTENDED);
+            regcomp(&value_rgx, "^\\s*[0-9]{1,3}\\s*$", REG_EXTENDED);
     if(reti) {
         fprintf(stderr, "Failed to compile ipc regexps\n");
         return false;
@@ -47,6 +47,8 @@ bool parse_ipc_param(char const *request_param, size_t param_idx, struct ipc_req
             else if(regexec(&cmd_set_rgx, request_param, 0, NULL, 0) == 0) {
                 LOG(VERBOSITY_LVL3, "Setting ipc request type ipc_set\n");
                 result->type = ipc_set;
+                /* TODO: identify shell instance */
+                result->ppid = getppid();
             }
             else {
                 LOG(VERBOSITY_LVL3, "%s is not a valid ipc command\n", request_param);
@@ -84,7 +86,7 @@ bool parse_ipc_param(char const *request_param, size_t param_idx, struct ipc_req
         case 2:
             if(regexec(&value_rgx, request_param, 0, NULL, 0) == 0) {
                 int value = atoi(request_param);
-                if(value < -100 || value > 100) {
+                if(value < 0 || value > 100) {
                     LOG(VERBOSITY_LVL3, "%d is not in the interval (-100, 100)\n", value);
                     return false;
                 }

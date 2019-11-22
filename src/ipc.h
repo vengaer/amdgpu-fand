@@ -43,6 +43,7 @@ struct ipc_request {
     enum ipc_request_type type;
     enum ipc_request_target target;
     int8_t value;
+    pid_t ppid;
 };
 
 bool parse_ipc_param(char const *request_param, size_t param_idx, struct ipc_request *result);
