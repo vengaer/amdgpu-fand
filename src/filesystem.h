@@ -15,6 +15,5 @@ bool file_accessible(char const *path, int amode, int *errnum);
 ssize_t readlink_safe(char const *restrict link, char *restrict dst, size_t count);
 ssize_t readlink_absolute(char const *restrict link, char *restrict dst, size_t count);
 
-bool is_valid_hwmon_dir(char const *dir);
 
 #endif

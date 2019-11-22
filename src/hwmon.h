@@ -12,5 +12,6 @@
 
 bool generate_hwmon_dir(char *restrict dst, char const *restrict src, size_t count, char const *restrict config);
 bool generate_hwmon_path(char *restrict dst, char const *restrict src, size_t count);
+bool is_valid_hwmon_dir(char const *dir);
 
 #endif

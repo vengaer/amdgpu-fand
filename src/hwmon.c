@@ -4,6 +4,8 @@
 #include "logger.h"
 #include "strutils.h"
 
+#include <regex.h>
+
 bool generate_hwmon_dir(char *restrict dst, char const *restrict src, size_t count, char const *restrict config) {
     if(*src) {
         LOG(VERBOSITY_LVL3, "Generating hwmon dir from %s supplied in config\n", src);
@@ -43,4 +45,15 @@ bool generate_hwmon_path(char *restrict dst, char const *restrict hwmon, size_t 
     }
     LOG(VERBOSITY_LVL2, "hwmon path set to %s\n", dst);
     return true;
+}
+
+bool is_valid_hwmon_dir(char const *dir) {
+    regex_t hwmon_rgx;
+    int reti = regcomp(&hwmon_rgx, "^hwmon[0-9]$", REG_EXTENDED);
+    if(reti) {
+        fprintf(stderr, "Failed to compile hwmon regex\n");
+        return false;
+    }
+
+    return regexec(&hwmon_rgx, dir, 0, NULL, 0) == 0;
 }
