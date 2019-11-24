@@ -2,6 +2,7 @@
 #include "strutils.h"
 
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -23,6 +24,22 @@ static bool construct_proc_path(char *dst, pid_t pid, size_t count) {
     return true;
 }
 
+/* Full comm name read if comm matches the pattern (comm) */
+static bool full_comm_name_read(char const *comm, size_t count) {
+    int8_t parens_balance = 0;
+
+    for(size_t i = 0; i < count && comm[i]; i++) {
+        if(comm[i] == '(') {
+            ++parens_balance;
+        }
+        else if(comm[i] == ')') {
+            --parens_balance;
+        }
+    }
+
+    return !parens_balance;
+}
+
 static bool get_proc_comm(char *dst, pid_t pid, size_t count) {
     char path[PROCFS_PATH_SIZE];
     char comm[COMM_SIZE];
@@ -38,14 +55,14 @@ static bool get_proc_comm(char *dst, pid_t pid, size_t count) {
         return false;
     }
 
-    int status = fscanf(fp, "%*d %s", comm);
+    int status = fscanf(fp, "%*d %32s", comm);
     fclose(fp);
     if(status == EOF) {
-        fprintf(stderr, "failed to read comm of %d\n", pid);
+        fprintf(stderr, "Failed to read comm of %d\n", pid);
         return false;
     }
 
-    bool buffer_overflow = false;
+    bool buffer_overflow = !full_comm_name_read(comm, sizeof comm);
     if(comm[COMM_SIZE - 1]) {
         fprintf(stderr, "Comm of %d overflows the buffer\n", pid);
         comm[COMM_SIZE - 1] = '\0';
