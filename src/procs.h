@@ -15,4 +15,6 @@ pid_t get_ppid_of(pid_t pid);
 pid_t get_pid_of_shell(void);
 enum proc_result proc_running_in_sudo(pid_t pid);
 
+bool proc_alive(pid_t pid);
+
 #endif

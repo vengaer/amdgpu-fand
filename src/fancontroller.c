@@ -1,8 +1,8 @@
 #include "fancontroller.h"
 #include "filesystem.h"
 #include "hwmon.h"
-#include "ipc.h"
 #include "logger.h"
+#include "procs.h"
 #include "strutils.h"
 
 #include <math.h>
@@ -290,7 +290,7 @@ void amdgpu_fan_set_override_speed(uint8_t speed, pid_t ppid) {
 bool amdgpu_fan_update_speed(void) {
     if(ppid_override >= 0) {
         amdgpu_fan_set_percentage(fan_speed);
-        if(!process_alive(ppid_override)) {
+        if(!proc_alive(ppid_override)) {
             LOG(VERBOSITY_LVL1, "Process %d no longer alive, falling back on matrix\n", ppid_override);
             ppid_override = -1;
         }

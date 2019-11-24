@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <error.h>
+#include <signal.h>
 #include <unistd.h>
 
 #define PROCFS_PATH_SIZE 64
@@ -118,5 +120,9 @@ enum proc_result proc_running_in_sudo(pid_t pid) {
     if(!get_proc_comm(comm, ppid, sizeof comm)) {
         return proc_unknown;
     }
-    return strcmp(comm, SUDO_COMM) == 0 ? proc_true : proc_false;
+    return (enum proc_result)strcmp(comm, SUDO_COMM) == 0;
+}
+
+bool proc_alive(pid_t pid) {
+    return kill(pid, 0) == 0 || errno != ESRCH;
 }
