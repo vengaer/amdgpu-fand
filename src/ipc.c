@@ -10,6 +10,9 @@
 #include <signal.h>
 #include <unistd.h>
 
+#define FAN_SPEED_MIN 0
+#define FAN_SPEED_MAX 100
+
 char const *ipc_request_type_value[3] = { "get", "set", "invalid" };
 char const *ipc_request_target_value[4] = { "temp", "speed", "matrix", "invalid" };
 
@@ -51,7 +54,7 @@ bool parse_ipc_param(char const *request_param, size_t param_idx, struct ipc_req
                 result->ppid = get_pid_of_shell();
             }
             else {
-                LOG(VERBOSITY_LVL3, "%s is not a valid ipc command\n", request_param);
+                LOG(VERBOSITY_LVL1, "%s is not a valid ipc command\n", request_param);
                 return false;
             }
             break;
@@ -59,7 +62,7 @@ bool parse_ipc_param(char const *request_param, size_t param_idx, struct ipc_req
             if(regexec(&target_temp_rgx, request_param, 0, NULL, 0) == 0) {
                 /* Can't set temperature... */
                 if(result->type == ipc_set) {
-                    LOG(VERBOSITY_LVL3, "%s is not available with command 'set'\n", request_param);
+                    LOG(VERBOSITY_LVL1, "%s is not available with command 'set'\n", request_param);
                     return false;
                 }
                 result->target = ipc_temp;
@@ -72,22 +75,22 @@ bool parse_ipc_param(char const *request_param, size_t param_idx, struct ipc_req
             else if(regexec(&target_matrix_rgx, request_param, 0, NULL, 0) == 0) {
                 /* Can't set matrix... */
                 if(result->type == ipc_set) {
-                    LOG(VERBOSITY_LVL3, "%s is not available with command 'set'\n", request_param);
+                    LOG(VERBOSITY_LVL1, "%s is not available with command 'set'\n", request_param);
                     return false;
                 }
                 result->target = ipc_matrix;
                 LOG(VERBOSITY_LVL3, "Setting ipc target ipc_matrix\n");
             }
             else {
-                LOG(VERBOSITY_LVL3, "%s is not a valid ipc target\n", request_param);
+                LOG(VERBOSITY_LVL1, "%s is not a valid ipc target\n", request_param);
                 return false;
             }
             break;
         case 2:
             if(regexec(&value_rgx, request_param, 0, NULL, 0) == 0) {
                 int value = atoi(request_param);
-                if(value < 0 || value > 100) {
-                    LOG(VERBOSITY_LVL3, "%d is not in the interval (-100, 100)\n", value);
+                if(value < FAN_SPEED_MIN || value > FAN_SPEED_MAX) {
+                    LOG(VERBOSITY_LVL1, "%d is not in the interval (%d, %d)\n", value, FAN_SPEED_MIN, FAN_SPEED_MAX);
                     return false;
                 }
                 LOG(VERBOSITY_LVL3, "Setting ipc value %d\n", value);
