@@ -1,5 +1,6 @@
 #include "ipc.h"
 #include "logger.h"
+#include "procs.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -47,8 +48,7 @@ bool parse_ipc_param(char const *request_param, size_t param_idx, struct ipc_req
             else if(regexec(&cmd_set_rgx, request_param, 0, NULL, 0) == 0) {
                 LOG(VERBOSITY_LVL3, "Setting ipc request type ipc_set\n");
                 result->type = ipc_set;
-                /* TODO: identify shell instance */
-                result->ppid = getppid();
+                result->ppid = get_pid_of_shell();
             }
             else {
                 LOG(VERBOSITY_LVL3, "%s is not a valid ipc command\n", request_param);
