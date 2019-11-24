@@ -172,6 +172,7 @@ int rmdir_force(char const *path) {
         if(absolute_path(buffer, path, entry->d_name, sizeof buffer) < 0) {
             fprintf(stderr, "%s/%s overflowed the buffer\n", path, entry->d_name);
             rv |= -1;
+            continue;
         }
         if(entry->d_type == DT_DIR) {
             /* Don't try to remove . or .. */
