@@ -26,7 +26,7 @@ static bool sysfs_writable(void) {
     char path[IPC_BUF_SIZE];
     ssize_t len = ipc_client_send_request(path, &request, sizeof path);
     if(len < 0) {
-        fprintf(stderr, "Failed to get path path\n");
+        fprintf(stderr, "Failed to get pwm path\n");
         return false;
     }
 
