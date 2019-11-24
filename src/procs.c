@@ -103,10 +103,16 @@ pid_t get_ppid_of(pid_t pid) {
 pid_t get_pid_of_shell(void) {
     pid_t ppid = getppid();
 
+    enum proc_result in_sudo = proc_running_in_sudo(getpid());
+
     /* If running in sudo, we need the parent process of sudo... */
-    if(proc_running_in_sudo(getpid())) {
+    if(in_sudo == proc_true) {
         ppid = get_ppid_of(ppid);
     }
+    else if(in_sudo == proc_unknown) {
+        return -1;
+    }
+
     return ppid;
 }
 
