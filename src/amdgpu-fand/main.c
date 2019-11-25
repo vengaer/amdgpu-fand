@@ -53,19 +53,11 @@ static bool uint8_from_chars(char const *str, uint8_t *value) {
     return true;
 }
 
-char const *argp_program_version = "amdgpu-fanctl 2.0";
+char const *argp_program_version = "amdgpu-fand 1.0";
 char const *argp_program_bug_address = "<vilhelm.engstrom@tuta.io>";
 
-static char doc[] = "amdgpu-fanctl -- A daemon controlling the fan speed on AMD Radeon GPUs\
-                    \vCommands:\n"
-                    "  get TARGET [VALUE]         Get target value, TARGET may be [fan]speed,\n"
-                    "                             temp[erature] or matrix. Any potential VALUE is\n"
-                    "                             silently discarded\n"
-                    "  set TARGET VALUE           Set value of target TARGET to VALUE. Changes\n"
-                    "                             are kept as long as the process invoking the\n"
-                    "                             ipc command remains alive. Valid targets are\n"
-                    "                             [fan]speed. VALUE should be givan as a percentage\n";
-static char args_doc[] = "[COMMAND TARGET [VALUE]]";
+static char doc[] = "amdgpu-fand -- A daemon controlling the fan speed on AMD Radeon GPUs";
+static char args_doc[] = "";
 
 static struct argp_option options[] = {
     {"verbose",  'v', 0,          0, "Echo actions to standard out. May be repeated up to 3 times to set verbosity level", 0 },
@@ -77,7 +69,6 @@ static struct argp_option options[] = {
 };
 
 struct arguments {
-    struct ipc_request request;
     char *hwmon;
     char *config;
     uint8_t verbosity;
@@ -104,11 +95,6 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
         case 'c':
             args->config = arg;
             break;
-        case ARGP_KEY_ARG:
-            if(state->arg_num >= 3 || !parse_ipc_param(arg, state->arg_num, &args->request)) {
-                argp_usage(state);
-            }
-            break;
         default:
             return ARGP_ERR_UNKNOWN;
         }
@@ -130,7 +116,6 @@ int main(int argc, char** argv) {
     matrix mtrx;
 
     struct arguments args = {
-        .request = { .type = ipc_invalid_type, .target = ipc_invalid_target, .value = -1 },
         .config = CONFIG_FULL_PATH,
         .verbosity = 0,
         .interval = 5,
@@ -142,23 +127,6 @@ int main(int argc, char** argv) {
     signal(SIGTERM, signal_handler);
 
     argp_parse(&argp, argc, argv, 0, 0, &args);
-
-    enum ipc_request_state const ipc_state = get_ipc_state(&args.request);
-
-    switch(ipc_state) {
-        default:
-        case ipc_invalid_state:
-            fprintf(stderr, "Invalid ipc request\n");
-            return 1;
-        case ipc_client_state:
-            return !ipc_client_handle_request(&args.request);
-        case ipc_server_state:
-            if(ipc_server_running()) {
-                fprintf(stderr, "Server already running\n");
-                return 1;
-            }
-            break;
-    }
 
     if(!parse_config(args.config, persistent_path, sizeof persistent_path, hwmon_buf, sizeof hwmon_buf, &config_interval, &aggressive_throttle, &interp, mtrx, &mtrx_rows)) {
         return 1;
