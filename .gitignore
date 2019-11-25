@@ -1,2 +1,4 @@
 build/**
 amdgpu-fanctl
+amdgpu-fand
+!src/*
