@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <error.h>
@@ -78,6 +79,23 @@ static bool get_proc_comm(char *dst, pid_t pid, size_t count) {
     return !buffer_overflow;
 }
 
+static ssize_t get_shell_comm(char *dst, size_t count) {
+    char *shell = getenv("SHELL");
+    if(!shell) {
+        fprintf(stderr, "Failed to get SHELL from environment\n");
+        return -1;
+    }
+
+    char *start = strrchr(shell, '/');
+    start = start ? start + 1 : shell;
+
+    if(strscpy(dst, "(", count) < 0 || strscat(dst, start, count) < 0 || strscat(dst, ")", count) < 0) {
+        fprintf(stderr, "Shell comm overflows the buffer\n");
+        return -1;
+    }
+    return strlen(dst) + 1;
+}
+
 pid_t get_ppid_of(pid_t pid) {
     char path[PROCFS_PATH_SIZE];
     if(!construct_proc_path(path, pid, sizeof path)) {
@@ -101,19 +119,32 @@ pid_t get_ppid_of(pid_t pid) {
 }
 
 pid_t get_pid_of_shell(void) {
-    pid_t ppid = getppid();
-
-    enum proc_result in_sudo = proc_running_in_sudo(getpid());
-
-    /* If running in sudo, we need the parent process of sudo... */
-    if(in_sudo == proc_true) {
-        ppid = get_ppid_of(ppid);
-    }
-    else if(in_sudo == proc_unknown) {
+    char shell[COMM_SIZE];
+    char comm[COMM_SIZE];
+    if(get_shell_comm(shell, sizeof shell) < 0) {
         return -1;
     }
 
-    return ppid;
+    pid_t pid = getpid();
+
+    do {
+        pid = get_ppid_of(pid);
+        switch(pid) {
+            case 1:
+                fprintf(stderr, "Shell not found in process tree\n");
+                /* fall through */
+            case -1:
+                return -1;
+            default:
+                break;
+        }
+
+        if(!get_proc_comm(comm, pid, sizeof comm)) {
+            return -1;
+        }
+    } while(strcmp(shell, comm) != 0);
+    
+    return pid;
 }
 
 enum proc_result proc_running_in_sudo(pid_t pid) {
