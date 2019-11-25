@@ -8,7 +8,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define CONFIG_FILE "amdgpu-fanctl.conf"
+#define CONFIG_FILE "amdgpu-fand.conf"
 #define CONFIG_FULL_PATH "/etc/"CONFIG_FILE
 #define COMMENT_CHAR '#'
 

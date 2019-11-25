@@ -404,7 +404,7 @@ bool parse_config(char const *restrict path, char *restrict persistent, size_t p
 
     FILE *fp = fopen(path, "r");
     if(!fp) {
-        fprintf(stderr, "Failed to read config file\n");
+        fprintf(stderr, "Failed to read config file %s\n", path);
         return false;
     }
 
