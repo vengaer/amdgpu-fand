@@ -1,6 +1,5 @@
 #include "ipc.h"
 #include "ipc_client.h"
-#include "ipc_server.h"
 #include "logger.h"
 
 #include <stdint.h>

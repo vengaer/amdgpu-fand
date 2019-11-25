@@ -1,7 +1,6 @@
 #include "filesystem.h"
 #include "ipc.h"
 #include "ipc_client.h"
-#include "ipc_server.h"
 #include "logger.h"
 #include "matrix.h"
 #include "strutils.h"

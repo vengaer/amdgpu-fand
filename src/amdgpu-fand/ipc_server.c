@@ -85,10 +85,6 @@ static size_t construct_ipc_response(char *response, struct ipc_request *request
     return strlen(response) + 1;
 }
 
-bool ipc_server_running(void) {
-    return file_exists(SERVER_SOCK_FILE);
-}
-
 bool ipc_server_open_socket(void) {
     struct sockaddr_un addr;
 

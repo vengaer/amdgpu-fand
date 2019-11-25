@@ -1,3 +1,4 @@
+#include "filesystem.h"
 #include "ipc.h"
 #include "logger.h"
 #include "procs.h"
@@ -118,5 +119,9 @@ enum ipc_request_state get_ipc_state(struct ipc_request *request) {
     }
 
     return ipc_client_state;
+}
+
+bool ipc_server_running(void) {
+    return file_exists(SERVER_SOCK_FILE);
 }
 

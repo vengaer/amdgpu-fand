@@ -1,14 +1,8 @@
 #include "config.h"
 #include "daemon.h"
-#include "fancontroller.h"
 #include "filesystem.h"
 #include "hwmon.h"
-#include "interpolation.h"
-#include "ipc.h"
-#include "ipc_client.h"
-#include "ipc_server.h"
 #include "logger.h"
-#include "strutils.h"
 
 #include <stdbool.h>
 #include <stddef.h>

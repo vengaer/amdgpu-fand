@@ -1,5 +1,4 @@
 #include "filesystem.h"
-#include "hwmon.h"
 #include "logger.h"
 #include "strutils.h"
 
@@ -15,9 +14,10 @@
 #define CURRENT_DIR_SIZE 2
 
 #define PATH_BUF_SIZE 512
+#define PATH_SIZE 128
 
 static ssize_t absolute_path(char *restrict dst, char const *restrict working_dir, char const *restrict path, size_t count) {
-    char buffer[HWMON_PATH_LEN];
+    char buffer[PATH_SIZE];
     char *c;
 
     regex_t path_rgx;
@@ -130,8 +130,8 @@ ssize_t readlink_safe(char const *restrict link, char *restrict dst, size_t coun
 }
 
 ssize_t readlink_absolute(char const *restrict link, char *restrict dst, size_t count) {
-    char dir[HWMON_PATH_LEN];
-    char relative[HWMON_PATH_LEN];
+    char dir[PATH_SIZE];
+    char relative[PATH_SIZE];
 
     if(parent_dir(dir, link, sizeof dir) < 0) {
         fprintf(stderr, "Parent dir of %s overflows the buffer\n", link);
