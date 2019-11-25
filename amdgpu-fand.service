@@ -1,10 +1,10 @@
 [Unit]
-Description=amdgpu-fanctl
+Description=amdgpu-fand
 
 [Service]
 Type=simple
 ExecStartPre=/usr/bin/sleep 10
-ExecStart=/usr/local/bin/amdgpu-fanctl -v
+ExecStart=/usr/local/bin/amdgpu-fand -v
 
 [Install]
 WantedBy=multi-user.target

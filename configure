@@ -1,7 +1,7 @@
 #!/bin/bash
 
 card=$(ls /sys/class/drm | grep "^card[0-9]$")
-conf=amdgpu-fanctl.conf
+conf=amdgpu-fand.conf
 
 case $(echo "$card" | wc -l) in
     0)
@@ -51,7 +51,7 @@ esac
 
 cat << EOF >$conf
 #
-# amdgpu-fanctl config
+# amdgpu-fand config
 #
 
 # Update interval
