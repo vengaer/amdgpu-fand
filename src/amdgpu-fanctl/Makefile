@@ -6,10 +6,10 @@ TARGET_PATH := $(BASE_DIR)/$(TARGET)
 SRC_BASE	:= $(BASE_DIR)/src
 SRC_DIR    	:= $(SRC_BASE)/$(TARGET) $(SRC_BASE)/$(COMMON_DIR)
 INC_DIRS   	:= $(shell find $(SRC_DIR) -type d)
-INC			:= $(foreach d, $(INC_DIRS), -I$d)
+INC	        := $(foreach d, $(INC_DIRS), -I$d)
 
 CFLAGS		:= $(G_CFLAGS)
-LIB			:= $(G_LIB)
+LIB	        := $(G_LIB)
 
 SRC        	:= $(shell find $(SRC_DIR) -mindepth 1 -type f -name "*.$(SRC_EXT)")
 OBJ        	:= $(patsubst $(SRC_BASE)/%, $(BUILD_DIR)/%, $(SRC:.$(SRC_EXT)=.$(OBJ_EXT)))
