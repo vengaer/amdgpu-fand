@@ -1,54 +1,56 @@
 CC           ?= gcc
 
-TARGET       := amdgpu-fanctl
+BASE_DIR 	 := $(shell pwd)
+COMMON_DIR	 := common
 
-SRC_DIR      := src
-INC_DIRS     := $(shell find $(SRC_DIR) -mindepth 1 -type d)
-BUILD_DIR    := build
+DAEMON		 := amdgpu-fand
+CONTROLLER	 := amdgpu-fanctl
+
+SRC_DIR		 := src
+BUILD_DIR    := $(BASE_DIR)/build
 SRC_EXT      := c
 OBJ_EXT      := o
 CFLAGS       := -std=c11 -Wall -Wextra -pedantic -Wshadow -Wunknown-pragmas -O3 -D_POSIX_C_SOURCE -D_DEFAULT_SOURCE
 LIB          := -lm
-INC          := $(shell [ -z "${INC_DIRS}" ] || echo "${INC_DIRS}" | sed -E 's/( |^)([^ ]*)/-I \2 /g')
 
-SRC          := $(shell find $(SRC_DIR) -mindepth 1 -type f -name *.$(SRC_EXT))
-OBJ          := $(patsubst $(SRC_DIR)/%, $(BUILD_DIR)/%, $(SRC:.$(SRC_EXT)=.$(OBJ_EXT)))
+SHARED_VARS  := G_CFLAGS="$(CFLAGS)"       \
+				G_LIB="$(LIB)"		   	   \
+				BUILD_DIR="$(BUILD_DIR)"   \
+				BASE_DIR="$(BASE_DIR)"     \
+				SRC_EXT="$(SRC_EXT)"       \
+				OBJ_EXT="$(OBJ_EXT)"	   \
+				COMMON_DIR="$(COMMON_DIR)"
 
-CONFIG       := $(TARGET).conf
-SERVICE      := $(TARGET).service
+CONFIG       := $(DAEMON).conf
+SERVICE      := $(DAEMON).service
 INSTALL_DIR  := /usr/local/bin
 CONFIG_DIR   := /etc
 SERVICE_DIR  := /etc/systemd/system
 
+.PHONY: $(DAEMON) $(CONTROLLER) clean install
 
-all: $(TARGET)
+all: $(DAEMON) $(CONTROLLER)
 
-$(TARGET): $(OBJ)
-	$(info Linking $@)
-	@$(CC) -o $@ $^ $(LIB)
+$(DAEMON):
+	@$(MAKE) -sC $(SRC_DIR)/$(DAEMON) $(SHARED_VARS)
 
-$(BUILD_DIR)/%.$(OBJ_EXT): $(SRC_DIR)/%.$(SRC_EXT) | dirs
-	$(info Compiling $@)
-	@mkdir -p $(dir $@)
-	@$(CC) $(CFLAGS) $(INC) -MD -MP -c -o $@ $<
-
-.PHONY: run clean install dirs
-
-run: $(TARGET)
-	@./$(TARGET)
+$(CONTROLLER):
+	@$(MAKE) -sC $(SRC_DIR)/$(CONTROLLER) $(SHARED_VARS)
 
 clean:
-	rm -f $(OBJ) $(TARGET); rm -rf $(BUILD_DIR)
+	@$(MAKE) clean -sC $(SRC_DIR)/$(DAEMON) $(SHARED_VARS)
+	@$(MAKE) clean -sC $(SRC_DIR)/$(CONTROLLER) $(SHARED_VARS)
 
-install: $(TARGET)
-	$(info Installing to $(INSTALL_DIR)/$(TARGET))
-	@install $(TARGET) $(INSTALL_DIR)/$(TARGET)
-	$(info Creating default config in $(CONFIG_DIR)/$(CONFIG))
+install:
+ifneq (,$(wildcard $(DAEMON)))
+	$(info Installing $(DAEMON))
+	@install $(DAEMON) $(INSTALL_DIR)/$(DAEMON)
+	$(info Copying $(CONFIG))
 	@install -m644 $(CONFIG) $(CONFIG_DIR)/$(CONFIG)
-	$(info Adding systemd service $(SERVICE_DIR)/$(SERVICE))
-	@install -m644 $(SERVICE) $(SERVICE_DIR)/$(SERVICE)
-
-dirs:
-	@mkdir -p $(BUILD_DIR)
-
--include $(OBJ:.o=.d)
+	$(info Adding Systemd service $(SERVICE))
+	@install -m644 $(SERVICE) $(SERVICE_DIR)/$(SERVIC)
+endif
+ifneq (,$(wildcard $(CONTROLLER)))
+	$(info Installing $(CONTROLLER))
+	@install $(CONTROLLER) $(INSTALL_DIR)/$(CONTROLLER)
+endif
