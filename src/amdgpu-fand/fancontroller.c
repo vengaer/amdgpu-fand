@@ -207,12 +207,12 @@ void amdgpu_fan_set_matrix(matrix m, uint8_t m_rows) {
     }
 }
 
-bool amdgpu_fan_get_pwm_path(char *buffer, size_t count) {
-    if(strscpy(buffer, pwm, count) < 0) {
+ssize_t amdgpu_fan_get_pwm_path(char *buffer, size_t count) {
+    ssize_t len = strscpy(buffer, pwm, count);
+    if(len < 0) {
         fprintf(stderr, "Pwm path overflows buffer\n");
-        return false;
     }
-    return true;
+    return len;
 }
 
 bool amdgpu_fan_get_aggressive_throttle(void) {
