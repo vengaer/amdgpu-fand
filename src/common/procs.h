@@ -5,6 +5,8 @@
 
 #include <sys/types.h>
 
+#define DETACH_FROM_SHELL -0x8
+
 enum proc_result {
     proc_unknown = -1,
     proc_false,
