@@ -37,8 +37,8 @@ static char doc[] = "amdgpu-fanctl -- Command line interface for amdgpu-fand\
 static char args_doc[] = "COMMAND [TARGET [VALUE]]";
 
 static struct argp_option options[] = {
-    {"verbose",  'v', 0,          0, "Echo actions to standard out. May be repeated up to 3 times to set verbosity level", 0 },
-    {"detach",  'd', 0,          0, "Detach from current shell instance", 0 },
+    {"verbose", 'v', 0, 0, "Echo actions to standard out. May be repeated up to 3 times to set verbosity level", 0 },
+    {"detach",  'd', 0, 0, "Detach from current shell instance", 0 },
     { 0 }
 };
 
