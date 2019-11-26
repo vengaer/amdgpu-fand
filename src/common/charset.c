@@ -1,5 +1,4 @@
 #include "charset.h"
-#include "strutils.h"
 
 #include <stdbool.h>
 #include <stdio.h>
