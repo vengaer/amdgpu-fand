@@ -110,7 +110,7 @@ bool ipc_client_handle_request(struct ipc_request *request) {
         return false;
     }
 
-    if(request->type == ipc_set) {
+    if(request->type == ipc_set || request->type == ipc_reset) {
         if(!sysfs_writable()) {
             return false;
         }
