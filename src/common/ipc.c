@@ -15,12 +15,13 @@
 char const *ipc_request_type_value[3] = { "get", "set", "invalid" };
 char const *ipc_request_target_value[4] = { "temp", "speed", "matrix", "invalid" };
 
-static regex_t cmd_get_rgx, cmd_set_rgx, target_temp_rgx, target_speed_rgx, target_matrix_rgx, value_rgx;
+static regex_t cmd_get_rgx, cmd_set_rgx, cmd_reset_rgx, target_temp_rgx, target_speed_rgx, target_matrix_rgx, value_rgx;
 
 static bool compile_regexps(void) {
     int reti = 0;
     reti |= regcomp(&cmd_get_rgx, "^\\s*get\\s*$", REG_EXTENDED) |
             regcomp(&cmd_set_rgx, "^\\s*set\\s*$", REG_EXTENDED) |
+            regcomp(&cmd_reset_rgx, "^\\s*reset\\s*$", REG_EXTENDED) |
             regcomp(&target_temp_rgx, "^\\s*temp(erature)?\\s*$", REG_EXTENDED) |
             regcomp(&target_speed_rgx, "^\\s*(fan)?speed\\s*$", REG_EXTENDED) |
             regcomp(&target_matrix_rgx, "^\\s*matrix\\s*$", REG_EXTENDED) |
@@ -32,6 +33,80 @@ static bool compile_regexps(void) {
     return true;
 }
 
+static bool parse_command_param(char const *request_param, struct ipc_request *result) {
+    if(regexec(&cmd_get_rgx, request_param, 0, NULL, 0) == 0) {
+        LOG(VERBOSITY_LVL3, "Setting ipc request type ipc_get\n");
+        result->type = ipc_get;
+    }
+    else if(regexec(&cmd_set_rgx, request_param, 0, NULL, 0) == 0) {
+        LOG(VERBOSITY_LVL3, "Setting ipc request type ipc_set\n");
+        result->type = ipc_set;
+        result->ppid = get_pid_of_shell();
+        if(result->ppid == -1) {
+            fprintf(stderr, "Failed to get pid of shell\n");
+            return false;
+        }
+    }
+    else if(regexec(&cmd_reset_rgx, request_param, 0, NULL, 0) == 0) {
+        LOG(VERBOSITY_LVL3, "Setting ipc request type ipc_reset\n");
+        result->type = ipc_reset;
+    }
+    else {
+        fprintf(stderr, "%s is not a valid ipc command\n", request_param);
+        return false;
+    }
+    return true;
+
+}
+
+static bool parse_target_param(char const *request_param, struct ipc_request *result) {
+    if(regexec(&target_temp_rgx, request_param, 0, NULL, 0) == 0) {
+        /* Can't set temperature... */
+        if(result->type == ipc_set) {
+            fprintf(stderr, "%s is not available with command 'set'\n", request_param);
+            return false;
+        }
+        result->target = ipc_temp;
+        LOG(VERBOSITY_LVL3, "Setting ipc target ipc_temp\n");
+    }
+    else if(regexec(&target_speed_rgx, request_param, 0, NULL, 0) == 0) {
+        LOG(VERBOSITY_LVL3, "Setting ipc target ipc_speed\n");
+        result->target = ipc_speed;
+    }
+    else if(regexec(&target_matrix_rgx, request_param, 0, NULL, 0) == 0) {
+        /* Can't set matrix... */
+        if(result->type == ipc_set) {
+            fprintf(stderr, "%s is not available with command 'set'\n", request_param);
+            return false;
+        }
+        result->target = ipc_matrix;
+        LOG(VERBOSITY_LVL3, "Setting ipc target ipc_matrix\n");
+    }
+    else {
+        fprintf(stderr, "%s is not a valid ipc target\n", request_param);
+        return false;
+    }
+    return true;
+}
+
+bool parse_value_param(char const *request_param, struct ipc_request *result) {
+    if(regexec(&value_rgx, request_param, 0, NULL, 0) != 0) {
+        fprintf(stderr, "Invalid value %s\n", request_param);
+        return false;
+    }
+    else if(result->type != ipc_set) {
+        return true;
+    }
+    int value = atoi(request_param);
+    if(value < FAN_SPEED_MIN || value > FAN_SPEED_MAX) {
+        LOG(VERBOSITY_LVL1, "%d is not in the interval (%d, %d)\n", value, FAN_SPEED_MIN, FAN_SPEED_MAX);
+        return false;
+    }
+    LOG(VERBOSITY_LVL3, "Setting ipc value %d\n", value);
+    result->value = value;
+
+    return true;
+}
 
 bool parse_ipc_param(char const *request_param, size_t param_idx, struct ipc_request *result) {
     static bool regexps_compiled = false;
@@ -43,70 +118,15 @@ bool parse_ipc_param(char const *request_param, size_t param_idx, struct ipc_req
 
     switch(param_idx) {
         case 0:
-            if(regexec(&cmd_get_rgx, request_param, 0, NULL, 0) == 0) {
-                LOG(VERBOSITY_LVL3, "Setting ipc request type ipc_get\n");
-                result->type = ipc_get;
-            }
-            else if(regexec(&cmd_set_rgx, request_param, 0, NULL, 0) == 0) {
-                LOG(VERBOSITY_LVL3, "Setting ipc request type ipc_set\n");
-                result->type = ipc_set;
-                result->ppid = get_pid_of_shell();
-                if(result->ppid == -1) {
-                    fprintf(stderr, "Failed to get pid of shell\n");
-                    return false;
-                }
-            }
-            else {
-                LOG(VERBOSITY_LVL1, "%s is not a valid ipc command\n", request_param);
-                return false;
-            }
-            break;
+            return parse_command_param(request_param, result);
         case 1:
-            if(regexec(&target_temp_rgx, request_param, 0, NULL, 0) == 0) {
-                /* Can't set temperature... */
-                if(result->type == ipc_set) {
-                    LOG(VERBOSITY_LVL1, "%s is not available with command 'set'\n", request_param);
-                    return false;
-                }
-                result->target = ipc_temp;
-                LOG(VERBOSITY_LVL3, "Setting ipc target ipc_temp\n");
-            }
-            else if(regexec(&target_speed_rgx, request_param, 0, NULL, 0) == 0) {
-                LOG(VERBOSITY_LVL3, "Setting ipc target ipc_speed\n");
-                result->target = ipc_speed;
-            }
-            else if(regexec(&target_matrix_rgx, request_param, 0, NULL, 0) == 0) {
-                /* Can't set matrix... */
-                if(result->type == ipc_set) {
-                    LOG(VERBOSITY_LVL1, "%s is not available with command 'set'\n", request_param);
-                    return false;
-                }
-                result->target = ipc_matrix;
-                LOG(VERBOSITY_LVL3, "Setting ipc target ipc_matrix\n");
-            }
-            else {
-                LOG(VERBOSITY_LVL1, "%s is not a valid ipc target\n", request_param);
-                return false;
-            }
-            break;
+            return parse_target_param(request_param, result);
         case 2:
-            if(regexec(&value_rgx, request_param, 0, NULL, 0) == 0) {
-                int value = atoi(request_param);
-                if(value < FAN_SPEED_MIN || value > FAN_SPEED_MAX) {
-                    LOG(VERBOSITY_LVL1, "%d is not in the interval (%d, %d)\n", value, FAN_SPEED_MIN, FAN_SPEED_MAX);
-                    return false;
-                }
-                LOG(VERBOSITY_LVL3, "Setting ipc value %d\n", value);
-                result->value = value;
-
-                break;
-            }
-            /* fall through */
+            return parse_value_param(request_param, result);
         default:
-            return false;
+            break;
     }
-
-    return true;
+    return false;
 }
 
 enum ipc_request_state get_ipc_state(struct ipc_request *request) {
