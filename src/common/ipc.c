@@ -41,10 +41,12 @@ static bool parse_command_param(char const *request_param, struct ipc_request *r
     else if(regexec(&cmd_set_rgx, request_param, 0, NULL, 0) == 0) {
         LOG(VERBOSITY_LVL3, "Setting ipc request type ipc_set\n");
         result->type = ipc_set;
-        result->ppid = get_pid_of_shell();
-        if(result->ppid == -1) {
-            fprintf(stderr, "Failed to get pid of shell\n");
-            return false;
+        if(result->ppid != DETACH_FROM_SHELL) {
+            result->ppid = get_pid_of_shell();
+            if(result->ppid == -1) {
+                fprintf(stderr, "Failed to get pid of shell\n");
+                return false;
+            }
         }
     }
     else if(regexec(&cmd_reset_rgx, request_param, 0, NULL, 0) == 0) {

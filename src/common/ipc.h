@@ -14,7 +14,7 @@
 #define CLIENT_SOCK_FILE SOCK_DIR"/amdgpu-fanctl-client.sock"
 #define IPC_BUF_SIZE 512
 
-#define DETACH_FROM_SHELL -0x4
+#define DETACH_FROM_SHELL -0x8
 
 #define MATRIX_OVERFLOW 0x80
 
