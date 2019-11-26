@@ -42,47 +42,90 @@ static size_t write_matrix_to_buffer(char *response, size_t count) {
 
 }
 
-static size_t construct_ipc_response(char *response, struct ipc_request *request, size_t count) {
+static size_t construct_ipc_get_response(char *response, struct ipc_request *request, size_t count) {
     char buffer[IPC_RESPONSE_BUF_SIZE];
     uint8_t value;
+    ssize_t len;
+    if(request->target == ipc_temp) {
+        if(!amdgpu_get_temp(&value)) {
+            len = strscpy(response, "Failed to get chip temp", count);
+            if(len < 0) {
+                fprintf(stderr, "Ipc response overflowed the buffer\n");
+                len = strlen(response);
+            }
+            return len + 1;
+        }
+        sprintf(buffer, "%u", value);
+    }
+    else if(request->target == ipc_speed) {
+        if(!amdgpu_fan_get_percentage(&value)) {
+            len = strscpy(response, "Failed to get fan percentage", count);
+            if(len < 0) {
+                fprintf(stderr, "Ipc response overflows the buffer\n");
+                len = strlen(response);
+            }
+            return len + 1;
+        }
+        sprintf(buffer, "%u", value);
+    }
+    else if(request->target == ipc_matrix) {
+        return write_matrix_to_buffer(response, count);
+    }
+    else if(request->target == ipc_pwm_path) {
+        len = amdgpu_fan_get_pwm_path(response, count);
+        if(len < 0) {
+            fprintf(stderr, "Pwm path overflows the buffer\n");
+            len = strlen(response);
+        }
+        return len + 1;
+    }
+    len = strscpy(response, buffer, count);
+    if(len < 0) {
+        fprintf(stderr, "%u overflows the destination buffer\n", value);
+        len = strlen(response);
+    }
+    return len + 1;
+}
+
+static size_t construct_ipc_set_response(char *response, struct ipc_request *request, size_t count) {
+    char buffer[IPC_RESPONSE_BUF_SIZE];
+    sprintf(buffer, "Speed set to constant %d%%", request->value);
+    ssize_t len = strscpy(response, buffer, count);
+    if(len < 0)  {
+        fprintf(stderr, "Ipc response overflows the buffer\n");
+        len = strlen(response);
+    }
+    amdgpu_fan_set_override_speed(request->value, request->ppid);
+    return len + 1;
+}
+
+static size_t construct_ipc_reset_response(char *response, struct ipc_request *request, size_t count) {
+    char buffer[IPC_RESPONSE_BUF_SIZE];
+    if(request->target != ipc_invalid_target) {
+        sprintf(buffer, "Resetting %s", ipc_request_target_value[request->target]);
+    }
+    else {
+        sprintf(buffer, "Resetting all values");
+        /* Currently equivalent to resetting speed */
+    }
+    ssize_t len = strscpy(response, buffer, count);
+    if(len < 0) {
+        fprintf(stderr, "Ipc response overflows the buffer\n");
+        len = strlen(response);
+    }
+    amdgpu_fan_reset_override_speed();
+    return len + 1;
+}
+
+static size_t construct_ipc_response(char *response, struct ipc_request *request, size_t count) {
     if(request->type == ipc_get) {
-        if(request->target == ipc_temp) {
-            if(!amdgpu_get_temp(&value)) {
-                if(strscpy(response, "Failed to get chip temp", count) < 0) {
-                    fprintf(stderr, "Ipc response overflowed the buffer\n");
-                }
-                return strlen(response) + 1;
-            }
-            sprintf(buffer, "%u", value);
-        }
-        else if(request->target == ipc_speed) {
-            if(!amdgpu_fan_get_percentage(&value)) {
-                if(strscpy(response, "Failed to get fan percentage", count) < 0) {
-                    fprintf(stderr, "Ipc response overflows the buffer\n");
-                }
-                return strlen(response) + 1;
-            }
-            sprintf(buffer, "%u", value);
-        }
-        else if(request->target == ipc_matrix) {    
-            return write_matrix_to_buffer(response, count);
-        }
-        else if(request->target == ipc_pwm_path) {
-            (void)amdgpu_fan_get_pwm_path(response, count);
-            return strlen(response) + 1;
-        }
-        if(strscpy(response, buffer, count) < 0) {
-            fprintf(stderr, "%u overflows the destination buffer\n", value);
-        }
+        return construct_ipc_get_response(response, request, count);
     }
     else if(request->type == ipc_set) {
-        sprintf(buffer, "Speed set to constant %d%%", request->value);
-        if(strscpy(response, buffer, count) < 0)  {
-            fprintf(stderr, "Ipc response overflows the buffer\n");
-        }
-        amdgpu_fan_set_override_speed(request->value, request->ppid);
+        return construct_ipc_set_response(response, request, count);
     }
-    return strlen(response) + 1;
+
+    return construct_ipc_reset_response(response, request, count);
 }
 
 bool ipc_server_open_socket(void) {
@@ -137,7 +180,7 @@ void ipc_server_handle_request(void) {
 
     while((nbytes = recvfrom(fd, request, sizeof request, 0, (struct sockaddr *)&sender, &sender_len)) > 0) {
         LOG(VERBOSITY_LVL3, "Received request: " IPC_REQUEST_FMT((struct ipc_request *)request));
-    
+
         size_t len = construct_ipc_response(response, (struct ipc_request *)request, sizeof response);
 
         ret = sendto(fd, response, len, 0, (struct sockaddr *)&sender, sender_len);
