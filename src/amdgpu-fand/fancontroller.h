@@ -43,6 +43,7 @@ bool amdgpu_fan_set_percentage(uint8_t percentage);
 bool amdgpu_get_temp(uint8_t *temp);
 
 void amdgpu_fan_set_override_speed(uint8_t speed, pid_t ppid);
+void amdgpu_fan_reset_override_speed(void);
 bool amdgpu_fan_update_speed(void);
 
 #endif

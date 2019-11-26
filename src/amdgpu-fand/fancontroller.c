@@ -287,10 +287,15 @@ void amdgpu_fan_set_override_speed(uint8_t speed, pid_t ppid) {
     ppid_override = ppid;
 }
 
+void amdgpu_fan_reset_override_speed(void) {
+    LOG(VERBOSITY_LVL1, "Resetting override speed, falling back on matrix\n");
+    ppid_override = -1;
+}
+
 bool amdgpu_fan_update_speed(void) {
-    if(ppid_override >= 0) {
+    if(ppid_override != -1) {
         amdgpu_fan_set_percentage(fan_speed);
-        if(!proc_alive(ppid_override)) {
+        if(ppid_override != DETACH_FROM_SHELL && !proc_alive(ppid_override)) {
             LOG(VERBOSITY_LVL1, "Process %d no longer alive, falling back on matrix\n", ppid_override);
             ppid_override = -1;
         }
