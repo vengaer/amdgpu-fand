@@ -12,8 +12,8 @@
 #define FAN_SPEED_MIN 0
 #define FAN_SPEED_MAX 100
 
-char const *ipc_request_type_value[3] = { "get", "set", "invalid" };
-char const *ipc_request_target_value[4] = { "temp", "speed", "matrix", "invalid" };
+char const *ipc_request_type_value[4] = { "get", "set", "reset", "invalid" };
+char const *ipc_request_target_value[5] = { "temp", "speed", "matrix", "pwm_path", "invalid" };
 
 static regex_t cmd_get_rgx, cmd_set_rgx, cmd_reset_rgx, target_temp_rgx, target_speed_rgx, target_matrix_rgx, value_rgx;
 
@@ -64,8 +64,8 @@ static bool parse_command_param(char const *request_param, struct ipc_request *r
 static bool parse_target_param(char const *request_param, struct ipc_request *result) {
     if(regexec(&target_temp_rgx, request_param, 0, NULL, 0) == 0) {
         /* Can't set temperature... */
-        if(result->type == ipc_set) {
-            fprintf(stderr, "%s is not available with command 'set'\n", request_param);
+        if(result->type == ipc_set || result->type == ipc_reset) {
+            fprintf(stderr, "Target '%s' is not available with command 'set'\n", request_param);
             return false;
         }
         result->target = ipc_temp;
@@ -77,8 +77,8 @@ static bool parse_target_param(char const *request_param, struct ipc_request *re
     }
     else if(regexec(&target_matrix_rgx, request_param, 0, NULL, 0) == 0) {
         /* Can't set matrix... */
-        if(result->type == ipc_set) {
-            fprintf(stderr, "%s is not available with command 'set'\n", request_param);
+        if(result->type == ipc_set || result->type == ipc_reset) {
+            fprintf(stderr, "Target '%s' is not available with command 'set'\n", request_param);
             return false;
         }
         result->target = ipc_matrix;
