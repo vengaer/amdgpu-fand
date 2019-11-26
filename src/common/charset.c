@@ -7,7 +7,10 @@
 #include <locale.h>
 #include <regex.h>
 
-static bool locale_is_utf8(void) {
+static char const *deg_c_ascii = "'C";
+static char const *deg_c_utf8 = "°C";
+
+static bool utf8_available(void) {
     static regex_t rgx;
     static bool rgx_compiled = false;
     if(!rgx_compiled) {
@@ -22,16 +25,6 @@ static bool locale_is_utf8(void) {
     return regexec(&rgx, locale, 0, NULL, 0) == 0;
 }
 
-ssize_t degrees_celcius(char *dst, size_t count) {
-    ssize_t len = -1;
-    bool utf8 = locale_is_utf8();
-    if(utf8) {
-        len = strscpy(dst, "°C", count);
-    }
-
-    if(!utf8 || len < 0) {
-        len = strscpy(dst, "'C", count);
-    }
-
-    return len;
+char const *deg_celcius_str(void) {
+    return utf8_available() ? deg_c_utf8 : deg_c_ascii;
 }

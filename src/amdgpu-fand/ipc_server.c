@@ -19,7 +19,6 @@
 #include <unistd.h>
 
 #define IPC_RESPONSE_BUF_SIZE 32
-#define TEMP_SUFFIX_BUF_SIZE 16
 
 static int fd;
 
@@ -49,14 +48,6 @@ static size_t construct_ipc_get_response(char *response, struct ipc_request *req
     uint8_t value;
     ssize_t len;
 
-    static char temp_suffix[TEMP_SUFFIX_BUF_SIZE] = { 0 };
-
-    if(!*temp_suffix) {
-        if(degrees_celcius(temp_suffix, sizeof temp_suffix) < 0) {
-            fprintf(stderr, "Temperature suffix overflows the buffer\n");
-        }
-    }
-
     if(request->target == ipc_temp) {
         if(!amdgpu_get_temp(&value)) {
             len = strscpy(response, "Failed to get chip temp", count);
@@ -66,7 +57,7 @@ static size_t construct_ipc_get_response(char *response, struct ipc_request *req
             }
             return len + 1;
         }
-        sprintf(buffer, "%u%s", value, temp_suffix);
+        sprintf(buffer, "%u%s", value, deg_celcius_str());
     }
     else if(request->target == ipc_speed) {
         if(!amdgpu_fan_get_percentage(&value)) {
