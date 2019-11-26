@@ -37,5 +37,6 @@
         ipc_request_target_value[(request)->target],\
         (request)->value
         
+void set_verbosity_level(uint8_t verbosity);
 
 #endif
