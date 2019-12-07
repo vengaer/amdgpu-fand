@@ -69,7 +69,7 @@ Secondly, and perhaps more important, the sysfs interface seems to handle multip
 
 ### The Set Command
 
-The control interface allows you to override the fan speed using `amdgpu-fanctl set speed PERCENTAGE`. For safety reasons, such an override is, by default, tied to the process (i.e. the shell instance) that invoked the `amdgpu-fanctl` command. Once that process is killed, the speed override will be reset. This is to avoid potential issues such as forcing the speed to 0%, forgetting that this has been done and starting up something GPU-intensive only to have the card melt. This behaviour can be overridden using the `--detach` switch to `amdgpu-fanctl`, in which case the fan speed will remain what was set with via the control interface until either the daemon is restarted or `amdgpu-fanctl reset speed` is run.
+The control interface allows you to override the fan speed using `amdgpu-fanctl set speed PERCENTAGE`. For safety reasons, such an override is, by default, tied to the process (i.e. the shell instance) that invoked the `amdgpu-fanctl` command. Once that process is killed, the speed override will be reset. This is to avoid potential issues such as forcing the speed to 0%, forgetting that this has been done and starting up something GPU-intensive only to have the card melt. This behaviour can be overridden using the `--detach` switch to `amdgpu-fanctl`, in which case the fan speed will remain what was set via the control interface until either the daemon is restarted or `amdgpu-fanctl reset speed` is run.
 
 ## Disclaimer  
 This piece of software is not affiliated with AMD in any way. Radeon is a trademark of AMD.
