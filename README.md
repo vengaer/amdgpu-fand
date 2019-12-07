@@ -60,14 +60,14 @@ In addition to specifying sample pointer, the interpolation used can also be cho
 The daemon may be interacted with using its control interface `amdgpu-fanctl`. This allows for fetching values such as current temperature and fan speed without
 having to find them in sysfs. Additionally, the fan speed may be overridden using the set command. See amdgpu-fanctl --help for a full list of available options.
 
-### The Get Command
+#### The Get Command
 
 Using the control interface's get command to get e.g. temperature and fan speed has two significant advantages as opposed to finding them in sysfs manually. Firstly,
 the values gotten from the sysfs tachometer interface are not guaranteed to be correct (as observed by both myself and [others](https://www.reddit.com/r/Amd/comments/9b0nmy/linuxamdgpu_rx_580_fan_always_on_windows_usually/e4zqah0/?utm_source=share&utm_medium=web2x)). This is handled internally by `amdgpu-fand`, meaning that `amdgpu-fanctl get speed` will always return the correct value.
 
 Secondly, and perhaps more important, the sysfs interface seems to handle multiple processes interfacing with it poorly (I have yet to find a conclusive reason as to why, but suspect it is tied to concurrent access). This may manifest itself as the processes being unable to open the files, which will essentially lock the threads running them. Using `amdgpu-fanctl`, all accesses to the relevant files is sequentialized, avoiding the issues. Alternatively, `amdgpu-fand` places exclusive advisory locks on the sysfs files it opens, meaning that `flock` should be another option if wanting to interface with sysfs directly.
 
-### The Set Command
+#### The Set Command
 
 The control interface allows you to override the fan speed using `amdgpu-fanctl set speed PERCENTAGE`. For safety reasons, such an override is, by default, tied to the process (i.e. the shell instance) that invoked the `amdgpu-fanctl` command. Once that process is killed, the speed override will be reset. This is to avoid potential issues such as forcing the speed to 0%, forgetting that this has been done and starting up something GPU-intensive only to have the card melt. This behaviour can be overridden using the `--detach` switch to `amdgpu-fanctl`, in which case the fan speed will remain what was set via the control interface until either the daemon is restarted or `amdgpu-fanctl reset speed` is run.
 
