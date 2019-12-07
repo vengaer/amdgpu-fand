@@ -13,6 +13,7 @@
 #include <string.h>
 
 #include <errno.h>
+#include <sys/file.h>
 #include <unistd.h>
 
 #define TEMP_BUF_SIZE 8
@@ -43,15 +44,39 @@ static enum interpolation_method interp = linear;
 static matrix mtrx;
 static uint8_t mtrx_rows;
 
+static FILE *file_open_excl(char const *restrict path, char const *restrict mode) {
+    FILE *fp = fopen(path, mode);
+    if(!fp) {
+        return NULL;
+    }
+
+    int fd = fileno(fp);
+    if(flock(fd, LOCK_EX) == -1) {
+        perror("Lock file");
+        fclose(fp);
+        return NULL;
+    }
+
+    return fp;
+}
+
+static void file_close_excl(FILE *fp) {
+    int fd = fileno(fp);
+    if(flock(fd, LOCK_UN) == -1) {
+        perror("Unlock file");
+    }
+    fclose(fp);
+}
+
 static bool read_long_from_file(char const *path, long *data) {
-    FILE *fp = fopen(path, "r");
+    FILE *fp = file_open_excl(path, "r");
     if(!fp) {
         fprintf(stderr, "Failed to open %s for reading\n", path);
         return false;
     }
     char buffer[PWM_BUF_SIZE] = { 0 };
     fgets(buffer, sizeof buffer, fp);
-    fclose(fp);
+    file_close_excl(fp);
 
     replace_char(buffer, '\n', '\0');
 
@@ -101,14 +126,14 @@ static bool read_uint32_from_file(char const *path, uint32_t *data) {
 }
 
 static bool write_uint8_to_file(char const *path, uint8_t data) {
-    FILE *fp = fopen(path, "w");
+    FILE *fp = file_open_excl(path, "w");
     if(!fp) {
         fprintf(stderr, "Failed to open %s for writing\n", path);
         return false;
     }
 
     fprintf(fp, "%u", data);
-    fclose(fp);
+    file_close_excl(fp);
     return true;
 }
 
