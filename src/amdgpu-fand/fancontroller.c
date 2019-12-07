@@ -279,6 +279,10 @@ bool amdgpu_fan_get_percentage(uint8_t *percentage) {
 }
 
 bool amdgpu_fan_set_percentage(uint8_t percentage) {
+    if(percentage == fan_speed) {
+        LOG(VERBOSITY_LVL3, "Fan speed unchanged (%u%%)\n", percentage);
+        return true;
+    }
     fan_speed = percentage;
     uint8_t const npwm = (uint8_t)((double)percentage / 100.0 * (double)(pwm_max - pwm_min));
     LOG(VERBOSITY_LVL3, "Setting pwm %u (%f%%)\n", npwm, 100.0 * (double)npwm / (double)(pwm_max - pwm_min));
