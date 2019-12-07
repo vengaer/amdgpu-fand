@@ -289,16 +289,7 @@ bool amdgpu_get_temp(uint8_t *temp) {
     uint32_t value;
     if(read_uint32_from_file(temp_input, &value)) {
         /* Remove 3 trailing zeroes */
-        char buffer[TEMP_BUF_SIZE] = { 0 };
-        sprintf(buffer, "%u", value);
-        size_t const len = strlen(buffer);
-        if(len < 5u) {
-            fprintf(stderr, "%s shows highly unlikely temperature\n", buffer);
-            return false;
-        }
-        buffer[len - 3] = '\0';
-
-        *temp = atoi(buffer);
+        *temp = value / 1000;
         LOG(VERBOSITY_LVL3, "Temperature is %u\n", *temp);
         return true;
     }
