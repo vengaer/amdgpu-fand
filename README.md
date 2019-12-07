@@ -22,7 +22,7 @@ The configure script attempts to find the persistent location of the card's hard
 multiple cards are present, the user is prompted to choose one.
 
 The daemon is copied to `/usr/local/bin/amdgpu-fand`, the control interface to `/usr/local/bin/amdgpu-fanctl`, 
-the default config to `/etc/amdgpu-fanctl.conf` and the systemd service to `/etc/systemd/system/amdgpu-fanctl.service`  
+the default config to `/etc/amdgpu-fand.conf` and the systemd service to `/etc/systemd/system/amdgpu-fand.service`  
 
 ## Daemon
 
@@ -51,7 +51,7 @@ To list available hardware monitors for card0, run `ls /sys/class/drm/card0/devi
 
 ##### Fan Curves
 
-the fan curves can be customized via discrete points set in `/etc/amdgpu-fanctl.conf`. The values are interpolated with respect tot he temperature of the card. Temperatures and speeds are given in a matrix whose first column contains the temperature and the second the desired speed percentage. The columns are separated by 2 colons (::). The max number of rows is 16.
+The fan curves can be customized via discrete points set in `/etc/amdgpu-fand.conf`. The values are interpolated with respect tot he temperature of the card. Temperatures and speeds are given in a matrix whose first column contains the temperature and the second the desired speed percentage. The columns are separated by 2 colons (::). The max number of rows is 16.
 
 In addition to specifying sample pointer, the interpolation used can also be chosen. The options are linear and cosine. Additionally, aggressive throttling may be set. If the latter it enabled, the fan speed will be set to the lowest speed in the matrix as soon as the temperature falls below the second lowest.
 
@@ -65,7 +65,7 @@ having to find them in sysfs. Additionally, the fan speed may be overridden usin
 Using the control interface's get command to get e.g. temperature and fan speed has two significant advantages as opposed to finding them in sysfs manually. Firstly,
 the values gotten from the sysfs tachometer interface are not guaranteed to be correct (as observed by both myself and [others](https://www.reddit.com/r/Amd/comments/9b0nmy/linuxamdgpu_rx_580_fan_always_on_windows_usually/e4zqah0/?utm_source=share&utm_medium=web2x)). This is handled internally by `amdgpu-fand`, meaning that `amdgpu-fanctl get speed` will always return the correct value.
 
-Secondly, and perhaps more important, the sysfs interface seems to handle multiple processes interfacing with it poorly (I have yet to find a conclusive reason as to why, but suspect it is tied to concurrent access). This may manifest itself as the processes being unable to open the files, which will essentially lock the threads running them. Using `amdgpu-fanctl`, all accesses to the relevant files is sequentialized, avoiding the issues. Alternatively, `amdgpu-fand` places exclusive advisory locks on the sysfs files it opens, meaning that `flock` should be another option if wanting to interface with sysfs directly.
+Secondly, and perhaps more important, the sysfs interface seems to handle multiple processes interfacing with it poorly (I have yet to find a conclusive reason as to why but it is seemingly tied to concurrent access). This may manifest itself as the processes being unable to open the files, which will essentially lock the threads running them. Using `amdgpu-fanctl`, all accesses to the relevant files is sequentialized, avoiding the issues. Alternatively, `amdgpu-fand` places exclusive advisory locks on the sysfs files it opens, meaning that `flock` should be another option if wanting to interface with sysfs directly.
 
 #### The Set Command
 
