@@ -44,16 +44,16 @@ To get the persistent path for card0, run `readlink -f /sys/class/drm/card0`.
 
 ##### Hwmon
 
-Here the desired hardware monitor of the card can be specified. If left blank, the program will detect it by itself. As, in my somewhat limited experience,
+Here the desired hardware monitor of the card can be specified. If left blank, the daemon will attempt to detect it by itself. As, in my somewhat limited experience,
 most cards seem to have only one, this is likely not something that needs to be tweaked by most people.  
 
 To list available hardware monitors for card0, run `ls /sys/class/drm/card0/device/hwmon | grep hwmon[0-9]`.
 
 ##### Fan Curves
 
-The fan curves can be customized via discrete points set in `/etc/amdgpu-fand.conf`. The values are interpolated with respect tot he temperature of the card. Temperatures and speeds are given in a matrix whose first column contains the temperature and the second the desired speed percentage. The columns are separated by 2 colons (::). The max number of rows is 16.
+The fan curves can be customized via discrete points set in `/etc/amdgpu-fand.conf`. The values are interpolated with respect to the temperature of the card. Temperatures and speeds are given in a matrix whose first column contains the temperature and the second the desired speed percentage. The columns are separated by 2 colons (::). The max number of rows is 16.
 
-In addition to specifying sample pointer, the interpolation used can also be chosen. The options are linear and cosine. Additionally, aggressive throttling may be set. If the latter it enabled, the fan speed will be set to the lowest speed in the matrix as soon as the temperature falls below the second lowest.
+In addition to specifying sample points, the interpolation used can also be chosen. The options are linear and cosine. Additionally, aggressive throttling may be set. If the latter it enabled, the fan speed will be set to the lowest speed in the matrix as soon as the temperature falls below the second lowest.
 
 ## Control Interface
 
