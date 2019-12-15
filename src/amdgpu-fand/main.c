@@ -14,12 +14,12 @@
 #include <argp.h>
 #include <signal.h>
 
-bool volatile daemon_alive = true;
+sig_atomic_t volatile daemon_alive = 1;
 
 void signal_handler(int code) {
     if(code == SIGINT || code == SIGTERM) {
         LOG(VERBOSITY_LVL1, "Killing daemon...\n");
-        daemon_alive = false;
+        daemon_alive = 0;
     }
 }
 

@@ -12,6 +12,7 @@
 #include <string.h>
 
 #include <fcntl.h>
+#include <signal.h>
 #include <sys/inotify.h>
 #include <unistd.h>
 
@@ -62,7 +63,7 @@ static void handle_inotify_events(void) {
     nbytes = read(inotify_fd, buf, sizeof buf);
 
     if(nbytes == -1) {
-        extern bool volatile daemon_alive;
+        extern sig_atomic_t volatile daemon_alive;
         if(daemon_alive) {
             LOG(VERBOSITY_LVL3, "No inotify events read\n");
         }
@@ -175,7 +176,7 @@ bool amdgpu_daemon_restart(void) {
 }
 
 void amdgpu_daemon_run(uint8_t interval) {
-    extern bool volatile daemon_alive;
+    extern sig_atomic_t volatile daemon_alive;
     update_interval = interval;
     ipc_server_open_socket();
 
