@@ -13,7 +13,7 @@ bool generate_hwmon_dir(char *restrict dst, char const *restrict src, size_t cou
             fprintf(stderr, "Persistent path %s does not exist\n", src);
             return false;
         }
-        if(strscpy(dst, src, count) < 0 || strscat(dst, "/", count) < 0) {
+        if(strscpy(dst, src, count) < 0) {
             fprintf(stderr, "Persistent path %s overflows the buffer\n", src);
             return false;
         }
