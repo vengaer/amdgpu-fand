@@ -4,7 +4,7 @@ A Systemd daemon that automatically manages the fan speed of Radeon graphics car
 
 Provides the daemon itself, `amdgpu-fand`, and its control interface `amdgpu-fanctl`.
 
-[![Build Status](https://gitlab.com/vilhelmengstrom/amdgpu-fand/badges/master/build.svg)](https://gitlab.com/vilhelmengstrom/amdgpu-fand/commits/master)
+[![Build Status](https://gitlab.com/vilhelmengstrom/amdgpu-fand/badges/master/pipeline.svg)](https://gitlab.com/vilhelmengstrom/amdgpu-fand/commits/master)
 
 ## Dependencies  
 
