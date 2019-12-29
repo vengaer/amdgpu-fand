@@ -303,8 +303,8 @@ bool amdgpu_get_temp(uint8_t *temp) {
 
 void amdgpu_fan_set_override_speed(uint8_t speed, pid_t ppid) {
     LOG(VERBOSITY_LVL1, "Setting override speed to %u, tied to pid %d\n", speed, ppid);
-    fan_speed = speed;
     ppid_override = ppid;
+    amdgpu_fan_set_percentage(speed);
 }
 
 void amdgpu_fan_reset_override_speed(void) {
