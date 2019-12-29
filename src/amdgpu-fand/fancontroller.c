@@ -314,12 +314,12 @@ void amdgpu_fan_reset_override_speed(void) {
 
 bool amdgpu_fan_update_speed(void) {
     if(ppid_override != -1) {
-        amdgpu_fan_set_percentage(fan_speed);
+        bool success = amdgpu_fan_set_percentage(fan_speed);
         if(ppid_override != DETACH_FROM_SHELL && !proc_alive(ppid_override)) {
             LOG(VERBOSITY_LVL1, "Process %d no longer alive, falling back on matrix\n", ppid_override);
             ppid_override = -1;
         }
-        return true;
+        return success;
     }
 
     uint8_t temp;
