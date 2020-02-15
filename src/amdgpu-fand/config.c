@@ -18,9 +18,10 @@
 #define LINE_SIZE 128
 #define OPTION_BUF_SIZE 4
 #define INTERP_OPTION_SIZE 8
+#define SPEED_IFACE_SIZE 16
 #define TEMP_MAX INT8_MAX
 
-#define TMP_FILE_NAME "amdgpu-fanctl.tmp"
+#define TMP_FILE_NAME ".amdgpu-fanctl.tmp"
 
 #define HANDLE_PARSE_RESULT(result)     \
     if(result == failure) {             \
@@ -35,7 +36,7 @@ static regex_t interval_rgx, hwmon_rgx, hwmon_content_rgx, empty_value_rgx, pers
 static regex_t empty_rgx, leading_space_rgx, matrix_rgx, matrix_start_rgx, matrix_end_rgx;
 static regex_t throttle_rgx, throttle_option_rgx; 
 static regex_t interpolation_rgx, interpolation_option_rgx;
-static regex_t speed_iface_rgx, speed_iface_option_rgx;
+static regex_t speed_iface_rgx, speed_iface_option_rgx, speed_iface_tacho_rgx;
 static bool parsing_matrix = false, regexps_compiled = false;
 static uint8_t line_number = 0;
 
@@ -141,16 +142,22 @@ static bool compile_regexps(void) {
         fprintf(stderr, "Failed to compile interpolation option regex\n");
         return false;
     }
-    reti = regcomp(&speed_iface_rgx, "^\\*sSPEED_INTERFACE=\".*\"\\s*", REG_EXTENDED);
+    reti = regcomp(&speed_iface_rgx, "^\\s*SPEED_INTERFACE=\".*\"\\s*", REG_EXTENDED);
     if(reti) {
         fprintf(stderr, "Failed to compile speed interface regex\n");
         return false;
     }
-    reti = regcomp(&speed_iface_option_rgx, "^\\*sSPEED_INTERFACE=\"(tacho(meter)?|daemon|fand)\"\\s*", REG_EXTENDED);
+    reti = regcomp(&speed_iface_option_rgx, "^\\s*SPEED_INTERFACE=\"(tacho(meter)?|daemon|fand)\"\\s*", REG_EXTENDED);
     if(reti) {
         fprintf(stderr, "Failed to compile speed interface option regex\n");
         return false;
     }
+    reti = regcomp(&speed_iface_tacho_rgx, "^tacho(meter)?$", REG_EXTENDED);
+    if(reti) {
+        fprintf(stderr, "Failed to compile speed interface tacho regex\n");
+        return false;
+    }
+    
     regexps_compiled = true;
     return true;
 }
@@ -302,6 +309,35 @@ static enum parse_result parse_interpolation(char const *line, enum interpolatio
     return match;
 }
 
+static enum parse_result parse_speed_interface(char const *line, enum speed_interface *iface) {
+    LOG(VERBOSITY_LVL3, "Matching %s against speed interface...\n", line);
+    regmatch_t pmatch[2];
+
+    if(regexec(&speed_iface_rgx, line, 0, NULL, 0)) {
+        LOG(VERBOSITY_LVL3, "No match\n");
+        return no_match;
+    }
+    if(regexec(&speed_iface_option_rgx, line, 2, pmatch, 0)) {
+        fprintf(stderr, "Syntax error on line %u: %s\n", line_number, line);
+        return failure;
+    }
+
+    char buffer[SPEED_IFACE_SIZE];
+    if(strsncpy(buffer, line + pmatch[1].rm_so, regmatch_size(pmatch[1]), sizeof buffer) < 0) {
+        fprintf(stderr, "Speed interface option on line %u overtflows the buffer\n", line_number);
+        return failure;
+    }
+
+    if(regexec(&speed_iface_tacho_rgx, buffer, 0, NULL, 0) == 0) {
+        *iface = sifc_tacho;
+    }
+    else {
+        *iface = sifc_daemon;
+    }
+    LOG(VERBOSITY_LVL1, "Speed interface set to %s\n", *iface ? "daemon" : "tacho");
+    return match;
+}
+
 static enum parse_result parse_matrix(char const *line, matrix mtrx, uint8_t *mtrx_rows) {
     LOG(VERBOSITY_LVL3, "Matching %s against matrix...\n", line);
     static int8_t current_temp = -1;
@@ -405,8 +441,6 @@ static bool replace_line_matching_pattern(char const *restrict path, char const 
 
 
 bool parse_config(struct config_params *params) {
-//char const *restrict path, char *restrict persistent, size_t persistent_count, char *restrict hwmon, size_t hwmon_count,
-                  //uint8_t *interval, bool *throttle, enum interpolation_method *interp, matrix mtrx, uint8_t *mtrx_rows) {
     if(!regexps_compiled && !compile_regexps()) {
         return false;
     }
@@ -443,10 +477,13 @@ bool parse_config(struct config_params *params) {
         result = parse_interval(buffer, params->interval);
         HANDLE_PARSE_RESULT(result);
 
-        result = parse_throttling(buffer, params->throttle);
+        result = parse_throttling(buffer, params->aggressive_throttle);
         HANDLE_PARSE_RESULT(result);
 
-        result = parse_interpolation(buffer, params->interp);
+        result = parse_interpolation(buffer, params->interp_method);
+        HANDLE_PARSE_RESULT(result);
+
+        result = parse_speed_interface(buffer, params->speed_iface);
         HANDLE_PARSE_RESULT(result);
 
         result = parse_persistent(buffer, params->persistent, params->persistent_size);

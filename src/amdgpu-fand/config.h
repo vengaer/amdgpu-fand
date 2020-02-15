@@ -12,12 +12,18 @@
 #define CONFIG_FULL_PATH "/etc/"CONFIG_FILE
 #define COMMENT_CHAR '#'
 
+enum speed_interface {
+    sifc_tacho,
+    sifc_daemon
+};
+
 struct config_params {
     char *path, *persistent, *hwmon;
     size_t persistent_size, hwmon_size;
     uint8_t *interval, *mtrx_rows;
-    bool *throttle;
-    enum interpolation_method *interp;
+    bool *aggressive_throttle;
+    enum interpolation_method *interp_method;
+    enum speed_interface *speed_iface;
     uint8_t (*mtrx)[];
 };
 

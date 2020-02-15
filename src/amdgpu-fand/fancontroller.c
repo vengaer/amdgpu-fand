@@ -40,6 +40,7 @@ static pid_t ppid_override = -1;
 
 static bool aggressive_throttle = false;
 static enum interpolation_method interp = linear;
+static enum speed_interface speed_iface = sifc_tacho;
 
 static matrix mtrx;
 static uint8_t mtrx_rows;
@@ -224,6 +225,10 @@ void amdgpu_fan_set_interpolation_method(enum interpolation_method method) {
     interp = method;
 }
 
+void amdgpu_fan_set_speed_interface(enum speed_interface iface) {
+    speed_iface = iface;
+}
+
 void amdgpu_fan_set_matrix(matrix m, uint8_t m_rows) {
     mtrx_rows = m_rows;
     for(size_t i = 0; i < m_rows; i++) {
@@ -262,7 +267,7 @@ bool amdgpu_fan_set_mode(enum fanmode mode) {
 }
 
 bool amdgpu_fan_get_percentage(uint8_t *percentage) {
-    if(fan_speed < 0) {
+    if(fan_speed < 0 || speed_iface == sifc_tacho) {
         uint8_t npwm;
         if(!read_uint8_from_file(pwm, &npwm)) {
             return false;

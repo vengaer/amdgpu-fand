@@ -1,4 +1,3 @@
-#include "config.h"
 #include "daemon.h"
 #include "fancontroller.h"
 #include "filesystem.h"
@@ -106,7 +105,7 @@ static bool setup_hwmon(char const *hwmon_path) {
 }
 
 
-static bool reinitialize(char const *restrict persistent, char const *restrict hwmon, uint8_t interval, bool throttle, enum interpolation_method interp, matrix mtrx, uint8_t mtrx_rows) {
+static bool reinitialize(char const *restrict persistent, char const *restrict hwmon, uint8_t interval, struct daemon_ctrl_opts const *ctrl_opts) {
     char hwmon_full_path[HWMON_PATH_LEN] = { 0 };
     char hwmon_dir[HWMON_SUBDIR_LEN];
 
@@ -134,19 +133,21 @@ static bool reinitialize(char const *restrict persistent, char const *restrict h
         return false;
     }
 
-    amdgpu_fan_set_matrix(mtrx, mtrx_rows);
-    amdgpu_fan_set_aggressive_throttle(throttle);
-    amdgpu_fan_set_interpolation_method(interp);
+    amdgpu_fan_set_matrix(ctrl_opts->mtrx, ctrl_opts->mtrx_rows);
+    amdgpu_fan_set_aggressive_throttle(ctrl_opts->aggressive_throttle);
+    amdgpu_fan_set_interpolation_method(ctrl_opts->interp_method);
+    amdgpu_fan_set_speed_interface(ctrl_opts->speed_iface);
 
     update_interval = interval;
     return true;
 }
 
-bool amdgpu_daemon_init(char const *restrict config, char const *restrict hwmon_path, bool aggressive_throttle, enum interpolation_method interp, matrix mtrx, uint8_t mtrx_rows) {
+bool amdgpu_daemon_init(char const *restrict config, char const *restrict hwmon_path, struct daemon_ctrl_opts const *ctrl_opts) {
     bool result = setup_hwmon(hwmon_path);
-    amdgpu_fan_set_matrix(mtrx, mtrx_rows);
-    amdgpu_fan_set_aggressive_throttle(aggressive_throttle);
-    amdgpu_fan_set_interpolation_method(interp);
+    amdgpu_fan_set_matrix(ctrl_opts->mtrx, ctrl_opts->mtrx_rows);
+    amdgpu_fan_set_aggressive_throttle(ctrl_opts->aggressive_throttle);
+    amdgpu_fan_set_interpolation_method(ctrl_opts->interp_method);
+    amdgpu_fan_set_speed_interface(ctrl_opts->speed_iface);
 
     if(strscpy(config_file, config, sizeof config_file) < 0) {
         fprintf(stderr, "Config path %s overflows the buffer\n", config_file);
@@ -160,13 +161,15 @@ bool amdgpu_daemon_init(char const *restrict config, char const *restrict hwmon_
 }
 
 bool amdgpu_daemon_restart(void) {
-    matrix mtrx;
-    uint8_t mtrx_rows;
     uint8_t interval = update_interval;
-    bool throttle = amdgpu_fan_get_aggressive_throttle();
-    enum interpolation_method interp = amdgpu_fan_get_interpolation_method();
+
     char hwmon[HWMON_SUBDIR_LEN];
     char persistent[HWMON_PATH_LEN];
+
+    struct daemon_ctrl_opts ctrl_opts = {
+        .aggressive_throttle = amdgpu_fan_get_aggressive_throttle(),
+        .interp_method = amdgpu_fan_get_interpolation_method()
+    };
 
     struct config_params params = {
         .path = config_file,
@@ -175,17 +178,19 @@ bool amdgpu_daemon_restart(void) {
         .hwmon = hwmon,
         .hwmon_size = sizeof hwmon,
         .interval = &interval,
-        .throttle = &throttle,
-        .interp = &interp,
-        .mtrx = mtrx,
-        .mtrx_rows = &mtrx_rows
+        .aggressive_throttle = &ctrl_opts.aggressive_throttle,
+        .interp_method = &ctrl_opts.interp_method,
+        .speed_iface = &ctrl_opts.speed_iface,
+        .mtrx = ctrl_opts.mtrx,
+        .mtrx_rows = &ctrl_opts.mtrx_rows
     };
 
     if(!parse_config(&params)) {
         fprintf(stderr, "Failed to reread config, keeping current values\n");
         return false;
     }
-    return reinitialize(persistent, hwmon, interval, throttle, interp, mtrx, mtrx_rows);
+
+    return reinitialize(persistent, hwmon, interval, &ctrl_opts);
 }
 
 void amdgpu_daemon_run(uint8_t interval) {

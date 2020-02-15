@@ -91,13 +91,11 @@ static struct argp argp = { options, parse_opt, args_doc, doc, 0, 0, 0 };
 int main(int argc, char** argv) {
     char hwmon_full_path[HWMON_PATH_LEN];
 
-    /* For values specified in config */
+    /* For parsing config*/
     char persistent_path[HWMON_PATH_LEN];
-    char hwmon_buf[HWMON_SUBDIR_LEN];
-    uint8_t config_interval = 0;
-    uint8_t mtrx_rows;
-    enum interpolation_method interp = linear;
-    bool aggressive_throttle = false;
+    char hwmon_cfg[HWMON_SUBDIR_LEN];
+    uint8_t interval_cfg = 0;
+
     matrix mtrx;
 
     struct arguments args = {
@@ -113,17 +111,25 @@ int main(int argc, char** argv) {
 
     argp_parse(&argp, argc, argv, 0, 0, &args);
 
+    struct daemon_ctrl_opts ctrl_opts = {
+        .interp_method = linear,
+        .speed_iface = sifc_tacho,
+        .aggressive_throttle = false,
+        .mtrx = mtrx
+    };
+
     struct config_params params = {
         .path = args.config,
         .persistent = persistent_path,
         .persistent_size = sizeof persistent_path,
-        .hwmon = hwmon_buf,
-        .hwmon_size = sizeof hwmon_buf,
-        .interval = &config_interval,
-        .throttle = &aggressive_throttle,
-        .interp = &interp,
-        .mtrx = mtrx,
-        .mtrx_rows = &mtrx_rows
+        .hwmon = hwmon_cfg,
+        .hwmon_size = sizeof hwmon_cfg,
+        .interval = &interval_cfg,
+        .aggressive_throttle = &ctrl_opts.aggressive_throttle,
+        .interp_method = &ctrl_opts.interp_method,
+        .speed_iface = &ctrl_opts.speed_iface,
+        .mtrx = ctrl_opts.mtrx,
+        .mtrx_rows = &ctrl_opts.mtrx_rows
     };
 
     if(!parse_config(&params)) {
@@ -136,23 +142,25 @@ int main(int argc, char** argv) {
             return 1;
         }
     }
-    else if(config_interval) {
-        args.interval = config_interval;
+    else if(interval_cfg) {
+        args.interval = interval_cfg;
     }
+    /* else keep default value */
+
 
     if(!generate_hwmon_dir(hwmon_full_path, persistent_path, sizeof hwmon_full_path, args.config)) {
         return 1;
     }
 
-    /* Set hwmon, precedence is argument -> config -> default */
+    /* Set hwmon, precedence is command line argument -> config -> default */
     if(!args.hwmon) {
-        if(!strlen(hwmon_buf)) {
-            if(!find_dir_matching_pattern(hwmon_buf, sizeof hwmon_buf, "^hwmon[0-9]$", hwmon_full_path)) {
+        if(!strlen(hwmon_cfg)) {
+            if(!find_dir_matching_pattern(hwmon_cfg, sizeof hwmon_cfg, "^hwmon[0-9]$", hwmon_full_path)) {
                 fprintf(stderr, "No hwmon directory found in %s\n", hwmon_full_path);
                 return 1;
             }
         }
-        args.hwmon = hwmon_buf;
+        args.hwmon = hwmon_cfg;
     }
 
     if(!is_valid_hwmon_dir(args.hwmon)) {
@@ -164,7 +172,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    if(!amdgpu_daemon_init(args.config, hwmon_full_path, aggressive_throttle, interp, mtrx, mtrx_rows)) {
+    if(!amdgpu_daemon_init(args.config, hwmon_full_path, &ctrl_opts)) {
         fprintf(stderr, "Failed to initialize daemon\n");
         return 1;
     }

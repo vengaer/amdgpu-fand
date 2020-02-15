@@ -1,6 +1,7 @@
 #ifndef FANCONTROLLER_H
 #define FANCONTROLLER_H
 
+#include "config.h"
 #include "interpolation.h"
 #include "matrix.h"
 
@@ -29,6 +30,7 @@ bool amdgpu_fan_store_pwm_max(void);
 
 void amdgpu_fan_set_aggressive_throttle(bool throttle);
 void amdgpu_fan_set_interpolation_method(enum interpolation_method method);
+void amdgpu_fan_set_speed_interface(enum speed_interface iface);
 void amdgpu_fan_set_matrix(matrix mtrx, uint8_t mtrx_rows);
 
 ssize_t amdgpu_fan_get_pwm_path(char *buffer, size_t count);
