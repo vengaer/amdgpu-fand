@@ -52,7 +52,7 @@ To list available hardware monitors for card0, run `ls /sys/class/drm/card0/devi
 ##### Speed Interface
 
 The daemon provides two methods of reading the fan speed on the GPU. One relies on the tachometer interface provided in sysfs whereas the other
-simply returns the last speed request made by the daemon. Most people will be fine with keeping the tachometer for speed readings. There has, however,
+simply returns the last speed request made by the daemon. Most people will be fine with keeping the tachometer for speed readings. There have, however,
 been a few cases such as [this](https://www.reddit.com/r/Amd/comments/9b0nmy/linuxamdgpu_rx_580_fan_always_on_windows_usually/e4zqah0/?utm_source=share&utm_medium=web2x)
 where the tachometer readings are incorrect. If this is the case, it might be more accurate to rely on the requests made by the daemon.
 
