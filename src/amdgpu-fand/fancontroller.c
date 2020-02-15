@@ -298,8 +298,6 @@ bool amdgpu_fan_get_speed(uint8_t *speed) {
             return false;
         }
 
-        fan_speed = pwm_to_percentage(*speed);
-
         LOG(VERBOSITY_LVL3, "Current pwm: %u, corresponding to percentage: %u\n", *speed, fan_speed);
     }
     else {
