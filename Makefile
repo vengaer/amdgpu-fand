@@ -13,14 +13,7 @@ OBJ_EXT      := o
 CFLAGS       := -std=c11 -Wall -Wextra -pedantic -Wshadow -Wunknown-pragmas -O3 -D_POSIX_C_SOURCE -D_DEFAULT_SOURCE
 LIB          := -lm
 
-SHARED_VARS  := G_CFLAGS="$(CFLAGS)"       \
-				G_LIB="$(LIB)"		   	   \
-                CC="$(CC)"                 \
-				BUILD_DIR="$(BUILD_DIR)"   \
-				BASE_DIR="$(BASE_DIR)"     \
-				SRC_EXT="$(SRC_EXT)"       \
-				OBJ_EXT="$(OBJ_EXT)"	   \
-				COMMON="$(COMMON)"
+export
 
 CONFIG       := $(DAEMON).conf
 SERVICE      := $(DAEMON).service
@@ -33,18 +26,18 @@ SERVICE_DIR  := /etc/systemd/system
 all: $(DAEMON) $(CONTROLLER)
 
 $(DAEMON): $(COMMON)
-	@$(MAKE) -sC $(SRC_DIR)/$(DAEMON) $(SHARED_VARS)
+	@$(MAKE) -sC $(SRC_DIR)/$(DAEMON)
 
 $(CONTROLLER): $(COMMON)
-	@$(MAKE) -sC $(SRC_DIR)/$(CONTROLLER) $(SHARED_VARS)
+	@$(MAKE) -sC $(SRC_DIR)/$(CONTROLLER)
 
 $(COMMON): | dirs
-	@$(MAKE) -sC $(SRC_DIR)/$(COMMON) $(SHARED_VARS)
+	@$(MAKE) -sC $(SRC_DIR)/$(COMMON)
 
 clean:
-	@$(MAKE) clean -sC $(SRC_DIR)/$(DAEMON) $(SHARED_VARS)
-	@$(MAKE) clean -sC $(SRC_DIR)/$(CONTROLLER) $(SHARED_VARS)
-	@$(MAKE) clean -sC $(SRC_DIR)/$(COMMON) $(SHARED_VARS)
+	@$(MAKE) clean -sC $(SRC_DIR)/$(DAEMON)
+	@$(MAKE) clean -sC $(SRC_DIR)/$(CONTROLLER)
+	@$(MAKE) clean -sC $(SRC_DIR)/$(COMMON)
 	@rm -rf $(BUILD_DIR)
 
 install:

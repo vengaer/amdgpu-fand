@@ -6,9 +6,6 @@ SRC_DIR    	:= $(SRC_BASE)/$(TARGET)
 INC_DIRS   	:= $(shell find $(SRC_DIR) $(SRC_BASE)/$(COMMON) -type d)
 INC	        := $(foreach d, $(INC_DIRS), -I$d)
 
-CFLAGS		:= $(G_CFLAGS)
-LIB	        := $(G_LIB)
-
 SRC        	:= $(shell find $(SRC_DIR) -mindepth 1 -type f -name "*.$(SRC_EXT)")
 OBJ        	:= $(patsubst $(SRC_BASE)/%, $(BUILD_DIR)/%, $(SRC:.$(SRC_EXT)=.$(OBJ_EXT))) \
 			   $(wildcard $(BUILD_DIR)/$(COMMON)/*.$(OBJ_EXT))
