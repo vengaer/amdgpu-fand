@@ -12,8 +12,16 @@
 #define CONFIG_FULL_PATH "/etc/"CONFIG_FILE
 #define COMMENT_CHAR '#'
 
-bool parse_config(char const *restrict path, char *restrict persistent, size_t persistent_count, char *restrict hwmon, size_t hwmon_count,
-                  uint8_t *interval, bool *throttle, enum interpolation_method *interp, matrix m, uint8_t *matrix_rows);
+struct config_params {
+    char *path, *persistent, *hwmon;
+    size_t persistent_size, hwmon_size;
+    uint8_t *interval, *mtrx_rows;
+    bool *throttle;
+    enum interpolation_method *interp;
+    uint8_t (*mtrx)[];
+};
+
+bool parse_config(struct config_params *params);
 
 bool replace_persistent_path_value(char const *restrict path, char const *restrict replacement);
 

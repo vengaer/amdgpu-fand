@@ -113,7 +113,20 @@ int main(int argc, char** argv) {
 
     argp_parse(&argp, argc, argv, 0, 0, &args);
 
-    if(!parse_config(args.config, persistent_path, sizeof persistent_path, hwmon_buf, sizeof hwmon_buf, &config_interval, &aggressive_throttle, &interp, mtrx, &mtrx_rows)) {
+    struct config_params params = {
+        .path = args.config,
+        .persistent = persistent_path,
+        .persistent_size = sizeof persistent_path,
+        .hwmon = hwmon_buf,
+        .hwmon_size = sizeof hwmon_buf,
+        .interval = &config_interval,
+        .throttle = &aggressive_throttle,
+        .interp = &interp,
+        .mtrx = mtrx,
+        .mtrx_rows = &mtrx_rows
+    };
+
+    if(!parse_config(&params)) {
         return 1;
     }
 

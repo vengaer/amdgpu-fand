@@ -168,7 +168,20 @@ bool amdgpu_daemon_restart(void) {
     char hwmon[HWMON_SUBDIR_LEN];
     char persistent[HWMON_PATH_LEN];
 
-    if(!parse_config(config_file, persistent, sizeof persistent, hwmon, sizeof hwmon, &interval, &throttle, &interp, mtrx, &mtrx_rows)) {
+    struct config_params params = {
+        .path = config_file,
+        .persistent = persistent,
+        .persistent_size = sizeof persistent,
+        .hwmon = hwmon,
+        .hwmon_size = sizeof hwmon,
+        .interval = &interval,
+        .throttle = &throttle,
+        .interp = &interp,
+        .mtrx = mtrx,
+        .mtrx_rows = &mtrx_rows
+    };
+
+    if(!parse_config(&params)) {
         fprintf(stderr, "Failed to reread config, keeping current values\n");
         return false;
     }

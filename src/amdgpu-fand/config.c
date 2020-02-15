@@ -35,6 +35,7 @@ static regex_t interval_rgx, hwmon_rgx, hwmon_content_rgx, empty_value_rgx, pers
 static regex_t empty_rgx, leading_space_rgx, matrix_rgx, matrix_start_rgx, matrix_end_rgx;
 static regex_t throttle_rgx, throttle_option_rgx; 
 static regex_t interpolation_rgx, interpolation_option_rgx;
+static regex_t speed_iface_rgx, speed_iface_option_rgx;
 static bool parsing_matrix = false, regexps_compiled = false;
 static uint8_t line_number = 0;
 
@@ -138,6 +139,16 @@ static bool compile_regexps(void) {
     reti = regcomp(&interpolation_option_rgx, "^\\s*INTERPOLATION=\"(linear|cosine)\"\\s*$", REG_EXTENDED);
     if(reti) {
         fprintf(stderr, "Failed to compile interpolation option regex\n");
+        return false;
+    }
+    reti = regcomp(&speed_iface_rgx, "^\\*sSPEED_INTERFACE=\".*\"\\s*", REG_EXTENDED);
+    if(reti) {
+        fprintf(stderr, "Failed to compile speed interface regex\n");
+        return false;
+    }
+    reti = regcomp(&speed_iface_option_rgx, "^\\*sSPEED_INTERFACE=\"(tacho(meter)?|daemon|fand)\"\\s*", REG_EXTENDED);
+    if(reti) {
+        fprintf(stderr, "Failed to compile speed interface option regex\n");
         return false;
     }
     regexps_compiled = true;
@@ -393,18 +404,19 @@ static bool replace_line_matching_pattern(char const *restrict path, char const 
 }
 
 
-bool parse_config(char const *restrict path, char *restrict persistent, size_t persistent_count, char *restrict hwmon, size_t hwmon_count,
-                  uint8_t *interval, bool *throttle, enum interpolation_method *interp, matrix mtrx, uint8_t *mtrx_rows) {
+bool parse_config(struct config_params *params) {
+//char const *restrict path, char *restrict persistent, size_t persistent_count, char *restrict hwmon, size_t hwmon_count,
+                  //uint8_t *interval, bool *throttle, enum interpolation_method *interp, matrix mtrx, uint8_t *mtrx_rows) {
     if(!regexps_compiled && !compile_regexps()) {
         return false;
     }
-    *mtrx_rows = 0;
+    *params->mtrx_rows = 0;
     line_number = 0;
     parsing_matrix = false;
 
-    FILE *fp = fopen(path, "r");
+    FILE *fp = fopen(params->path, "r");
     if(!fp) {
-        fprintf(stderr, "Failed to read config file %s\n", path);
+        fprintf(stderr, "Failed to read config file %s\n", params->path);
         return false;
     }
 
@@ -425,22 +437,22 @@ bool parse_config(char const *restrict path, char *restrict persistent, size_t p
             continue;
         }
 
-        result = parse_hwmon(buffer, hwmon, hwmon_count);
+        result = parse_hwmon(buffer, params->hwmon, params->hwmon_size);
         HANDLE_PARSE_RESULT(result);
 
-        result = parse_interval(buffer, interval);
+        result = parse_interval(buffer, params->interval);
         HANDLE_PARSE_RESULT(result);
 
-        result = parse_throttling(buffer, throttle);
+        result = parse_throttling(buffer, params->throttle);
         HANDLE_PARSE_RESULT(result);
 
-        result = parse_interpolation(buffer, interp);
+        result = parse_interpolation(buffer, params->interp);
         HANDLE_PARSE_RESULT(result);
 
-        result = parse_persistent(buffer, persistent, persistent_count);
+        result = parse_persistent(buffer, params->persistent, params->persistent_size);
         HANDLE_PARSE_RESULT(result);
 
-        result = parse_matrix(buffer, mtrx, mtrx_rows);
+        result = parse_matrix(buffer, params->mtrx, params->mtrx_rows);
         HANDLE_PARSE_RESULT(result);
 
         fprintf(stderr, "Syntax error on line %u: %s\n", line_number, buffer);
@@ -449,11 +461,11 @@ bool parse_config(char const *restrict path, char *restrict persistent, size_t p
     }
     fclose(fp);
 
-    if(*interval < 1) {
+    if(*params->interval < 1) {
         fprintf(stderr, "Update intervals below 1 are not allowed, setting interval to 1\n");
-        *interval = 1;
+        *params->interval = 1;
     }
-    else if(*mtrx_rows < 1) {
+    else if(*params->mtrx_rows < 1) {
         fprintf(stderr, "No matrix specified\n");
         return false;
     }
