@@ -72,12 +72,12 @@ static bool compile_regexps(void) {
         fprintf(stderr, "Failed to compile interval regex\n");
         return false;
     }
-    reti = regcomp(&hwmon_rgx, "^HWMON=\"(.*)\"\\s*$", REG_EXTENDED);
+    reti = regcomp(&hwmon_rgx, "^HWMON\\s*=\\s*\"(.*)\"\\s*$", REG_EXTENDED);
     if(reti) {
         fprintf(stderr, "Failed to compile hwmon regex\n");
         return false;
     }
-    reti = regcomp(&hwmon_content_rgx, "^HWMON=\"(hwmon[0-9])\"\\s*$", REG_EXTENDED);
+    reti = regcomp(&hwmon_content_rgx, "^HWMON\\s*=\\s*\"(hwmon[0-9])\"\\s*$", REG_EXTENDED);
     if(reti) {
         fprintf(stderr, "Failed to compile hwmon content regex\n");
         return false;
@@ -87,27 +87,27 @@ static bool compile_regexps(void) {
         fprintf(stderr, "Failed to compile hwmon empty regex\n");
         return false;
     }
-    reti = regcomp(&persistent_rgx, "^PERSISTENT_PATH=\".*\"\\s*$", REG_EXTENDED);
+    reti = regcomp(&persistent_rgx, "^PERSISTENT_PATH\\s*=\\s*\".*\"\\s*$", REG_EXTENDED);
     if(reti) {
         fprintf(stderr, "Failed to compile persistent path regex\n");
         return false;
     }
-    reti = regcomp(&persistent_content_rgx, "^PERSISTENT_PATH=\"(.*)\"\\s*$", REG_EXTENDED);
+    reti = regcomp(&persistent_content_rgx, "^PERSISTENT_PATH\\s*=\\s*\"(.*)\"\\s*$", REG_EXTENDED);
     if(reti) {
         fprintf(stderr, "Failed to compile persistent path content regex\n");
         return false;
     }
-    reti = regcomp(&matrix_rgx, "^(MATRIX=\\()?'([0-9]{1,3})::([0-9]{1,3})'\\)?*$", REG_EXTENDED);
+    reti = regcomp(&matrix_rgx, "^(MATRIX\\s*=\\s*\\()?'([0-9]{1,3})::([0-9]{1,3})'\\)?*$", REG_EXTENDED);
     if(reti) {
         fprintf(stderr, "Failed to compile matrix regex\n");
         return false;
     }
-    reti = regcomp(&matrix_start_rgx, "^MATRIX=\\('[0-9]{1,3}::[0-9]{1,3}'\\)?\\s*$", REG_EXTENDED);
+    reti = regcomp(&matrix_start_rgx, "^MATRIX\\s*=\\s*\\('[0-9]{1,3}::[0-9]{1,3}'\\)?\\s*$", REG_EXTENDED);
     if(reti) {
         fprintf(stderr, "Failed to compile matrix start regex\n");
         return false;
     }
-    reti = regcomp(&matrix_end_rgx, "\\s*(MATRIX=\\()?'[0-9]{1,3}::[0-9]{1,3}'\\)\\s*$", REG_EXTENDED);
+    reti = regcomp(&matrix_end_rgx, "\\s*(MATRIX\\s*=\\s*\\()?'[0-9]{1,3}::[0-9]{1,3}'\\)\\s*$", REG_EXTENDED);
     if(reti) {
         fprintf(stderr, "Failed to compile matrix end regex\n");
         return false;
@@ -122,32 +122,32 @@ static bool compile_regexps(void) {
         fprintf(stderr, "Failed to compile leading spaces regex\n");
         return false;
     }
-    reti = regcomp(&throttle_rgx, "^\\s*AGGRESSIVE_THROTTLING=\".*\"\\s*$", REG_EXTENDED);
+    reti = regcomp(&throttle_rgx, "^\\s*AGGRESSIVE_THROTTLING\\s*=\\s*\".*\"\\s*$", REG_EXTENDED);
     if(reti) {
         fprintf(stderr, "Failed to compile throttling regex\n");
         return false;
     }
-    reti = regcomp(&throttle_option_rgx, "^\\s*AGGRESSIVE_THROTTLING=\"(yes|no)\"\\s*$", REG_EXTENDED);
+    reti = regcomp(&throttle_option_rgx, "^\\s*AGGRESSIVE_THROTTLING\\s*=\\s*\"(yes|no)\"\\s*$", REG_EXTENDED);
     if(reti) {
         fprintf(stderr, "Failed to compile throttling option regex\n");
         return false;
     }
-    reti = regcomp(&interpolation_rgx, "^\\s*INTERPOLATION=\".*\"\\s*$", REG_EXTENDED);
+    reti = regcomp(&interpolation_rgx, "^\\s*INTERPOLATION\\s*=\\s*\".*\"\\s*$", REG_EXTENDED);
     if(reti) {
         fprintf(stderr, "Failed to compile interpolation regex\n");
         return false;
     }
-    reti = regcomp(&interpolation_option_rgx, "^\\s*INTERPOLATION=\"(linear|cosine)\"\\s*$", REG_EXTENDED);
+    reti = regcomp(&interpolation_option_rgx, "^\\s*INTERPOLATION\\s*=\\s*\"(linear|cosine)\"\\s*$", REG_EXTENDED);
     if(reti) {
         fprintf(stderr, "Failed to compile interpolation option regex\n");
         return false;
     }
-    reti = regcomp(&speed_iface_rgx, "^\\s*SPEED_INTERFACE=\".*\"\\s*", REG_EXTENDED);
+    reti = regcomp(&speed_iface_rgx, "^\\s*SPEED_INTERFACE\\s*=\\s*\".*\"\\s*", REG_EXTENDED);
     if(reti) {
         fprintf(stderr, "Failed to compile speed interface regex\n");
         return false;
     }
-    reti = regcomp(&speed_iface_option_rgx, "^\\s*SPEED_INTERFACE=\"(tacho(meter)?|daemon|fand)\"\\s*", REG_EXTENDED);
+    reti = regcomp(&speed_iface_option_rgx, "^\\s*SPEED_INTERFACE\\s*=\\s*\"(tacho(meter)?|daemon|fand)\"\\s*", REG_EXTENDED);
     if(reti) {
         fprintf(stderr, "Failed to compile speed interface option regex\n");
         return false;
