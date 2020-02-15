@@ -45,6 +45,14 @@ static enum speed_interface speed_iface = sifc_tacho;
 static matrix mtrx;
 static uint8_t mtrx_rows;
 
+static inline uint8_t pwm_to_percentage(uint8_t ipwm) {
+    return (uint8_t)(100.0 * (double)ipwm / ((double)(pwm_max - pwm_min)));
+}
+
+static inline uint8_t percentage_to_pwm(uint8_t percentage) {
+    return (uint8_t)((double)percentage / 100.0 * (double)(pwm_max - pwm_min));
+}
+
 static FILE *file_open_excl(char const *restrict path, char const *restrict mode) {
     FILE *fp = fopen(path, mode);
     if(!fp) {
@@ -289,9 +297,20 @@ bool amdgpu_fan_set_percentage(uint8_t percentage) {
         return true;
     }
     fan_speed = percentage;
-    uint8_t const npwm = (uint8_t)((double)percentage / 100.0 * (double)(pwm_max - pwm_min));
-    LOG(VERBOSITY_LVL3, "Setting pwm %u (%f%%)\n", npwm, 100.0 * (double)npwm / (double)(pwm_max - pwm_min));
+    uint8_t const npwm = percentage_to_pwm(percentage);
+    LOG(VERBOSITY_LVL3, "Setting pwm %u (%u%%)\n", npwm, percentage);
     return write_uint8_to_file(pwm, npwm);
+}
+
+bool amdgpu_fan_get_speed(uint8_t *speed) {
+    uint8_t percentage;
+    if(!amdgpu_fan_get_percentage(&percentage)) {
+        return false;
+    }
+
+    *speed = percentage_to_pwm(percentage);
+
+    return true;
 }
 
 bool amdgpu_get_temp(uint8_t *temp) {
@@ -307,9 +326,13 @@ bool amdgpu_get_temp(uint8_t *temp) {
 }
 
 void amdgpu_fan_set_override_speed(uint8_t speed, pid_t ppid) {
-    LOG(VERBOSITY_LVL1, "Setting override speed to %u, tied to pid %d\n", speed, ppid);
+    amdgpu_fan_set_override_percentage(pwm_to_percentage(speed), ppid);
+}
+
+void amdgpu_fan_set_override_percentage(uint8_t percentage, pid_t ppid) {
+    LOG(VERBOSITY_LVL1, "Setting override percentage to %u (%u%%), tied to pid %d\n", percentage_to_pwm(percentage), percentage, ppid);
     ppid_override = ppid;
-    amdgpu_fan_set_percentage(speed);
+    amdgpu_fan_set_percentage(percentage);
 }
 
 void amdgpu_fan_reset_override_speed(void) {

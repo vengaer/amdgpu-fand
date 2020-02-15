@@ -1,6 +1,5 @@
 #ifndef FANCONTROLLER_H
 #define FANCONTROLLER_H
-
 #include "config.h"
 #include "interpolation.h"
 #include "matrix.h"
@@ -41,10 +40,12 @@ void amdgpu_fan_get_matrix(matrix mtrx, uint8_t *mtrx_rows);
 bool amdgpu_fan_set_mode(enum fanmode mode);
 bool amdgpu_fan_get_percentage(uint8_t *percentage);
 bool amdgpu_fan_set_percentage(uint8_t percentage);
+bool amdgpu_fan_get_speed(uint8_t *speed);
 
 bool amdgpu_get_temp(uint8_t *temp);
 
 void amdgpu_fan_set_override_speed(uint8_t speed, pid_t ppid);
+void amdgpu_fan_set_override_percentage(uint8_t percentage, pid_t ppid);
 void amdgpu_fan_reset_override_speed(void);
 bool amdgpu_fan_update_speed(void);
 

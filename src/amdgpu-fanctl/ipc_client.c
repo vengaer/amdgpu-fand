@@ -19,7 +19,7 @@ static bool sysfs_writable(void) {
     struct ipc_request request = {
         .type = ipc_get,
         .target = ipc_pwm_path,
-        .value = -1
+        .value = IPC_EMPTY_REQUEST_FIELD
     };
 
     char path[IPC_BUF_SIZE];
@@ -124,7 +124,7 @@ bool ipc_client_handle_request(struct ipc_request *request) {
     }
     if(request->target == ipc_matrix) {
         uint8_t const rows = *(uint8_t*)response;
-        if(MATRIX_OVERFLOW & rows) {
+        if(IPC_MATRIX_OVERFLOW & rows) {
             fprintf(stderr, "Matrix overflows the buffer\n");
             return false;
         }

@@ -18,7 +18,7 @@
 #include <sys/un.h>
 #include <unistd.h>
 
-#define IPC_RESPONSE_BUF_SIZE 32
+#define IPC_RESPONSE_BUF_SIZE 64
 
 static int fd;
 
@@ -33,7 +33,7 @@ static size_t write_matrix_to_buffer(char *response, size_t count) {
     uint8_t rows;
     amdgpu_fan_get_matrix(m, &rows);
     if(count < sizeof(uint8_t) * (1 + rows * MATRIX_COLS)) {
-        memset(response, MATRIX_OVERFLOW, sizeof(uint8_t));
+        memset(response, IPC_MATRIX_OVERFLOW, sizeof(uint8_t));
         return sizeof(uint8_t);
     }
 
@@ -91,13 +91,29 @@ static size_t construct_ipc_get_response(char *response, struct ipc_request *req
 
 static size_t construct_ipc_set_response(char *response, struct ipc_request *request, size_t count) {
     char buffer[IPC_RESPONSE_BUF_SIZE];
-    sprintf(buffer, "Speed set to constant %d%%", request->value);
+
+    bool is_percentage = (request->value & IPC_PERCENTAGE_BIT) == IPC_PERCENTAGE_BIT;
+    request->value &= ~IPC_PERCENTAGE_BIT;
+
+    if(is_percentage) {
+        amdgpu_fan_set_override_percentage(request->value, request->ppid);
+    }
+    else {
+        amdgpu_fan_set_override_speed(request->value, request->ppid);
+    }
+
+    uint8_t speed, percentage;
+    if(!amdgpu_fan_get_speed(&speed) || !amdgpu_fan_get_percentage(&percentage)) {
+        sprintf(buffer, "Failed to read fan speed");
+    }
+    else {
+        sprintf(buffer, "Speed set to constant %u (%u%%)", speed, percentage);
+    }
     ssize_t len = strscpy(response, buffer, count);
     if(len < 0)  {
         fprintf(stderr, "Ipc response overflows the buffer\n");
         len = strlen(response);
     }
-    amdgpu_fan_set_override_speed(request->value, request->ppid);
     return len + 1;
 }
 

@@ -15,17 +15,20 @@ static char doc[] = "amdgpu-fanctl -- Command line interface for amdgpu-fand\
                     "  get TARGET [VALUE]         Get target value, TARGET may be [fan]speed,\n"
                     "                             temp[erature] or matrix. Any potential VALUE\n"
                     "                             is silently discarded\n"
-                    "  set TARGET VALUE           Set value of target TARGET to VALUE. Changes\n"
-                    "                             are kept as long as the process invoking the\n"
-                    "                             ipc command remains alive. This behavior can be\n"
-                    "                             overridden by passing the --detach switch.\n"
-                    "                             Valid targets are [fan]speed. VALUE should be \n"
-                    "                             given as a percentage\n"
+                    "  set speed VALUE[%]         Set the fan speed. Changes are kept as long\n"
+                    "                             as the process invoking the ipc command remains\n"
+                    "                             alive. This behavior can be overridden by passing\n"
+                    "                             the --detach flag. If no percent sign is given,\n"
+                    "                             the VALUE is interpreted as a pwd value. If a\n"
+                    "                             percent sign is passed, the value is interpreted\n"
+                    "                             as a percentage\n"
+                    "  set speed-iface IFACE      Set the speed interface of the server. IFACE may be\n"
+                    "                             tacho[meter], daemon or fand (alias for daemon)\n"
                     "  reset [TARGET [VALUE]]     Undo any and all set commands for TARGET and fall\n"
                     "                             back on value specified in the config file. If no\n" 
                     "                             TARGET is specified, all values are reset. Valid\n"
-                    "                             targets are [fan]speed. Any potential VALUE is\n"
-                    "                             silently discarded\n";
+                    "                             targets are [fan]speed and speed-iface. Any \n"
+                    "                             potential VALUE is silently discarded\n";
 static char args_doc[] = "COMMAND [TARGET [VALUE]]";
 
 static struct argp_option options[] = {
@@ -65,7 +68,7 @@ static struct argp argp = { options, parse_opt, args_doc, doc, 0, 0, 0 };
 int main(int argc, char** argv) {
 
     struct arguments args = {
-        .request = { .type = ipc_invalid_type, .target = ipc_invalid_target, .value = -1, .ppid = -1 },
+        .request = { .type = ipc_invalid_type, .target = ipc_invalid_target, .value = IPC_EMPTY_REQUEST_FIELD, .ppid = -1 },
         .verbosity = 0,
     };
 

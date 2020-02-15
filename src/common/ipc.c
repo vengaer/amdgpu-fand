@@ -5,12 +5,13 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <regex.h>
 #include <unistd.h>
 
-#define FAN_SPEED_MIN 0
-#define FAN_SPEED_MAX 100
+#define FAN_PERCENTAGE_MIN 0
+#define FAN_PERCENTAGE_MAX 100
 
 char const *ipc_request_type_value[4] = { "get", "set", "reset", "invalid" };
 char const *ipc_request_target_value[5] = { "temp", "speed", "matrix", "pwm_path", "invalid" };
@@ -25,7 +26,7 @@ static bool compile_regexps(void) {
             regcomp(&target_temp_rgx, "^\\s*temp(erature)?\\s*$", REG_EXTENDED) |
             regcomp(&target_speed_rgx, "^\\s*(fan)?speed\\s*$", REG_EXTENDED) |
             regcomp(&target_matrix_rgx, "^\\s*matrix\\s*$", REG_EXTENDED) |
-            regcomp(&value_rgx, "^\\s*[0-9]{1,3}\\s*$", REG_EXTENDED);
+            regcomp(&value_rgx, "^\\s*[0-9]{1,3}%?\\s*$", REG_EXTENDED);
     if(reti) {
         fprintf(stderr, "Failed to compile ipc regexps\n");
         return false;
@@ -99,12 +100,20 @@ bool parse_value_param(char const *request_param, struct ipc_request *result) {
     else if(result->type != ipc_set) {
         return true;
     }
+    bool is_percentage = strchr(request_param, '%');
+
+    /* %-sign ignored by atoi */
     int value = atoi(request_param);
-    if(value < FAN_SPEED_MIN || value > FAN_SPEED_MAX) {
-        LOG(VERBOSITY_LVL1, "%d is not in the interval (%d, %d)\n", value, FAN_SPEED_MIN, FAN_SPEED_MAX);
-        return false;
+
+    if(is_percentage) {
+        if(value < FAN_PERCENTAGE_MIN || value > FAN_PERCENTAGE_MAX) {
+            LOG(VERBOSITY_LVL1, "%d is not in the interval [%d, %d]\n", value, FAN_PERCENTAGE_MIN, FAN_PERCENTAGE_MAX);
+            return false;
+        }
+        value |= IPC_PERCENTAGE_BIT;
     }
-    LOG(VERBOSITY_LVL3, "Setting ipc value %d\n", value);
+
+    LOG(VERBOSITY_LVL3, "Setting ipc value %d, percentage bit: %d\n", (value & 0xFF), (value & IPC_PERCENTAGE_BIT) == IPC_PERCENTAGE_BIT);
     result->value = value;
 
     return true;
@@ -136,7 +145,7 @@ enum ipc_request_state get_ipc_state(struct ipc_request *request) {
         return ipc_server_state;
     }
     
-    if(request->type == ipc_set && request->value == -1) {
+    if(request->type == ipc_set && request->value == IPC_EMPTY_REQUEST_FIELD) {
         return ipc_invalid_state;
     }
 
