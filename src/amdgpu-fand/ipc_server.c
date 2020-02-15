@@ -120,17 +120,18 @@ static size_t construct_ipc_set_response(char *response, struct ipc_request *req
 static size_t construct_ipc_reset_response(char *response, struct ipc_request *request, size_t count) {
     char buffer[IPC_RESPONSE_BUF_SIZE];
     if(request->target != ipc_invalid_target) {
-        sprintf(buffer, "Resetting %s", ipc_request_target_value[request->target]);
+        sprintf(buffer, "Successfully reset %s", ipc_request_target_value[request->target]);
     }
     else {
-        sprintf(buffer, "Resetting all values");
-        /* Currently equivalent to resetting speed */
+        sprintf(buffer, "Config state restored");
     }
+
     ssize_t len = strscpy(response, buffer, count);
     if(len < 0) {
         fprintf(stderr, "Ipc response overflows the buffer\n");
         len = strlen(response);
     }
+
     amdgpu_fan_reset_override_speed();
     return len + 1;
 }
