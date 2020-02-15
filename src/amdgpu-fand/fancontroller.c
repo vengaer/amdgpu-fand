@@ -177,6 +177,22 @@ static bool construct_file_path(char *restrict dst, char const *restrict dir, ch
     return true;
 }
 
+static inline bool get_tachometer_speed(uint8_t *speed) {
+    return read_uint8_from_file(pwm, speed);
+}
+
+static inline bool get_tachometer_percentage(uint8_t *percentage) {
+    uint8_t npwm;
+    if(!get_tachometer_speed(&npwm)) {
+        return false;
+    }
+
+    double const frac = (double)npwm / (double)(pwm_max - pwm_min);
+    *percentage = (uint8_t)round((frac * 100));
+
+    return true;
+}
+
 bool amdgpu_fan_setup_pwm_enable_file(char const *hwmon_path) {
     if(!construct_file_path(pwm_enable, hwmon_path, PWM_ENABLE_FILE, sizeof pwm_enable) || !file_accessible(pwm_enable, W_OK, NULL)) {
         return false;
@@ -274,20 +290,33 @@ bool amdgpu_fan_set_mode(enum fanmode mode) {
     return write_uint8_to_file(pwm_enable, mode);
 }
 
-bool amdgpu_fan_get_percentage(uint8_t *percentage) {
+bool amdgpu_fan_get_speed(uint8_t *speed) {
     if(fan_speed < 0 || speed_iface == sifc_tacho) {
-        uint8_t npwm;
-        if(!read_uint8_from_file(pwm, &npwm)) {
+
+        if(!get_tachometer_speed(speed)) {
+            fputs("Failed to read tachometer value\n", stderr);
             return false;
         }
-        double const frac = (double)npwm / (double)(pwm_max - pwm_min);
-        *percentage = (uint8_t)round((frac * 100));
-        fan_speed = *percentage;
-        LOG(VERBOSITY_LVL3, "Current pwm: %u, corresponding to percentage: %u\n", npwm, *percentage);
+
+        fan_speed = pwm_to_percentage(*speed);
+
+        LOG(VERBOSITY_LVL3, "Current pwm: %u, corresponding to percentage: %u\n", *speed, fan_speed);
     }
     else {
-        *percentage = (uint8_t)fan_speed;
+        *speed = percentage_to_pwm(fan_speed);
     }
+
+    return true;
+}
+
+bool amdgpu_fan_get_percentage(uint8_t *percentage) {
+    uint8_t speed;
+    if(!amdgpu_fan_get_speed(&speed)) {
+        return false;
+    }
+
+    *percentage = pwm_to_percentage(speed);
+
     return true;
 }
 
@@ -298,17 +327,24 @@ bool amdgpu_fan_set_percentage(uint8_t percentage) {
     }
     fan_speed = percentage;
     uint8_t const npwm = percentage_to_pwm(percentage);
-    LOG(VERBOSITY_LVL3, "Setting pwm %u (%u%%)\n", npwm, percentage);
-    return write_uint8_to_file(pwm, npwm);
-}
 
-bool amdgpu_fan_get_speed(uint8_t *speed) {
-    uint8_t percentage;
-    if(!amdgpu_fan_get_percentage(&percentage)) {
+    LOG(VERBOSITY_LVL3, "Setting pwm %u (%u%%)\n", npwm, percentage);
+
+    if(!write_uint8_to_file(pwm, npwm)) {
         return false;
     }
 
-    *speed = percentage_to_pwm(percentage);
+    uint8_t tacho_pwm;
+    if(!get_tachometer_speed(&tacho_pwm)) {
+        fputs("Warning: Failed to read tachometer speed\n", stderr);
+
+        /* Recoverable error */
+        return true;
+    }
+
+    if(pwm_to_percentage(tacho_pwm) != percentage) {
+        E_LOG(VERBOSITY_LVL2, "Warning: Requested speed %u but tachometer reports %u\n", npwm, tacho_pwm);
+    }
 
     return true;
 }
@@ -330,7 +366,7 @@ void amdgpu_fan_set_override_speed(uint8_t speed, pid_t ppid) {
 }
 
 void amdgpu_fan_set_override_percentage(uint8_t percentage, pid_t ppid) {
-    LOG(VERBOSITY_LVL1, "Setting override percentage to %u (%u%%), tied to pid %d\n", percentage_to_pwm(percentage), percentage, ppid);
+    LOG(VERBOSITY_LVL1, "Setting override speed to %u (%u%%), tied to pid %d\n", percentage_to_pwm(percentage), percentage, ppid);
     ppid_override = ppid;
     amdgpu_fan_set_percentage(percentage);
 }
