@@ -18,7 +18,7 @@
 #include <sys/un.h>
 #include <unistd.h>
 
-#define IPC_RESPONSE_BUF_SIZE 64
+#define IPC_RESPONSE_BUF_SIZE 128
 
 static int fd;
 
@@ -91,7 +91,7 @@ static size_t construct_ipc_get_response(char *response, struct ipc_request *req
 }
 
 static size_t construct_ipc_set_response(char *response, struct ipc_request *request, size_t count) {
-    char buffer[IPC_RESPONSE_BUF_SIZE];
+    char buffer[IPC_RESPONSE_BUF_SIZE] = { 0 };
 
     bool is_percentage = (request->value & IPC_PERCENTAGE_BIT) == IPC_PERCENTAGE_BIT;
     request->value &= ~IPC_PERCENTAGE_BIT;
@@ -108,7 +108,17 @@ static size_t construct_ipc_set_response(char *response, struct ipc_request *req
         sprintf(buffer, "Failed to read fan speed");
     }
     else {
-        sprintf(buffer, "Speed set to constant %u (%u%%)", speed, percentage);
+        if(is_percentage && percentage != request->value) {
+            sprintf(buffer, "Warning: requested percentage %u not supported\n"
+                            "Speed set to constant %u (%u%%)", request->value, speed, percentage);
+        }
+        else if(speed != request->value) {
+            sprintf(buffer, "Warning: requested pwm %u not supported\n"
+                            "Speed set to constant %u (%u%%)", request->value, speed, percentage);
+        }
+        else {
+            sprintf(buffer + strlen(buffer), "Speed set to constant %u (%u%%)", speed, percentage);
+        }
     }
     ssize_t len = strscpy(response, buffer, count);
     if(len < 0)  {
