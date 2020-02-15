@@ -38,7 +38,7 @@ static bool sysfs_writable(void) {
 }
 
 bool ipc_client_open_socket(void) {
-    struct sockaddr_un addr;
+    union usockaddrs addrs;
     
     if(!ipc_server_running()) {
         fprintf(stderr, "Server not running\n");
@@ -51,30 +51,30 @@ bool ipc_client_open_socket(void) {
         return false;
     }
 
-    memset(&addr, 0, sizeof addr);
-    addr.sun_family = AF_UNIX;
-    if(strscpy(addr.sun_path, CLIENT_SOCK_FILE, sizeof addr.sun_path) < 0) {
+    memset(&addrs, 0, sizeof addrs);
+    addrs.saddr_un.sun_family = AF_UNIX;
+    if(strscpy(addrs.saddr_un.sun_path, CLIENT_SOCK_FILE, sizeof addrs.saddr_un.sun_path) < 0) {
         fprintf(stderr, "%s overflowed the socket path\n", CLIENT_SOCK_FILE);
         close(fd);
         return false;
     }
     unlink(CLIENT_SOCK_FILE);
 
-    if(bind(fd, (struct sockaddr *)&addr, sizeof addr) == -1) {
+    if(bind(fd, (struct sockaddr *)&addrs.saddr_un, sizeof addrs.saddr_un) == -1) {
         perror("Failed to bind socket");
         close(fd);
         return false;
     }
 
-    memset(&addr, 0, sizeof addr);
-    addr.sun_family = AF_UNIX;
-    if(strscpy(addr.sun_path, SERVER_SOCK_FILE, sizeof addr.sun_path) < 0) {
+    memset(&addrs, 0, sizeof addrs);
+    addrs.saddr_un.sun_family = AF_UNIX;
+    if(strscpy(addrs.saddr_un.sun_path, SERVER_SOCK_FILE, sizeof addrs.saddr_un.sun_path) < 0) {
         fprintf(stderr, "%s overflows the socket path\n", SERVER_SOCK_FILE);
         close(fd);
         return false;
     }
 
-    if(connect(fd, (struct sockaddr *)&addr, sizeof addr) == -1) {
+    if(connect(fd, (struct sockaddr *)&addrs.saddr_un, sizeof addrs.saddr_un) == -1) {
         perror("Failed to connect to server");
         close(fd);
         return false;

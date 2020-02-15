@@ -5,7 +5,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/un.h>
 
 #define SOCK_DIR "/tmp/amdgpu-fanctl"
 #define SERVER_SOCK_RESTRICT_FILE SOCK_DIR"/amdgpu-fanctl-server-restr.sock"
@@ -47,6 +49,11 @@ struct ipc_request {
     enum ipc_request_target target;
     int16_t value;
     pid_t ppid;
+};
+
+union usockaddrs {
+    struct sockaddr saddr;
+    struct sockaddr_un saddr_un;
 };
 
 bool parse_ipc_param(char const *request_param, size_t param_idx, struct ipc_request *result);

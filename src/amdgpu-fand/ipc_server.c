@@ -149,7 +149,7 @@ static size_t construct_ipc_response(char *response, struct ipc_request *request
 }
 
 bool ipc_server_open_socket(void) {
-    struct sockaddr_un addr;
+    union usockaddrs addrs;
 
     fd = socket(PF_UNIX, SOCK_DGRAM, 0);
     if(fd == -1) {
@@ -159,16 +159,16 @@ bool ipc_server_open_socket(void) {
 
     create_tmp_dir();
 
-    memset(&addr, 0, sizeof(addr));
-    addr.sun_family = AF_UNIX;
-    if(strscpy(addr.sun_path, SERVER_SOCK_FILE, sizeof addr.sun_path) < 0) {
+    memset(&addrs, 0, sizeof(addrs));
+    addrs.saddr_un.sun_family = AF_UNIX;
+    if(strscpy(addrs.saddr_un.sun_path, SERVER_SOCK_FILE, sizeof addrs.saddr_un.sun_path) < 0) {
         fprintf(stderr, "%s overflows the socket address path\n", SERVER_SOCK_FILE);
         ipc_server_close_socket();
         return false;
     }
     unlink(SERVER_SOCK_FILE);
 
-    if(bind(fd, (struct sockaddr *)&addr, sizeof addr) == -1) {
+    if(bind(fd, (struct sockaddr *)&addrs.saddr_un, sizeof addrs.saddr_un) == -1) {
         perror("Failed to bind socket");
         ipc_server_close_socket();
         return false;
