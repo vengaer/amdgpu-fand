@@ -90,8 +90,8 @@ static size_t construct_ipc_get_response(char *response, struct ipc_request *req
     return len + 1;
 }
 
-static size_t construct_ipc_set_response(char *response, struct ipc_request *request, size_t count) {
-    char buffer[IPC_RESPONSE_BUF_SIZE] = { 0 };
+static size_t construct_ipc_set_speed_response(char *response, struct ipc_request *request, size_t count) {
+    char buffer[IPC_RESPONSE_BUF_SIZE];
 
     bool is_percentage = (request->value & IPC_PERCENTAGE_BIT) == IPC_PERCENTAGE_BIT;
     request->value &= ~IPC_PERCENTAGE_BIT;
@@ -117,24 +117,48 @@ static size_t construct_ipc_set_response(char *response, struct ipc_request *req
                             "Speed set to constant %u (%u%%)", request->value, speed, percentage);
         }
         else {
-            sprintf(buffer + strlen(buffer), "Speed set to constant %u (%u%%)", speed, percentage);
+            sprintf(buffer, "Speed set to constant %u (%u%%)", speed, percentage);
         }
     }
     ssize_t len = strscpy(response, buffer, count);
     if(len < 0)  {
-        fprintf(stderr, "Ipc response overflows the buffer\n");
+        fprintf(stderr, "Ipc response %s overflows the buffer\n", buffer);
         len = strlen(response);
     }
     return len + 1;
 }
 
+static size_t construct_ipc_set_speed_interface_response(char *response, struct ipc_request *request, size_t count) {
+    char buffer[IPC_RESPONSE_BUF_SIZE];
+    amdgpu_fan_set_speed_interface_override(request->value);
+
+    sprintf(buffer, "Speed interface set to %s", speed_interface_value[request->value]);
+    ssize_t len = strscpy(response, buffer, count);
+    if(len < 0) {
+        fprintf(stderr, "Ipc response %s overflows the buffer\n", buffer);
+        return strlen(response);
+    }
+
+    return len + 1;
+}
+
 static size_t construct_ipc_reset_response(char *response, struct ipc_request *request, size_t count) {
     char buffer[IPC_RESPONSE_BUF_SIZE];
-    if(request->target != ipc_invalid_target) {
-        sprintf(buffer, "Successfully reset %s", ipc_request_target_value[request->target]);
+
+    if(request->target == ipc_invalid_target) {
+        amdgpu_fan_reset_override_speed();
+        amdgpu_fan_reset_speed_interface_override();
+        sprintf(buffer, "Config state restored");
     }
     else {
-        sprintf(buffer, "Config state restored");
+        if(request->target == ipc_speed) {
+            amdgpu_fan_reset_override_speed();
+        }
+        else {
+            amdgpu_fan_reset_speed_interface_override();
+        }
+        sprintf(buffer, "Successfully reset %s", ipc_request_target_value[request->target]);
+
     }
 
     ssize_t len = strscpy(response, buffer, count);
@@ -143,7 +167,6 @@ static size_t construct_ipc_reset_response(char *response, struct ipc_request *r
         len = strlen(response);
     }
 
-    amdgpu_fan_reset_override_speed();
     return len + 1;
 }
 
@@ -152,7 +175,12 @@ static size_t construct_ipc_response(char *response, struct ipc_request *request
         return construct_ipc_get_response(response, request, count);
     }
     else if(request->type == ipc_set) {
-        return construct_ipc_set_response(response, request, count);
+        if(request->target == ipc_speed) {
+            return construct_ipc_set_speed_response(response, request, count);
+        }
+        else {
+            return construct_ipc_set_speed_interface_response(response, request, count);
+        }
     }
 
     return construct_ipc_reset_response(response, request, count);

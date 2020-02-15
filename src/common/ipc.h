@@ -21,7 +21,7 @@
 #define IPC_PERCENTAGE_BIT 0x400
 
 extern char const *ipc_request_type_value[4];
-extern char const *ipc_request_target_value[5];
+extern char const *ipc_request_target_value[6];
 
 enum ipc_request_type {
     ipc_get,
@@ -34,6 +34,7 @@ enum ipc_request_target {
     ipc_temp,
     ipc_speed,
     ipc_matrix,
+    ipc_speed_iface,
     ipc_pwm_path,
     ipc_invalid_target
 };

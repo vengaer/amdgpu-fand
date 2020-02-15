@@ -41,6 +41,7 @@ static pid_t ppid_override = -1;
 static bool aggressive_throttle = false;
 static enum interpolation_method interp = linear;
 static enum speed_interface speed_iface = sifc_tacho;
+static enum speed_interface default_speed_iface = sifc_tacho;
 
 static matrix mtrx;
 static uint8_t mtrx_rows;
@@ -251,6 +252,7 @@ void amdgpu_fan_set_interpolation_method(enum interpolation_method method) {
 
 void amdgpu_fan_set_speed_interface(enum speed_interface iface) {
     speed_iface = iface;
+    default_speed_iface = iface;
 }
 
 void amdgpu_fan_set_matrix(matrix m, uint8_t m_rows) {
@@ -372,6 +374,16 @@ void amdgpu_fan_set_override_percentage(uint8_t percentage, pid_t ppid) {
 void amdgpu_fan_reset_override_speed(void) {
     LOG(VERBOSITY_LVL1, "Resetting override speed, falling back on matrix\n");
     ppid_override = -1;
+}
+
+void amdgpu_fan_set_speed_interface_override(enum speed_interface iface) {
+    LOG(VERBOSITY_LVL1, "Overriding speed interface, new value is %s\n", speed_interface_value[iface]);
+    speed_iface = iface;
+}
+
+void amdgpu_fan_reset_speed_interface_override(void) {
+    LOG(VERBOSITY_LVL1, "Resetting speed interface override, falling back on %s\n", speed_interface_value[default_speed_iface]);
+    speed_iface = default_speed_iface;
 }
 
 bool amdgpu_fan_update_speed(void) {

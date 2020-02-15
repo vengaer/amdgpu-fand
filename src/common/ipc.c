@@ -1,3 +1,4 @@
+#include "commontype.h"
 #include "filesystem.h"
 #include "ipc.h"
 #include "logger.h"
@@ -14,9 +15,10 @@
 #define FAN_PERCENTAGE_MAX 100
 
 char const *ipc_request_type_value[4] = { "get", "set", "reset", "invalid" };
-char const *ipc_request_target_value[5] = { "temp", "speed", "matrix", "pwm_path", "invalid" };
+char const *ipc_request_target_value[6] = { "temp", "speed", "matrix", "speed-iface", "pwm_path", "invalid" };
 
-static regex_t cmd_get_rgx, cmd_set_rgx, cmd_reset_rgx, target_temp_rgx, target_speed_rgx, target_matrix_rgx, value_rgx;
+static regex_t cmd_get_rgx, cmd_set_rgx, cmd_reset_rgx, target_temp_rgx, target_speed_rgx, target_matrix_rgx, target_speed_iface_rgx;
+static regex_t numeric_value_rgx, speed_iface_value_rgx, tacho_iface_rgx;
 
 static bool compile_regexps(void) {
     int reti = 0;
@@ -26,7 +28,10 @@ static bool compile_regexps(void) {
             regcomp(&target_temp_rgx, "^\\s*temp(erature)?\\s*$", REG_EXTENDED) |
             regcomp(&target_speed_rgx, "^\\s*(fan)?speed\\s*$", REG_EXTENDED) |
             regcomp(&target_matrix_rgx, "^\\s*matrix\\s*$", REG_EXTENDED) |
-            regcomp(&value_rgx, "^\\s*[0-9]{1,3}%?\\s*$", REG_EXTENDED);
+            regcomp(&target_speed_iface_rgx, "^\\s*speed-i(nter)?face\\s*$", REG_EXTENDED) |
+            regcomp(&numeric_value_rgx, "^\\s*[0-9]{1,3}%?\\s*$", REG_EXTENDED) |
+            regcomp(&speed_iface_value_rgx, "^\\s*tacho(meter)?|daemon|fand\\s*$", REG_EXTENDED) |
+            regcomp(&tacho_iface_rgx, "^\\s*tacho(meter)?\\s*$", REG_EXTENDED);
     if(reti) {
         fprintf(stderr, "Failed to compile ipc regexps\n");
         return false;
@@ -85,6 +90,10 @@ static bool parse_target_param(char const *request_param, struct ipc_request *re
         result->target = ipc_matrix;
         LOG(VERBOSITY_LVL3, "Setting ipc target ipc_matrix\n");
     }
+    else if(regexec(&target_speed_iface_rgx, request_param, 0, NULL, 0) == 0) {
+        LOG(VERBOSITY_LVL3, "Setting ipc raget ipc_speed_iface\n");
+        result->target = ipc_speed_iface;
+    }
     else {
         fprintf(stderr, "%s is not a valid ipc target\n", request_param);
         return false;
@@ -92,13 +101,10 @@ static bool parse_target_param(char const *request_param, struct ipc_request *re
     return true;
 }
 
-bool parse_value_param(char const *request_param, struct ipc_request *result) {
-    if(regexec(&value_rgx, request_param, 0, NULL, 0) != 0) {
+bool parse_numeric_value_param(char const *request_param, struct ipc_request *result) {
+    if(regexec(&numeric_value_rgx, request_param, 0, NULL, 0) != 0) {
         fprintf(stderr, "Invalid value %s\n", request_param);
         return false;
-    }
-    else if(result->type != ipc_set) {
-        return true;
     }
     bool is_percentage = strchr(request_param, '%');
 
@@ -119,6 +125,23 @@ bool parse_value_param(char const *request_param, struct ipc_request *result) {
     return true;
 }
 
+bool parse_speed_iface_value_param(char const *request_param, struct ipc_request *result) {
+    if(regexec(&speed_iface_value_rgx, request_param, 0, NULL, 0) != 0) {
+        fprintf(stderr, "Invalid value %s\n", request_param);
+        return false;
+    }
+
+    if(regexec(&tacho_iface_rgx, request_param, 0, NULL, 0) == 0) {
+        result->value = sifc_tacho;
+    }
+    else {
+        result->value = sifc_daemon;
+    }
+
+    LOG(VERBOSITY_LVL3, "Setting ipc value %s\n", result->value == sifc_tacho ? "tachometer" : "daemon");
+    return true;
+}
+
 bool parse_ipc_param(char const *request_param, size_t param_idx, struct ipc_request *result) {
     static bool regexps_compiled = false;
     LOG(VERBOSITY_LVL3, "Parsing ipc request param '%s'\n", request_param);
@@ -133,7 +156,18 @@ bool parse_ipc_param(char const *request_param, size_t param_idx, struct ipc_req
         case 1:
             return parse_target_param(request_param, result);
         case 2:
-            return parse_value_param(request_param, result);
+            if(result->type != ipc_set && result->type != ipc_reset) {
+                return true;
+            }
+            switch(result->target) {
+                case ipc_speed:
+                    return parse_numeric_value_param(request_param, result);
+                case ipc_speed_iface:
+                    return parse_speed_iface_value_param(request_param, result);
+                    return 0;
+                default:
+                    break;
+            }
         default:
             break;
     }
