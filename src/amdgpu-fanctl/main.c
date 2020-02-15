@@ -7,7 +7,7 @@
 
 #include <argp.h>
 
-char const *argp_program_version = "amdgpu-fanctl 2.0";
+char const *argp_program_version = "amdgpu-fanctl 3.0";
 char const *argp_program_bug_address = "<vilhelm.engstrom@tuta.io>";
 
 static char doc[] = "amdgpu-fanctl -- Command line interface for amdgpu-fand\

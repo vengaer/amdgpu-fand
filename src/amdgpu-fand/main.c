@@ -38,7 +38,7 @@ static bool uint8_from_chars(char const *str, uint8_t *value) {
     return true;
 }
 
-char const *argp_program_version = "amdgpu-fand 1.0";
+char const *argp_program_version = "amdgpu-fand 2.0";
 char const *argp_program_bug_address = "<vilhelm.engstrom@tuta.io>";
 
 static char doc[] = "amdgpu-fand -- A daemon controlling the fan speed on AMD Radeon GPUs";
