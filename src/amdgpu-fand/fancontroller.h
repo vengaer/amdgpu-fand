@@ -44,7 +44,7 @@ bool amdgpu_fan_get_speed(uint8_t *speed);
 
 bool amdgpu_get_temp(uint8_t *temp);
 
-void amdgpu_fan_set_override_speed(uint8_t speed, pid_t ppid);
+void amdgpu_fan_set_override_speed(int16_t speed, pid_t ppid);
 void amdgpu_fan_set_override_percentage(uint8_t percentage, pid_t ppid);
 void amdgpu_fan_reset_override_speed(void);
 void amdgpu_fan_set_speed_interface_override(enum speed_interface iface);

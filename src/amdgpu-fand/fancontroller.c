@@ -361,7 +361,16 @@ bool amdgpu_get_temp(uint8_t *temp) {
     return false;
 }
 
-void amdgpu_fan_set_override_speed(uint8_t speed, pid_t ppid) {
+void amdgpu_fan_set_override_speed(int16_t speed, pid_t ppid) {
+    if(speed < (int16_t)pwm_min) {
+        E_LOG(VERBOSITY_LVL1, "Requested speed %u is below minimum pwm %u\n", speed, pwm_min);
+        speed = pwm_min;
+    }
+    else if(speed > (int16_t)pwm_max) {
+        E_LOG(VERBOSITY_LVL1, "Requested speed %u is above maximum pwm %u\n", speed, pwm_max);
+        speed = pwm_max;
+    }
+        
     amdgpu_fan_set_override_percentage(pwm_to_percentage(speed), ppid);
 }
 
