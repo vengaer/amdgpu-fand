@@ -166,9 +166,12 @@ bool amdgpu_daemon_restart(void) {
     char hwmon[HWMON_SUBDIR_LEN];
     char persistent[HWMON_PATH_LEN];
 
+    matrix mtrx;
+
     struct daemon_ctrl_opts ctrl_opts = {
         .aggressive_throttle = amdgpu_fan_get_aggressive_throttle(),
-        .interp_method = amdgpu_fan_get_interpolation_method()
+        .interp_method = amdgpu_fan_get_interpolation_method(),
+        .mtrx = mtrx
     };
 
     struct config_params params = {
