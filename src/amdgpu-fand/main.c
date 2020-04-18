@@ -115,7 +115,8 @@ int main(int argc, char** argv) {
         .interp_method = linear,
         .speed_iface = sifc_tacho,
         .aggressive_throttle = false,
-        .mtrx = mtrx
+        .mtrx = mtrx,
+        .hysteresis = 0
     };
 
     struct config_params params = {
@@ -125,6 +126,7 @@ int main(int argc, char** argv) {
         .hwmon = hwmon_cfg,
         .hwmon_size = sizeof hwmon_cfg,
         .interval = &interval_cfg,
+        .hysteresis = &ctrl_opts.hysteresis,
         .aggressive_throttle = &ctrl_opts.aggressive_throttle,
         .interp_method = &ctrl_opts.interp_method,
         .speed_iface = &ctrl_opts.speed_iface,

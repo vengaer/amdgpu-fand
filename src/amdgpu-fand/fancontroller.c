@@ -36,6 +36,9 @@ static uint8_t pwm_max;
 
 static int8_t fan_speed = -1;
 
+static uint8_t hysteresis = 0;
+static uint8_t hysteresis_threshold_idx = 0;
+
 static pid_t ppid_override = -1;
 
 static bool aggressive_throttle = false;
@@ -263,6 +266,10 @@ void amdgpu_fan_set_matrix(matrix m, uint8_t m_rows) {
     }
 }
 
+void amdgpu_fan_set_hysteresis(uint8_t hysteresis_val) {
+    hysteresis = hysteresis_val;
+}
+
 ssize_t amdgpu_fan_get_pwm_path(char *buffer, size_t count) {
     ssize_t len = strscpy(buffer, pwm, count);
     if(len < 0) {
@@ -370,7 +377,7 @@ void amdgpu_fan_set_override_speed(int16_t speed, pid_t ppid) {
         E_LOG(VERBOSITY_LVL1, "Requested speed %u is above maximum pwm %u\n", speed, pwm_max);
         speed = pwm_max;
     }
-        
+
     amdgpu_fan_set_override_percentage(pwm_to_percentage(speed), ppid);
 }
 
@@ -425,8 +432,30 @@ bool amdgpu_fan_update_speed(void) {
         return amdgpu_fan_set_percentage(speeds[mtrx_rows - 1u]);
     }
 
-    uint8_t const percentage = inverse_lerp_uint8(temps[idx], temps[idx + 1], temp);
-    uint8_t const npwm = interp == linear ? lerp_uint8(speeds[idx], speeds[idx + 1], (double)percentage / 100.0) :
-                                            cosine_interpolate_uint8(speeds[idx], speeds[idx + 1], (double)percentage / 100.0);
+    uint8_t lerp_percentage = inverse_lerp_uint8(temps[idx], temps[idx + 1], temp);
+
+    /* Hysteresis should be considered? */
+    if(idx < hysteresis_threshold_idx) {
+        /* Temp has fallen below hysteresis threshold, update matrix */
+        if(temp < temps[hysteresis_threshold_idx] - hysteresis) {
+            LOG(VERBOSITY_LVL2, "Temperature %u is below hysteresis threshold %u, updating speed\n",
+                                 temp, temps[hysteresis_threshold_idx] - hysteresis);
+            hysteresis_threshold_idx = idx;
+        }
+        /* Temp has not fallen below threshold, keed index */
+        else {
+            LOG(VERBOSITY_LVL2, "Temperature %u has yet to fall below hysteresis threshold %u, keeping prior speed\n",
+                                 temp, temps[hysteresis_threshold_idx] - hysteresis);
+            /* Use next listed speed */
+            lerp_percentage = 0;
+            idx = hysteresis_threshold_idx;
+        }
+    }
+    else {
+        hysteresis_threshold_idx = idx;
+    }
+
+    uint8_t const npwm = interp == linear ? lerp_uint8(speeds[idx], speeds[idx + 1], (double)lerp_percentage / 100.0) :
+                                            cosine_interpolate_uint8(speeds[idx], speeds[idx + 1], (double)lerp_percentage / 100.0);
     return amdgpu_fan_set_percentage(npwm);
 }

@@ -137,6 +137,7 @@ static bool reinitialize(char const *restrict persistent, char const *restrict h
     amdgpu_fan_set_aggressive_throttle(ctrl_opts->aggressive_throttle);
     amdgpu_fan_set_interpolation_method(ctrl_opts->interp_method);
     amdgpu_fan_set_speed_interface(ctrl_opts->speed_iface);
+    amdgpu_fan_set_hysteresis(ctrl_opts->hysteresis);
 
     update_interval = interval;
     return true;
@@ -148,6 +149,7 @@ bool amdgpu_daemon_init(char const *restrict config, char const *restrict hwmon_
     amdgpu_fan_set_aggressive_throttle(ctrl_opts->aggressive_throttle);
     amdgpu_fan_set_interpolation_method(ctrl_opts->interp_method);
     amdgpu_fan_set_speed_interface(ctrl_opts->speed_iface);
+    amdgpu_fan_set_hysteresis(ctrl_opts->hysteresis);
 
     if(strscpy(config_file, config, sizeof config_file) < 0) {
         fprintf(stderr, "Config path %s overflows the buffer\n", config_file);
@@ -171,7 +173,8 @@ bool amdgpu_daemon_restart(void) {
     struct daemon_ctrl_opts ctrl_opts = {
         .aggressive_throttle = amdgpu_fan_get_aggressive_throttle(),
         .interp_method = amdgpu_fan_get_interpolation_method(),
-        .mtrx = mtrx
+        .mtrx = mtrx,
+        .hysteresis = 0
     };
 
     struct config_params params = {
@@ -181,6 +184,7 @@ bool amdgpu_daemon_restart(void) {
         .hwmon = hwmon,
         .hwmon_size = sizeof hwmon,
         .interval = &interval,
+        .hysteresis = &ctrl_opts.hysteresis,
         .aggressive_throttle = &ctrl_opts.aggressive_throttle,
         .interp_method = &ctrl_opts.interp_method,
         .speed_iface = &ctrl_opts.speed_iface,

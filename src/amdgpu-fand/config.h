@@ -16,7 +16,7 @@
 struct config_params {
     char *path, *persistent, *hwmon;
     size_t persistent_size, hwmon_size;
-    uint8_t *interval, *mtrx_rows;
+    uint8_t *interval, *mtrx_rows, *hysteresis;
     bool *aggressive_throttle;
     enum interpolation_method *interp_method;
     enum speed_interface *speed_iface;

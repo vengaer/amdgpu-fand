@@ -10,7 +10,7 @@
 
 struct daemon_ctrl_opts {
     bool aggressive_throttle;
-    uint8_t mtrx_rows;
+    uint8_t mtrx_rows, hysteresis;
     enum interpolation_method interp_method;
     enum speed_interface speed_iface;
     uint8_t (*mtrx)[];

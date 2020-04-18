@@ -31,6 +31,7 @@ void amdgpu_fan_set_aggressive_throttle(bool throttle);
 void amdgpu_fan_set_interpolation_method(enum interpolation_method method);
 void amdgpu_fan_set_speed_interface(enum speed_interface iface);
 void amdgpu_fan_set_matrix(matrix mtrx, uint8_t mtrx_rows);
+void amdgpu_fan_set_hysteresis(uint8_t hysteresis_val);
 
 ssize_t amdgpu_fan_get_pwm_path(char *buffer, size_t count);
 bool amdgpu_fan_get_aggressive_throttle(void);
