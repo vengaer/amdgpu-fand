@@ -67,7 +67,7 @@ static int daemon_init(bool fork) {
     }
 
     umask(0);
-    mkdir(DAEMON_WORKING_DIR, 0755);
+    mkdir(DAEMON_WORKING_DIR, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
 
     chdir(DAEMON_WORKING_DIR);
 
