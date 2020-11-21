@@ -27,8 +27,8 @@ incdirs     :=
 fand_objs   :=
 fanctl_objs :=
 
-fand        := amdgpu-fand-3.0
-fanctl      := amdgpu-fanctl-3.0
+FAND        := amdgpu-fand-3.0
+FANCTL      := amdgpu-fanctl-3.0
 
 # $(call mk-module-build-dir)
 define mk-module-build-dir
@@ -114,10 +114,11 @@ endef
 
 # $(call build-configuration)
 define build-configuration
+$(eval __cfg := )
 $(if $(MAKECMDGOALS),
-    $(if $(findstring $(fand),$(MAKECMDGOALS)),
+    $(if $(findstring $(FAND),$(MAKECMDGOALS)),
         $(eval __cfg += fand))
-    $(if $(findstring $(fanctl),$(MAKECMDGOALS)),
+    $(if $(findstring $(FANCTL),$(MAKECMDGOALS)),
         $(eval __cfg += fanctl)),
   $(eval __cfg += fand fanctl))
 $(__cfg)
@@ -149,7 +150,7 @@ target_deps    :=
 configuration  := $(call build-configuration)
 
 .PHONY: all
-all: $(fand)
+all: $(FAND)
 
 ifneq ($(configuration),)
     $(call include-module,src)
@@ -157,11 +158,11 @@ endif
 
 $(call override-implicit-vars)
 
-$(fand): $(target_deps) $(fand_objs)
+$(FAND): $(target_deps) $(fand_objs)
 	$(call echo-ld,$@)
 	$(QUIET)$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
-$(fanctl): $(target_deps) $(fanctl_objs)
+$(FANCTL): $(target_deps) $(fanctl_objs)
 	$(call echo-ld,$@)
 	$(QUIET)$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
@@ -171,4 +172,4 @@ $(builddir)/%.$(oext): $(srcdir)/%.$(cext)
 
 .PHONY: clean
 clean:
-	$(QUIET)$(RM) $(builddir) $(fand) $(fanctl)
+	$(QUIET)$(RM) $(builddir) $(FAND) $(FANCTL)
