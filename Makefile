@@ -35,25 +35,26 @@ define mk-module-build-dir
 $(shell $(MKDIR) $(patsubst $(srcdir)/%,$(builddir)/%,$(module_path)))
 endef
 
-# $(call module-stack-top)
-define module-stack-top
-$(subst :,,$(firstwod $(module_stack)))
+# $(call stack-top, stack_name)
+define stack-top
+$(subst :,,$(firstword $($(1))))
 endef
 
-# $(call module-stack-push, module_name)
-define module-stack-push
-$(eval module_stack := $(stack_top_symb)$(strip $(1)) $(subst $(stack_top_symb),,$(module_stack)))
+# $(call stack-push, stack_name, value)
+define stack-push
+$(eval $(1) := $(stack_top_symb)$(strip $(2)) $(subst $(stack_top_symb),,$($(1))))
 endef
 
-# $(call module-stack-pop)
-define module-stack-pop
-$(eval module_stack := $(stack_top_symb)$(subst $(stack_top_symv)$(module_name) ,,$(module_stack)))
+# $(call stack-pop, stack_name)
+define stack-pop
+$(eval __top := $(call stack-top,$(1)))
+$(eval $(1) := $(stack_top_symb)$(subst $(stack_top_symb)$(__top) ,,$($(1))))
 endef
 
 # $(cal include-module-prologue, module_name)
 define include-module-prologue
 $(eval module_name := $(strip $(1)))
-$(call module-stack-push,$(module_name))
+$(call stack-push,module_stack,$(module_name))
 $(eval module_path := $(module_path)/$(module_name))
 $(call mk-module-build-dir)
 $(eval trivial_module := n)
@@ -66,8 +67,8 @@ $(if $(findstring y,$(trivial_module)),
     $(call declare-trivial-c-module))
 $(eval trivial_module := n)
 $(eval module_path := $(patsubst %/$(module_name),%,$(module_path)))
-$(call module-stack-pop)
-$(eval module_name := $(call module-stack-top))
+$(call stack-pop,module_stack)
+$(eval module_name := $(call stack-top,module_stack))
 endef
 
 # $(call include-module, module_name)
