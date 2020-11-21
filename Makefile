@@ -55,6 +55,7 @@ endef
 define include-module-prologue
 $(eval module_name := $(strip $(1)))
 $(call stack-push,module_stack,$(module_name))
+$(call stack-push,trivial_stack,$(trivial_module))
 $(eval module_path := $(module_path)/$(module_name))
 $(call mk-module-build-dir)
 $(eval trivial_module := n)
@@ -65,7 +66,7 @@ endef
 define include-module-epilogue
 $(if $(findstring y,$(trivial_module)),
     $(call declare-trivial-c-module))
-$(eval trivial_module := n)
+$(eval trivial_module := $(stack-top,trivial_stack))
 $(eval module_path := $(patsubst %/$(module_name),%,$(module_path)))
 $(call stack-pop,module_stack)
 $(eval module_name := $(call stack-top,module_stack))
@@ -136,6 +137,10 @@ module_mk      := Makefile
 module_path    := $(root)
 
 stack_top_symb := :
+
+module_stack   := $(stack_top_symb)
+trivial_stack  := $(stack_top_symb)
+trivial_module := n
 
 prepare_deps   :=
 build_deps     :=
