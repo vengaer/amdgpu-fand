@@ -59,6 +59,11 @@ static int record_queue_pop(struct ipc_record *record) {
         return 1;
     }
     *record = record_queue.records[record_queue.idx++ % SERVER_QUEUE_SIZE];
+
+    if(record_queue.idx == record_queue.size) {
+        record_queue_flush();
+    }
+j
     return 0;
 }
 
