@@ -1,5 +1,6 @@
 #include "daemon.h"
 #include "defs.h"
+#include "server.h"
 
 #include <errno.h>
 #include <signal.h>
@@ -74,24 +75,32 @@ static int daemon_init(bool fork) {
         return 1;
     }
 
-    chdir(DAEMON_WORKING_DIR);
-
-    return 0;
-}
-
-static int daemon_kill(void) {
-    if(rmdir(DAEMON_WORKING_DIR)) {
-        syslog(LOG_ERR, "Failed to remove working directory: %s", strerror(errno));
+    if(chdir(DAEMON_WORKING_DIR)) {
+        syslog(LOG_ERR, "Failed to set working directory: %s", strerror(errno));
         return 1;
     }
 
+    return server_init();
+}
+
+static int daemon_kill(void) {
+    int rv = 0;
+
+    if(server_kill()) {
+        rv = 1;
+    }
+    if(rmdir(DAEMON_WORKING_DIR)) {
+        syslog(LOG_ERR, "Failed to remove working directory: %s", strerror(errno));
+        rv = 1;
+    }
+
     closelog();
-    return 0;
+    return rv;
 }
 
 int daemon_main(bool fork) {
     if(daemon_init(fork)) {
-        return false;
+        return 1;
     }
 
     while(daemon_alive) {
