@@ -81,6 +81,11 @@ static int daemon_init(bool fork) {
 }
 
 static void daemon_kill(void) {
+    if(rmdir(DAEMON_WORKING_DIR)) {
+        syslog(LOG_ERR, "Failed to remove working directory: %s", strerror(errno));
+        return 1;
+    }
+
     closelog();
 }
 
