@@ -70,7 +70,7 @@ static ssize_t server_send(unsigned char const* buffer, size_t bufsize, union un
         return 1;
     }
 
-    nsent = sendto(server_fd, buffer, bufsize, 0, (struct sockaddr *)&receiver->addr_un, (socklen_t)sizeof(receiver->addr_un));
+    nsent = sendto(server_fd, buffer, bufsize, 0, &receiver->addr, (socklen_t)sizeof(receiver->addr));
 
     if(nsent == -1) {
         syslog(LOG_ERR, "Failed to send response: %s", strerror(errno));
@@ -124,7 +124,7 @@ static ssize_t server_invalid_request(int err, union unsockaddr *receiver) {
 int server_init(void) {
     static_assert(IPC_MAX_MSG_LENGTH >= MAX_TEMP_THRESHOLDS + 2, "Insufficient IPC buffer size");
 
-    union unsockaddr addr;
+    union unsockaddr sockaddr;
 
     server_fd = socket(PF_UNIX, SOCK_DGRAM, 0);
     if(server_fd == -1) {
@@ -132,15 +132,15 @@ int server_init(void) {
         return 1;
     }
 
-    memset(&addr, 0, sizeof(addr));
-    addr.addr_un.sun_family = AF_UNIX;
-    if(strscpy(addr.addr_un.sun_path, SERVER_SOCKET, sizeof(addr.addr_un.sun_path)) < 0) {
+    memset(&sockaddr, 0, sizeof(sockaddr));
+    sockaddr.addr_un.sun_family = AF_UNIX;
+    if(strscpy(sockaddr.addr_un.sun_path, SERVER_SOCKET, sizeof(sockaddr.addr_un.sun_path)) < 0) {
         syslog(LOG_ERR, "Socket path %s overflows the socket buffer", SERVER_SOCKET);
         (void)server_kill();
         return 1;
     }
 
-    if(bind(server_fd, (struct sockaddr *)&addr.addr_un, sizeof(addr.addr_un)) == -1) {
+    if(bind(server_fd, &sockaddr.addr, sizeof(sockaddr.addr)) == -1) {
         syslog(LOG_ERR, "Failed to bind socket %s: %s", SERVER_SOCKET, strerror(errno));
         (void)server_kill();
         return 1;
@@ -170,7 +170,7 @@ ssize_t server_try_poll(void) {
     ssize_t ntotal = 0;
 
     while(1) {
-        nbytes = recvfrom(server_fd, buffer, sizeof(buffer), 0, (struct sockaddr *)&client.addr_un, &(socklen_t){ sizeof(client) });
+        nbytes = recvfrom(server_fd, buffer, sizeof(buffer), 0, &client.addr, &(socklen_t){ sizeof(client) });
 
         switch(nbytes) {
             case -1:
