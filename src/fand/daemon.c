@@ -1,7 +1,9 @@
 #include "daemon.h"
 
+#include <errno.h>
 #include <signal.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <syslog.h>
 #include <sys/stat.h>
@@ -14,13 +16,8 @@ static sig_atomic_t volatile daemon_alive = 1;
 
 static void daemon_sig_handler(int signal) {
     switch(signal) {
-        case SIGCHLD:
-            /* TODO */
-            break;
-        case SIGHUP:
-            /* TODO */
-            break;
         case SIGINT:
+        case SIGTERM:
             daemon_alive = 0;
             break;
     }
@@ -41,8 +38,8 @@ static int daemon_fork(void) {
         return 1;
     }
 
-    signal(SIGCHLD, daemon_sig_handler);
-    signal(SIGHUP, daemon_sig_handler);
+    signal(SIGCHLD, SIG_IGN);
+    signal(SIGHUP, SIG_IGN);
 
     pid = fork();
 
@@ -62,16 +59,23 @@ static int daemon_fork(void) {
 }
 
 static int daemon_init(bool fork) {
+    signal(SIGINT, daemon_sig_handler);
+    signal(SIGTERM, daemon_sig_handler);
+
     if(fork && daemon_fork()) {
         return 1;
     }
 
+    openlog(0, !fork * LOG_PERROR, LOG_DAEMON);
+
     umask(0);
-    mkdir(DAEMON_WORKING_DIR, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
+
+    if(mkdir(DAEMON_WORKING_DIR, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH)) {
+        syslog(LOG_ERR, "Failed to create working directory: %s", strerror(errno));
+        return 1;
+    }
 
     chdir(DAEMON_WORKING_DIR);
-
-    openlog(0, !fork * LOG_PERROR, LOG_DAEMON);
 
     return 0;
 }
@@ -81,8 +85,6 @@ static void daemon_kill(void) {
 }
 
 bool daemon_main(bool fork) {
-    signal(SIGINT, daemon_sig_handler);
-
     if(daemon_init(fork)) {
         return false;
     }
