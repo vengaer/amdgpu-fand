@@ -37,7 +37,7 @@ endef
 
 # $(call stack-top, stack_name)
 define stack-top
-$(subst :,,$(firstword $($(1))))
+$(subst $(stack_top_symb),,$(firstword $($(1))))
 endef
 
 # $(call stack-push, stack_name, value)
@@ -66,9 +66,10 @@ endef
 define include-module-epilogue
 $(if $(findstring y,$(trivial_module)),
     $(call declare-trivial-c-module))
-$(eval trivial_module := $(stack-top,trivial_stack))
+$(eval trivial_module := $(call stack-top,trivial_stack))
 $(eval module_path := $(patsubst %/$(module_name),%,$(module_path)))
 $(call stack-pop,module_stack)
+$(call stack-pop,trivial_stack)
 $(eval module_name := $(call stack-top,module_stack))
 endef
 
@@ -138,10 +139,6 @@ module_mk      := Makefile
 module_path    := $(root)
 
 stack_top_symb := :
-
-module_stack   := $(stack_top_symb)
-trivial_stack  := $(stack_top_symb)
-trivial_module := n
 
 prepare_deps   :=
 build_deps     :=
