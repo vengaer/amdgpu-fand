@@ -1,4 +1,5 @@
 #include "daemon.h"
+#include "defs.h"
 
 #include <errno.h>
 #include <signal.h>
@@ -9,8 +10,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-
-#define DAEMON_WORKING_DIR "/var/run/amdgpu-fand"
 
 static sig_atomic_t volatile daemon_alive = 1;
 
@@ -80,16 +79,17 @@ static int daemon_init(bool fork) {
     return 0;
 }
 
-static void daemon_kill(void) {
+static int daemon_kill(void) {
     if(rmdir(DAEMON_WORKING_DIR)) {
         syslog(LOG_ERR, "Failed to remove working directory: %s", strerror(errno));
         return 1;
     }
 
     closelog();
+    return 0;
 }
 
-bool daemon_main(bool fork) {
+int daemon_main(bool fork) {
     if(daemon_init(fork)) {
         return false;
     }
@@ -98,6 +98,5 @@ bool daemon_main(bool fork) {
 
     }
 
-    daemon_kill();
-    return true;
+    return daemon_kill();
 }

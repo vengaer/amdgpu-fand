@@ -1,8 +1,5 @@
-ifneq ($(findstring fand,$(configuration)),)
-    $(call include-module,fand)
-endif
-
-$(call include-module,common)
+trivial_module := y
+required_by    := fand fanctl
 
 ifeq ($(module_name),)
 target := $(if $(MAKECMDGOALS),$(MAKECMDGOALS),recurse)
