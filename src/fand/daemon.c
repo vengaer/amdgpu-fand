@@ -1,5 +1,6 @@
 #include "daemon.h"
 #include "defs.h"
+#include "ipc.h"
 #include "server.h"
 
 #include <errno.h>
@@ -98,13 +99,56 @@ static int daemon_kill(void) {
     return rv;
 }
 
+static int daemon_process_messages(void) {
+    unsigned char rspbuf[IPC_MAX_MSG_LENGTH];
+    unsigned rsplen;
+    ssize_t nmessages;
+    enum ipc_cmd cmd;
+
+    nmessages = server_try_poll();
+    if(nmessages < 0) {
+        return 1;
+    }
+
+    for(int i = 0; i < nmessages; i++) {
+        if(server_peek_request(&cmd)) {
+            syslog(LOG_ERR, "Command queue is empty");
+            return 1;
+        }
+
+        switch(cmd) {
+            case ipc_exit:
+                daemon_alive = 0;
+                rspbuf[0] = ipc_ok;
+                rsplen = 1;
+                break;
+            case ipc_get_speed:
+                /* TODO */
+                break;
+            case ipc_get_temp:
+                /* TODO */
+                break;
+            case ipc_get_matrix:
+                /* TODO */
+                break;
+            default:
+                syslog(LOG_WARNING, "Unexpected ipc command: %hhu", (unsigned char)cmd);
+                continue;
+        }
+
+        (void)server_respond(rspbuf, rsplen);
+    }
+
+    return 0;
+}
+
 int daemon_main(bool fork) {
     if(daemon_init(fork)) {
         return 1;
     }
 
     while(daemon_alive) {
-
+        (void)daemon_process_messages();
     }
 
     return daemon_kill();

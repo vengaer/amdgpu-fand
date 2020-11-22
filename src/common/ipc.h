@@ -4,6 +4,8 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
+enum { IPC_MAX_MSG_LENGTH = 18 };
+
 enum ipc_cmd {
     ipc_privileged = 0,
     ipc_exit,
@@ -22,5 +24,7 @@ union unsockaddr {
     struct sockaddr addr;
     struct sockaddr_un addr_un;
 };
+
+extern unsigned char ipc_valid_requests[4];
 
 #endif /* IPC_H */

@@ -4,7 +4,7 @@ cflags      := -std=c11 -Wall -Wextra -Wpedantic -Waggregate-return -Wbad-functi
                 -Wcast-qual -Wfloat-equal -Wmissing-include-dirs -Wnested-externs -Wpointer-arith \
                 -Wredundant-decls -Wshadow -Wunknown-pragmas -Wswitch -Wundef -Wunused -Wwrite-strings \
                 -MD -MP -c
-cppflags    :=
+cppflags    := -D_GNU_SOURCE
 
 ldflags     :=
 ldlibs      :=
