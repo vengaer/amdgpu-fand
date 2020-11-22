@@ -1,5 +1,6 @@
 #include "defs.h"
 #include "macro.h"
+#include "record_queue.h"
 #include "server.h"
 #include "strutils.h"
 
@@ -15,57 +16,8 @@
 #include <sys/un.h>
 #include <unistd.h>
 
-enum { SERVER_QUEUE_SIZE = 32 };
-
-struct ipc_record {
-    union unsockaddr sender;
-    enum ipc_cmd cmd;
-};
-
-struct server_record_queue {
-    unsigned idx;
-    unsigned size;
-    struct ipc_record records[SERVER_QUEUE_SIZE];
-};
-
 static int server_fd;
-static struct server_record_queue record_queue;
-
-static inline void record_queue_flush(void) {
-    memset(&record_queue, 0, sizeof(record_queue));
-}
-
-static int record_queue_push(struct ipc_record const *record) {
-    if(record_queue.size - record_queue.idx >= SERVER_QUEUE_SIZE) {
-        return 1;
-    }
-    record_queue.records[record_queue.size++ % SERVER_QUEUE_SIZE] = *record;
-    return 0;
-}
-
-static int record_queue_peek(struct ipc_record *record) {
-    if(record_queue.idx == record_queue.size) {
-        record_queue_flush();
-        return 1;
-    }
-
-    *record = record_queue.records[record_queue.idx % SERVER_QUEUE_SIZE];
-    return 0;
-}
-
-static int record_queue_pop(struct ipc_record *record) {
-    if(record_queue.idx == record_queue.size) {
-        record_queue_flush();
-        return 1;
-    }
-    *record = record_queue.records[record_queue.idx++ % SERVER_QUEUE_SIZE];
-
-    if(record_queue.idx == record_queue.size) {
-        record_queue_flush();
-    }
-j
-    return 0;
-}
+static struct record_queue record_queue;
 
 static ssize_t server_send(unsigned char const* buffer, size_t bufsize, union unsockaddr *receiver) {
     ssize_t nsent;
@@ -190,12 +142,12 @@ ssize_t server_try_poll(void) {
         for(unsigned i = 0; i < nbytes; i++) {
             err = server_validate_request(buffer[i]);
             if(err) {
-                record_queue_flush();
+                record_queue_flush(&record_queue);
                 (void)server_invalid_request(err, &client);
                 ntotal = -1;
                 goto ret;
             }
-            if(record_queue_push(&(struct ipc_record){ client, buffer[i] })) {
+            if(record_queue_push(&record_queue, &(struct ipc_record){ client, buffer[i] })) {
                 syslog(LOG_ERR, "Failed to enqueue ipc record: queue is full");
                 goto ret;
             }
@@ -223,7 +175,7 @@ int server_kill(void) {
 
 int server_peek_request(enum ipc_cmd *cmd) {
     struct ipc_record record;
-    if(record_queue_peek(&record)) {
+    if(record_queue_peek(&record_queue, &record)) {
         return 1;
     }
     *cmd = record.cmd;
@@ -232,7 +184,7 @@ int server_peek_request(enum ipc_cmd *cmd) {
 
 ssize_t server_respond(unsigned char const *buffer, size_t bufsize) {
     struct ipc_record record;
-    if(record_queue_pop(&record)) {
+    if(record_queue_pop(&record_queue, &record)) {
         return 1;
     }
 
