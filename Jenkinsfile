@@ -4,6 +4,7 @@ pipeline {
     }
     environment {
         CC='gcc'
+        CFLAGS='-Werror'
         ARTIFACT_DIR='artifacts'
     }
     stages {
