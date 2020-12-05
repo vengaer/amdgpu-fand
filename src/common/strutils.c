@@ -1,6 +1,7 @@
 #include "strutils.h"
 
 #include <ctype.h>
+#include <stdlib.h>
 
 ssize_t strscpy(char *restrict dst, char const *restrict src, size_t dstlen) {
     size_t const srclen = strlen(src);
@@ -44,4 +45,25 @@ void strtolower(char *str) {
         c = tolower((unsigned char)*str);
         *str++ = c;
     }
+}
+
+ssize_t strstoul(char const *restrict src, unsigned long *dst) {
+    char *endp;
+    if(!*src) {
+        return -1;
+    }
+    *dst = strtoul(src, &endp, 10);
+
+    if(*endp) {
+        return -1;
+    }
+
+    return 0;
+}
+ssize_t strstoul_range(char const *restrict src, unsigned long *dst, unsigned long low, unsigned long high) {
+    ssize_t status = strstoul(src, dst);
+    if(status) {
+        return status;
+    }
+    return -1 * (*dst < low || *dst > high);
 }
