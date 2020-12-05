@@ -4,8 +4,6 @@
 #include "ipc.h"
 #include "server.h"
 
-#warning remove stdio
-#include <stdio.h>
 #include <errno.h>
 #include <signal.h>
 #include <stdlib.h>
@@ -105,9 +103,9 @@ static int daemon_kill(void) {
     return rv;
 }
 
-static int daemon_process_messages(void) {
+static int daemon_process_messages(struct fand_config *data) {
     unsigned char rspbuf[IPC_MAX_MSG_LENGTH];
-    unsigned rsplen;
+    int rsplen;
     ssize_t nmessages;
     enum ipc_cmd cmd;
 
@@ -123,26 +121,29 @@ static int daemon_process_messages(void) {
         }
 
         switch(cmd) {
-            case ipc_exit:
+            case ipc_exit_req:
                 daemon_alive = 0;
-                rspbuf[0] = ipc_ok;
-                rsplen = 1;
+                rsplen = ipc_pack_exit_rsp(rspbuf, sizeof(rspbuf));
                 break;
-            case ipc_get_speed:
+            case ipc_speed_req:
                 /* TODO */
                 break;
-            case ipc_get_temp:
+            case ipc_temp_req:
                 /* TODO */
                 break;
-            case ipc_get_matrix:
-                /* TODO */
+            case ipc_matrix_req:
+                rsplen = ipc_pack_matrix_rsp(rspbuf, sizeof(rspbuf), data->matrix, data->matrix_rows);
                 break;
             default:
                 syslog(LOG_WARNING, "Unexpected ipc command: %hhu", (unsigned char)cmd);
                 continue;
         }
+        if(rsplen < 0) {
+            syslog(LOG_ERR, "Failed to serialize response to request %hhu", (unsigned char)cmd);
+            return -1;
+        }
 
-        (void)server_respond(rspbuf, rsplen);
+        (void)server_respond(rspbuf, (size_t)rsplen);
     }
 
     return 0;
@@ -156,7 +157,7 @@ int daemon_main(bool fork, char const *config) {
     }
 
     while(daemon_alive) {
-        (void)daemon_process_messages();
+        (void)daemon_process_messages(&data);
         sleep(data.interval);
     }
 

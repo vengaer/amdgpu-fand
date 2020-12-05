@@ -70,12 +70,14 @@ static int server_validate_request(enum ipc_cmd cmd) {
 
 static ssize_t server_invalid_request(int err, union unsockaddr *receiver) {
     unsigned char rspbuf[sizeof(err) + 1];
-    unsigned rsplen = sizeof(rspbuf);
+    int rsplen = ipc_pack_errno(rspbuf, sizeof(rspbuf), err);
 
-    rspbuf[0] = ipc_err;
-    memcpy(&rspbuf[1], &err, sizeof(err));
+    if(rsplen < 0) {
+        syslog(LOG_ERR, "Serialization of errno %d failed", err);
+        return -1;
+    }
 
-    return server_send(rspbuf, rsplen, receiver);
+    return server_send(rspbuf, (size_t)rsplen, receiver);
 }
 
 int server_init(void) {
