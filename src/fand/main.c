@@ -39,17 +39,17 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
     return 0;
 }
 
-static struct argp argp = {
-    options,
-    parse_opt,
-    args_doc,
-    doc,
-    0,
-    0,
-    0
-};
-
 int main(int argc, char **argv) {
+    struct argp argp = {
+        options,
+        parse_opt,
+        args_doc,
+        doc,
+        0,
+        0,
+        0
+    };
+
     struct args args = {
         .fork = true,
         .config = CONFIG_DEFAULT_PATH
@@ -57,5 +57,5 @@ int main(int argc, char **argv) {
 
     argp_parse(&argp, argc, argv, 0, 0, &args);
 
-    daemon_main(args.fork, args.config);
+    return daemon_main(args.fork, args.config);
 }
