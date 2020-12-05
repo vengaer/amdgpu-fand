@@ -6,5 +6,6 @@
 
 enum { DEVICE_PATH_MAX_SIZE = 256 };
 enum { MAX_TEMP_THRESHOLDS = 16 };
+enum { FAND_FATAL_ERR = -0x20 };
 
 #endif /* DEFS_H */

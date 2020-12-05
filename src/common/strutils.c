@@ -50,12 +50,12 @@ void strtolower(char *str) {
 ssize_t strstoul(char const *restrict src, unsigned long *dst) {
     char *endp;
     if(!*src) {
-        return -1;
+        return -EINVAL;
     }
     *dst = strtoul(src, &endp, 10);
 
     if(*endp) {
-        return -1;
+        return -EINVAL;
     }
 
     return 0;
@@ -65,5 +65,5 @@ ssize_t strstoul_range(char const *restrict src, unsigned long *dst, unsigned lo
     if(status) {
         return status;
     }
-    return -1 * (*dst < low || *dst > high);
+    return -EINVAL * (*dst < low || *dst > high);
 }

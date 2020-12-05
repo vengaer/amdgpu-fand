@@ -21,12 +21,15 @@
 #define CONFIG_KEY_CTRL_MODE "ctrl_mode"
 #define CONFIG_KEY_PWM_MIN "pwm_min"
 #define CONFIG_KEY_PWM_MAX "pwm_max"
+#define CONFIG_KEY_PWM_CTRL "pwm_controller"
 #define CONFIG_KEY_TEMP_SENSOR "temp_sensor"
+#define CONFIG_KEY_THROTTLE "aggressive_throttle"
 
 #define CONFIG_DEFAULT_HWMON "hwmon2"
 #define CONFIG_DEFAULT_CTRL_MODE "fan1_enable"
 #define CONFIG_DEFAULT_PWM_MIN "pwm1_min"
 #define CONFIG_DEFAULT_PWM_MAX "pwm1_max"
+#define CONFIG_DEFAULT_PWM_CTRL "pwm1"
 #define CONFIG_DEFAULT_TEMP_SENSOR "temp1_input"
 
 enum { CONFIG_BUFFER_SIZE = DEVICE_PATH_MAX_SIZE };
@@ -47,7 +50,9 @@ static int config_set_hwmon(struct fand_config *data, char const *value);
 static int config_set_ctrl_mode(struct fand_config *data, char const *value);
 static int config_set_pwm_min(struct fand_config *data, char const *value);
 static int config_set_pwm_max(struct fand_config *data, char const *value);
+static int config_set_pwm_ctrl(struct fand_config *data, char const *value);
 static int config_set_temp_sensor(struct fand_config *data, char const *value);
+static int config_set_throttle(struct fand_config *data, char const *value);
 
 static struct config_pair config_map[] = {
     { CONFIG_KEY_INTERVAL,    config_set_interval },
@@ -58,7 +63,9 @@ static struct config_pair config_map[] = {
     { CONFIG_KEY_CTRL_MODE,   config_set_ctrl_mode },
     { CONFIG_KEY_PWM_MIN,     config_set_pwm_min },
     { CONFIG_KEY_PWM_MAX,     config_set_pwm_max },
-    { CONFIG_KEY_TEMP_SENSOR, config_set_temp_sensor }
+    { CONFIG_KEY_PWM_CTRL,    config_set_pwm_ctrl },
+    { CONFIG_KEY_TEMP_SENSOR, config_set_temp_sensor },
+    { CONFIG_KEY_THROTTLE,    config_set_throttle }
 };
 
 static inline int regmatch_length(regmatch_t *match) {
@@ -218,8 +225,26 @@ static int config_set_pwm_max(struct fand_config *data, char const *value) {
     return config_set_simple_string(data->pwm_max, value, sizeof(data->pwm_max), "Pwm max");
 }
 
+static int config_set_pwm_ctrl(struct fand_config *data, char const *value) {
+    return config_set_simple_string(data->pwm_ctrl, value, sizeof(data->pwm_ctrl), "Pwm control");
+}
+
 static int config_set_temp_sensor(struct fand_config *data, char const *value) {
     return config_set_simple_string(data->temp_sensor, value, sizeof(data->temp_sensor), "Temperature sensor");
+}
+
+static int config_set_throttle(struct fand_config *data, char const *value) {
+    if(strcmp(value, "true") == 0) {
+        data->throttle = true;
+    }
+    else if(strcmp(value, "false") == 0) {
+        data->throttle = false;
+    }
+    else {
+        syslog(LOG_WARNING, "Unknown value %s for aggressive_throttle, valid options are 'true' or 'false'", value);
+        return -1;
+    }
+    return 0;
 }
 
 static int config_append_matrix_rows(char *value, size_t valsize, FILE *fp , unsigned *lineno) {

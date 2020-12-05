@@ -11,16 +11,20 @@
 
 enum { FILE_ULONG_BUFSIZE = 16 };
 
+static int file_errno;
+
 FILE *fopen_excl(char const *path, char const *mode) {
     FILE *fp = fopen(path, mode);
     if(!fp) {
-        syslog(LOG_ERR, "Could not open %s: %s", path, strerror(errno));
+        file_errno = errno;
+        syslog(LOG_ERR, "Could not open %s: %s", path, strerror(file_errno));
         return fp;
     }
 
     int fd = fileno(fp);
     if(flock(fd, LOCK_EX) == -1) {
-        syslog(LOG_ERR, "Failed to acquire exclusive lock for %d: %s", fd, strerror(errno));
+        file_errno = errno;
+        syslog(LOG_ERR, "Failed to acquire exclusive lock for %d: %s", fd, strerror(file_errno));
         fclose(fp);
         return 0;
     }
@@ -31,7 +35,8 @@ FILE *fopen_excl(char const *path, char const *mode) {
 int fclose_excl(FILE *fp) {
     int fd = fileno(fp);
     if(flock(fd, LOCK_UN) == -1) {
-        syslog(LOG_ERR, "Failed to release exclusive lock for %d: %s", fd, strerror(errno));
+        file_errno = errno;
+        syslog(LOG_ERR, "Failed to release exclusive lock for %d: %s", fd, strerror(file_errno));
     }
     return fclose(fp);
 }
@@ -51,17 +56,18 @@ int fread_ulong_excl(char const *path, unsigned long *value) {
     char buffer[FILE_ULONG_BUFSIZE] = { 0 };
     FILE *fp = fopen_excl(path, "r");
     if(!fp) {
-        return -1;
+        return file_errno;
     }
 
     {
         char *s = fgets(buffer, sizeof(buffer), fp);
         if(fclose_excl(fp)) {
-            syslog(LOG_ERR, "Could not close %s: %s", path, strerror(errno));
+            file_errno = errno;
+            syslog(LOG_ERR, "Could not close %s: %s", path, strerror(file_errno));
         }
         if(!s) {
             syslog(LOG_ERR, "Could not read from %s", path);
-            return -1;
+            return -EAGAIN;
         }
     }
 
