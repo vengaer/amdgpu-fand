@@ -3,7 +3,7 @@ CC          ?= gcc
 cflags      := -std=c11 -Wall -Wextra -Wpedantic -Waggregate-return -Wbad-function-cast \
                 -Wcast-qual -Wfloat-equal -Wmissing-include-dirs -Wnested-externs -Wpointer-arith \
                 -Wredundant-decls -Wshadow -Wunknown-pragmas -Wswitch -Wundef -Wunused -Wwrite-strings \
-                -MD -MP -c
+                -MD -MP -c -g
 cppflags    := -D_GNU_SOURCE
 
 ldflags     :=
@@ -27,8 +27,8 @@ incdirs     :=
 fand_objs   :=
 fanctl_objs :=
 
-FAND        := amdgpu-fand-3.0
-FANCTL      := amdgpu-fanctl-3.0
+FAND        := amdgpu-fand-4.0
+FANCTL      := amdgpu-fanctl-4.0
 
 # $(call mk-module-build-dir)
 define mk-module-build-dir
