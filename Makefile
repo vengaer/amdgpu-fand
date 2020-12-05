@@ -7,7 +7,7 @@ cflags      := -std=c11 -Wall -Wextra -Wpedantic -Waggregate-return -Wbad-functi
 cppflags    := -D_GNU_SOURCE
 
 ldflags     :=
-ldlibs      :=
+ldlibs      := -lm
 
 TOUCH       := touch
 QUIET       := @
@@ -147,7 +147,7 @@ target_deps    :=
 configuration  := $(call build-configuration)
 
 .PHONY: all
-all: $(FAND)
+all: $(FAND) $(FANCTL)
 
 ifneq ($(configuration),)
     $(call include-module,src)

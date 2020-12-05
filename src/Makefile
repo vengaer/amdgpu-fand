@@ -1,6 +1,9 @@
 ifneq ($(findstring fand,$(configuration)),)
     $(call include-module,fand)
 endif
+ifneq ($(findstring fanctl,$(configuration)),)
+    $(call include-module,fanctl)
+endif
 
 $(call include-module,common)
 
