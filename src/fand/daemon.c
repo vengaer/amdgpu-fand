@@ -1,8 +1,11 @@
+#include "config.h"
 #include "daemon.h"
 #include "defs.h"
 #include "ipc.h"
 #include "server.h"
 
+#warning remove stdio
+#include <stdio.h>
 #include <errno.h>
 #include <signal.h>
 #include <stdlib.h>
@@ -59,7 +62,7 @@ static int daemon_fork(void) {
     return 0;
 }
 
-static int daemon_init(bool fork) {
+static int daemon_init(bool fork, char const *config, struct fand_config *data) {
     signal(SIGINT, daemon_sig_handler);
     signal(SIGTERM, daemon_sig_handler);
 
@@ -68,7 +71,6 @@ static int daemon_init(bool fork) {
     }
 
     openlog(0, !fork * LOG_PERROR, LOG_DAEMON);
-
     umask(0);
 
     if(mkdir(DAEMON_WORKING_DIR, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH)) {
@@ -78,6 +80,10 @@ static int daemon_init(bool fork) {
 
     if(chdir(DAEMON_WORKING_DIR)) {
         syslog(LOG_ERR, "Failed to set working directory: %s", strerror(errno));
+        return 1;
+    }
+
+    if(config_parse(config, data)) {
         return 1;
     }
 
@@ -142,13 +148,16 @@ static int daemon_process_messages(void) {
     return 0;
 }
 
-int daemon_main(bool fork) {
-    if(daemon_init(fork)) {
+int daemon_main(bool fork, char const *config) {
+    struct fand_config data = { 0 };
+
+    if(daemon_init(fork, config, &data)) {
         return 1;
     }
 
     while(daemon_alive) {
         (void)daemon_process_messages();
+        sleep(data.interval);
     }
 
     return daemon_kill();

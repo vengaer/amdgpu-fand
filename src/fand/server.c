@@ -97,7 +97,7 @@ int server_init(void) {
         return 1;
     }
 
-    if(bind(server_fd, &sockaddr.addr, sizeof(sockaddr.addr)) == -1) {
+    if(bind(server_fd, &sockaddr.addr, sizeof(sockaddr)) == -1) {
         syslog(LOG_ERR, "Failed to bind socket %s: %s", SERVER_SOCKET, strerror(errno));
         (void)server_kill();
         return 1;
@@ -131,7 +131,9 @@ ssize_t server_try_poll(void) {
 
         switch(nbytes) {
             case -1:
-                syslog(LOG_ERR, "Failed to read from socket: %s", strerror(errno));
+                if(errno != EAGAIN) {
+                    syslog(LOG_ERR, "Failed to read from socket: %s", strerror(errno));
+                }
                 ntotal = -1;
                 /* fallthrough */
             case 0:

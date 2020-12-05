@@ -17,6 +17,7 @@
 #define CONFIG_KEY_HYSTERESIS "hysteresis"
 #define CONFIG_KEY_MATRIX "matrix"
 #define CONFIG_KEY_DEVPATH "device_path"
+#define CONFIG_KEY_HWMON "hwmon"
 
 enum { CONFIG_BUFFER_SIZE = DEVICE_PATH_MAX_SIZE };
 enum { CONFIG_KEY_SIZE = 64 };
@@ -25,19 +26,21 @@ enum { REGEX_ERRBUF_SIZE = 64 };
 
 struct config_pair {
     char const *key;
-    int(*handler)(struct fand_config_data *, char const*);
+    int(*handler)(struct fand_config *, char const*);
 };
 
-static int config_set_interval(struct fand_config_data *data, char const *value);
-static int config_set_hysteresis(struct fand_config_data *data, char const *value);
-static int config_set_matrix(struct fand_config_data *data, char const *value);
-static int config_set_devpath(struct fand_config_data *data, char const *value);
+static int config_set_interval(struct fand_config *data, char const *value);
+static int config_set_hysteresis(struct fand_config *data, char const *value);
+static int config_set_matrix(struct fand_config *data, char const *value);
+static int config_set_devpath(struct fand_config *data, char const *value);
+static int config_set_hwmon(struct fand_config *data, char const *value);
 
 static struct config_pair config_map[] = {
     { CONFIG_KEY_INTERVAL,   config_set_interval },
     { CONFIG_KEY_HYSTERESIS, config_set_hysteresis },
     { CONFIG_KEY_MATRIX,     config_set_matrix },
-    { CONFIG_KEY_DEVPATH,    config_set_devpath }
+    { CONFIG_KEY_DEVPATH,    config_set_devpath },
+    { CONFIG_KEY_HWMON,      config_set_hwmon }
 };
 
 static inline int regmatch_length(regmatch_t *match) {
@@ -109,7 +112,7 @@ static int config_parse_ulong_in_range(char const *str, unsigned long *value, un
     return -1 * (*value < low || *value > high);
 }
 
-static int config_set_interval(struct fand_config_data *data, char const *value) {
+static int config_set_interval(struct fand_config *data, char const *value) {
     unsigned long ul;
     int reti = config_parse_ulong_in_range(value, &ul, 0, USHRT_MAX);
     if(reti) {
@@ -120,7 +123,7 @@ static int config_set_interval(struct fand_config_data *data, char const *value)
     return 0;
 }
 
-static int config_set_hysteresis(struct fand_config_data *data, char const *value) {
+static int config_set_hysteresis(struct fand_config *data, char const *value) {
     unsigned long ul;
     int reti = config_parse_ulong_in_range(value, &ul, 0, UCHAR_MAX);
     if(reti) {
@@ -131,7 +134,7 @@ static int config_set_hysteresis(struct fand_config_data *data, char const *valu
     return 0;
 }
 
-static int config_set_matrix(struct fand_config_data *data, char const *value) {
+static int config_set_matrix(struct fand_config *data, char const *value) {
     regex_t matv_regex;
     regmatch_t pmatch[3];
     int status = -1;
@@ -140,7 +143,7 @@ static int config_set_matrix(struct fand_config_data *data, char const *value) {
     unsigned long ul;
     unsigned char temp;
 
-    if(config_regcomp(&matv_regex, "[;(]'(\\d+)::(\\d+)'.*[;)]", REG_EXTENDED, "matrix value")) {
+    if(config_regcomp(&matv_regex, "[;(]'([0-9]+)::([0-9]+)'.*[;)]", REG_EXTENDED, "matrix value")) {
         return status;
     }
 
@@ -174,7 +177,7 @@ static int config_set_matrix(struct fand_config_data *data, char const *value) {
         data->matrix[matrix_rows * 2 + 1] = (unsigned char)ul;
         ++matrix_rows;
 
-        value = strchr(value, ';');
+        value = strchr(value + 1, ';');
     }
 
     data->matrix_rows = matrix_rows;
@@ -183,14 +186,22 @@ cleanup:
     return 0;
 }
 
-static int config_set_devpath(struct fand_config_data *data, char const *value) {
+static int config_set_devpath(struct fand_config *data, char const *value) {
     if(!fsys_dir_exists(value)) {
         syslog(LOG_ERR, "%s is not a directory", value);
         return -1;
     }
 
     if(strscpy(data->devpath, value, sizeof(data->devpath)) < 0) {
-        syslog(LOG_ERR, "%s overflows the internal devpath buffer", value);
+        syslog(LOG_ERR, "Device path %s overflows the internal buffer", value);
+        return -1;
+    }
+    return 0;
+}
+
+static int config_set_hwmon(struct fand_config *data, char const *value) {
+    if(strscpy(data->hwmon, value, sizeof(data->hwmon)) < 0) {
+        syslog(LOG_ERR, "Hardware monitor %s overflows the internal buffer", value);
         return -1;
     }
     return 0;
@@ -205,14 +216,14 @@ static int config_append_matrix_rows(char *value, size_t valsize, FILE *fp , uns
     int mid_reti, end_reti;
     unsigned matrix_rows = 0;
 
-    if(config_regcomp(&mpat_start, "\\s*(\\('\\d+::\\d+')\\s*$", REG_EXTENDED, "matrix start")) {
+    if(config_regcomp(&mpat_start, "\\s*(\\('[0-9]+::[0-9]+')\\s*$", REG_EXTENDED, "matrix start")) {
         return status;
     }
-    if(config_regcomp(&mpat_mid, "\\s*('\\d+::\\d+')\\s*$", REG_EXTENDED, "matrix middle")) {
+    if(config_regcomp(&mpat_mid, "\\s*('[0-9]+::[0-9]+')\\s*$", REG_EXTENDED, "matrix middle")) {
         regfree(&mpat_start);
         return status;
     }
-    if(config_regcomp(&mpat_end, "\\s*('\\d+::\\d+'\\))\\s*$", REG_EXTENDED, "matrix end")) {
+    if(config_regcomp(&mpat_end, "\\s*('[0-9]+::[0-9]+'\\))\\s*$", REG_EXTENDED, "matrix end")) {
         regfree(&mpat_start);
         regfree(&mpat_mid);
         return status;
@@ -250,7 +261,7 @@ static int config_append_matrix_rows(char *value, size_t valsize, FILE *fp , uns
         }
 
         mid_reti = regexec(&mpat_mid, buffer, array_size(pmatch), pmatch, 0);
-        if(mid_reti == 0) {
+        if(mid_reti) {
             end_reti = regexec(&mpat_end, buffer, array_size(pmatch), pmatch, 0);
         }
 
@@ -279,16 +290,17 @@ cleanup:
     return status;
 }
 
-int config_parse(char const *path, struct fand_config_data *data) {
+int config_parse(char const *path, struct fand_config *data) {
     int status = 0;
     unsigned lineno = 0;
+    unsigned config_idx;
     regex_t valregex;
     regmatch_t pmatch[3];
     char buffer[CONFIG_BUFFER_SIZE];
     char key[CONFIG_KEY_SIZE];
     char value[CONFIG_BUFFER_SIZE];
 
-    int reti = config_regcomp(&valregex, "^\\s*([^=]+)\\s*=\\s*\"?([^\"]+)\"?\\s*$", REG_EXTENDED, "config value");
+    int reti = config_regcomp(&valregex, "^\\s*(\\S+)\\s*=\\s*\"?([^\" ]+)\"?\\s*$", REG_EXTENDED, "config value");
     if(reti) {
         return reti;
     }
@@ -320,13 +332,13 @@ int config_parse(char const *path, struct fand_config_data *data) {
         }
         strtolower(key);
 
-        if(strsncpy(value, buffer + pmatch[2].rm_so, sizeof(key), regmatch_length(&pmatch[2])) < 0) {
+        if(strsncpy(value, buffer + pmatch[2].rm_so, sizeof(value), regmatch_length(&pmatch[2])) < 0) {
             syslog(LOG_ERR, "Value %.*s overflows the internal buffer", regmatch_length(&pmatch[2]), buffer + pmatch[2].rm_so);
             status = -1;
             goto cleanup;
         }
 
-        if(strcmp(key, CONFIG_KEY_MATRIX)) {
+        if(strcmp(key, CONFIG_KEY_MATRIX) == 0) {
             reti = config_append_matrix_rows(value, sizeof(value), fp, &lineno);
             if(reti) {
                 status = reti;
@@ -334,20 +346,22 @@ int config_parse(char const *path, struct fand_config_data *data) {
             }
         }
 
-        for(unsigned i = 0; i < array_size(config_map); i++) {
-            if(strcmp(key, config_map[i].key) == 0) {
-                reti = config_map[i].handler(data, value);
+        for(config_idx = 0; config_idx < array_size(config_map); config_idx++) {
+            if(strcmp(key, config_map[config_idx].key) == 0) {
+                reti = config_map[config_idx].handler(data, value);
                 if(reti) {
                     status = reti;
                     goto cleanup;
                 }
-                continue;
+                break;
             }
         }
 
-        syslog(LOG_ERR, "Syntax error on line %u: unknown key %s", lineno, key);
-        status = -1;
-        goto cleanup;
+        if(config_idx == array_size(config_map)) {
+            syslog(LOG_ERR, "Syntax error on line %u: unknown key %s", lineno, key);
+            status = -1;
+            goto cleanup;
+        }
     }
 
 cleanup:
