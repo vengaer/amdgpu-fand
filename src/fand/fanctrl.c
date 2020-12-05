@@ -239,6 +239,8 @@ int fanctrl_adjust(void) {
         return status;
     }
 
+    /* TODO: add hysteresis support */
+
     /* Below low threshold */
     if(temp <= matrix.temps[0]) {
         speed = matrix.speeds[0] * !throttle;
