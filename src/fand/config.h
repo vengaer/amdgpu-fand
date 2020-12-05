@@ -5,8 +5,7 @@
 
 #define CONFIG_DEFAULT_PATH "/etc/amdgpu-fand.conf"
 
-enum { DEVICE_PATH_MAX_SIZE = 256 };
-enum { HWMON_PATH_MAX_SIZE = 32 };
+enum { DIRENT_MAX_SIZE = 32 };
 enum { MATRIX_MAX_SIZE = 2 * MAX_TEMP_THRESHOLDS };
 
 struct fand_config {
@@ -14,9 +13,12 @@ struct fand_config {
     unsigned char hysteresis;
     unsigned short interval;
     unsigned char matrix[MATRIX_MAX_SIZE];
-    char hwmon[HWMON_PATH_MAX_SIZE];
+    char hwmon[DIRENT_MAX_SIZE];
+    char ctrl_mode[DIRENT_MAX_SIZE];
+    char pwm_min[DIRENT_MAX_SIZE];
+    char pwm_max[DIRENT_MAX_SIZE];
+    char temp_sensor[DIRENT_MAX_SIZE];
     char devpath[DEVICE_PATH_MAX_SIZE];
-
 };
 
 int config_parse(char const *path, struct fand_config *data);

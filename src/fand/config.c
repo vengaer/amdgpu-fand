@@ -17,7 +17,17 @@
 #define CONFIG_KEY_HYSTERESIS "hysteresis"
 #define CONFIG_KEY_MATRIX "matrix"
 #define CONFIG_KEY_DEVPATH "device_path"
-#define CONFIG_KEY_HWMON "hwmon"
+#define CONFIG_KEY_HWMON "hardware_monitor"
+#define CONFIG_KEY_CTRL_MODE "ctrl_mode"
+#define CONFIG_KEY_PWM_MIN "pwm_min"
+#define CONFIG_KEY_PWM_MAX "pwm_max"
+#define CONFIG_KEY_TEMP_SENSOR "temp_sensor"
+
+#define CONFIG_DEFAULT_HWMON "hwmon2"
+#define CONFIG_DEFAULT_CTRL_MODE "fan1_enable"
+#define CONFIG_DEFAULT_PWM_MIN "pwm1_min"
+#define CONFIG_DEFAULT_PWM_MAX "pwm1_max"
+#define CONFIG_DEFAULT_TEMP_SENSOR "temp1_input"
 
 enum { CONFIG_BUFFER_SIZE = DEVICE_PATH_MAX_SIZE };
 enum { CONFIG_KEY_SIZE = 64 };
@@ -34,13 +44,21 @@ static int config_set_hysteresis(struct fand_config *data, char const *value);
 static int config_set_matrix(struct fand_config *data, char const *value);
 static int config_set_devpath(struct fand_config *data, char const *value);
 static int config_set_hwmon(struct fand_config *data, char const *value);
+static int config_set_ctrl_mode(struct fand_config *data, char const *value);
+static int config_set_pwm_min(struct fand_config *data, char const *value);
+static int config_set_pwm_max(struct fand_config *data, char const *value);
+static int config_set_temp_sensor(struct fand_config *data, char const *value);
 
 static struct config_pair config_map[] = {
-    { CONFIG_KEY_INTERVAL,   config_set_interval },
-    { CONFIG_KEY_HYSTERESIS, config_set_hysteresis },
-    { CONFIG_KEY_MATRIX,     config_set_matrix },
-    { CONFIG_KEY_DEVPATH,    config_set_devpath },
-    { CONFIG_KEY_HWMON,      config_set_hwmon }
+    { CONFIG_KEY_INTERVAL,    config_set_interval },
+    { CONFIG_KEY_HYSTERESIS,  config_set_hysteresis },
+    { CONFIG_KEY_MATRIX,      config_set_matrix },
+    { CONFIG_KEY_DEVPATH,     config_set_devpath },
+    { CONFIG_KEY_HWMON,       config_set_hwmon },
+    { CONFIG_KEY_CTRL_MODE,   config_set_ctrl_mode },
+    { CONFIG_KEY_PWM_MIN,     config_set_pwm_min },
+    { CONFIG_KEY_PWM_MAX,     config_set_pwm_max },
+    { CONFIG_KEY_TEMP_SENSOR, config_set_temp_sensor }
 };
 
 static inline int regmatch_length(regmatch_t *match) {
@@ -89,32 +107,17 @@ static inline bool config_line_empty(char *buffer) {
     return true;
 }
 
-static int config_parse_ulong(char const *str, unsigned long *value) {
-    char *endp;
-    if(!*str) {
+static inline int config_set_simple_string(char *dst, char const *value, size_t dstsize, char const *desc) {
+    if(strscpy(dst, value, dstsize) < 0) {
+        syslog(LOG_ERR, "%s %s overflows the internal buffer", desc, value);
         return -1;
     }
-    unsigned long v = strtoul(str, &endp, 10);
-
-    if(*endp) {
-        return -1;
-    }
-
-    *value = v;
     return 0;
-}
-
-static int config_parse_ulong_in_range(char const *str, unsigned long *value, unsigned long low, unsigned long high) {
-    int reti = config_parse_ulong(str, value);
-    if(reti) {
-        return reti;
-    }
-    return -1 * (*value < low || *value > high);
 }
 
 static int config_set_interval(struct fand_config *data, char const *value) {
     unsigned long ul;
-    int reti = config_parse_ulong_in_range(value, &ul, 0, USHRT_MAX);
+    int reti = strstoul_range(value, &ul, 0, USHRT_MAX);
     if(reti) {
         syslog(LOG_ERR, "Invalid interval %s, must be a number between 0 and %hu", value, USHRT_MAX);
         return reti;
@@ -125,7 +128,7 @@ static int config_set_interval(struct fand_config *data, char const *value) {
 
 static int config_set_hysteresis(struct fand_config *data, char const *value) {
     unsigned long ul;
-    int reti = config_parse_ulong_in_range(value, &ul, 0, UCHAR_MAX);
+    int reti = strstoul_range(value, &ul, 0, UCHAR_MAX);
     if(reti) {
         syslog(LOG_ERR, "Invalid hysteresis %s, must be a number between 0 and %hhu", value, UCHAR_MAX);
         return reti;
@@ -158,7 +161,7 @@ static int config_set_matrix(struct fand_config *data, char const *value) {
             goto cleanup;
         }
 
-        if(config_parse_ulong_in_range(numbuf, &ul, 0, UCHAR_MAX)) {
+        if(strstoul_range(numbuf, &ul, 0, UCHAR_MAX)) {
             syslog(LOG_ERR, "Invalid temperature %s, must be a number between 0 and %hhu", numbuf, UCHAR_MAX);
             goto cleanup;
         }
@@ -168,7 +171,7 @@ static int config_set_matrix(struct fand_config *data, char const *value) {
             syslog(LOG_ERR, "Percentage %.*s exceeds allowed limit", regmatch_length(&pmatch[2]), value + pmatch[2].rm_so);
             goto cleanup;
         }
-        if(config_parse_ulong_in_range(numbuf, &ul, 0, 100)) {
+        if(strstoul_range(numbuf, &ul, 0, 100)) {
             syslog(LOG_ERR, "Invalid percentage %s, must be a number between 0 and 100", numbuf);
             goto cleanup;
         }
@@ -200,11 +203,23 @@ static int config_set_devpath(struct fand_config *data, char const *value) {
 }
 
 static int config_set_hwmon(struct fand_config *data, char const *value) {
-    if(strscpy(data->hwmon, value, sizeof(data->hwmon)) < 0) {
-        syslog(LOG_ERR, "Hardware monitor %s overflows the internal buffer", value);
-        return -1;
-    }
-    return 0;
+    return config_set_simple_string(data->hwmon, value, sizeof(data->hwmon), "Hardware monitor");
+}
+
+static int config_set_ctrl_mode(struct fand_config *data, char const *value) {
+    return config_set_simple_string(data->ctrl_mode, value, sizeof(data->ctrl_mode), "Control mode");
+}
+
+static int config_set_pwm_min(struct fand_config *data, char const *value) {
+    return config_set_simple_string(data->pwm_min, value, sizeof(data->pwm_min), "Pwm min");
+}
+
+static int config_set_pwm_max(struct fand_config *data, char const *value) {
+    return config_set_simple_string(data->pwm_max, value, sizeof(data->pwm_max), "Pwm max");
+}
+
+static int config_set_temp_sensor(struct fand_config *data, char const *value) {
+    return config_set_simple_string(data->temp_sensor, value, sizeof(data->temp_sensor), "Temperature sensor");
 }
 
 static int config_append_matrix_rows(char *value, size_t valsize, FILE *fp , unsigned *lineno) {
@@ -290,6 +305,19 @@ cleanup:
     return status;
 }
 
+static int config_set_defaults(struct fand_config *data) {
+    memset(data, 0, sizeof(*data));
+
+    data->interval = 5;
+    int status = (strscpy(data->hwmon,       CONFIG_DEFAULT_HWMON,       sizeof(data->hwmon))       < 0) |
+                 (strscpy(data->ctrl_mode,   CONFIG_DEFAULT_CTRL_MODE,   sizeof(data->ctrl_mode))   < 0) |
+                 (strscpy(data->pwm_min,     CONFIG_DEFAULT_PWM_MIN,     sizeof(data->pwm_min))     < 0) |
+                 (strscpy(data->pwm_max,     CONFIG_DEFAULT_PWM_MAX,     sizeof(data->pwm_max))     < 0) |
+                 (strscpy(data->temp_sensor, CONFIG_DEFAULT_TEMP_SENSOR, sizeof(data->temp_sensor)) < 0);
+
+    return -status;
+}
+
 int config_parse(char const *path, struct fand_config *data) {
     int status = 0;
     unsigned lineno = 0;
@@ -299,6 +327,10 @@ int config_parse(char const *path, struct fand_config *data) {
     char buffer[CONFIG_BUFFER_SIZE];
     char key[CONFIG_KEY_SIZE];
     char value[CONFIG_BUFFER_SIZE];
+
+    if(config_set_defaults(data)) {
+        return -1;
+    }
 
     int reti = config_regcomp(&valregex, "^\\s*(\\S+)\\s*=\\s*\"?([^\" ]+)\"?\\s*$", REG_EXTENDED, "config value");
     if(reti) {
@@ -364,6 +396,10 @@ int config_parse(char const *path, struct fand_config *data) {
         }
     }
 
+    if(data->matrix_rows == 0) {
+        syslog(LOG_ERR, "No matrix found");
+        status = -1;
+    }
 cleanup:
     if(fp) {
         fclose(fp);
