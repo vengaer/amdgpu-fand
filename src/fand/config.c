@@ -124,9 +124,9 @@ static inline int config_set_simple_string(char *dst, char const *value, size_t 
 
 static int config_set_interval(struct fand_config *data, char const *value) {
     unsigned long ul;
-    int reti = strstoul_range(value, &ul, 0, USHRT_MAX);
+    int reti = strstoul_range(value, &ul, 0ul, (unsigned long)USHRT_MAX);
     if(reti) {
-        syslog(LOG_ERR, "Invalid interval %s, must be a number between 0 and %hu", value, USHRT_MAX);
+        syslog(LOG_ERR, "Invalid interval %s, must be a number between 0 and %hu", value, (unsigned short)USHRT_MAX);
         return reti;
     }
     data->interval = (unsigned short)ul;
@@ -137,7 +137,7 @@ static int config_set_hysteresis(struct fand_config *data, char const *value) {
     unsigned long ul;
     int reti = strstoul_range(value, &ul, 0, UCHAR_MAX);
     if(reti) {
-        syslog(LOG_ERR, "Invalid hysteresis %s, must be a number between 0 and %hhu", value, UCHAR_MAX);
+        syslog(LOG_ERR, "Invalid hysteresis %s, must be a number between 0 and %hhu", value, (unsigned char)UCHAR_MAX);
         return reti;
     }
     data->hysteresis = (unsigned char)ul;
@@ -169,7 +169,7 @@ static int config_set_matrix(struct fand_config *data, char const *value) {
         }
 
         if(strstoul_range(numbuf, &ul, 0, UCHAR_MAX)) {
-            syslog(LOG_ERR, "Invalid temperature %s, must be a number between 0 and %hhu", numbuf, UCHAR_MAX);
+            syslog(LOG_ERR, "Invalid temperature %s, must be a number between 0 and %hhu", numbuf, (unsigned char)UCHAR_MAX);
             goto cleanup;
         }
         temp = (unsigned char)ul;

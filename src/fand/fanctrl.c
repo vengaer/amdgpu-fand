@@ -234,6 +234,8 @@ int fanctrl_adjust(void) {
         return FAND_FATAL_ERR;
     }
 
+    speed = matrix.speeds[matrix.rows - 1];
+
     status = fanctrl_read_temp(&temp);
     if(status) {
         return status;
