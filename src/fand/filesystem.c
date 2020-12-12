@@ -3,7 +3,6 @@
 
 #include <errno.h>
 #include <stddef.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include <syslog.h>
@@ -64,7 +63,7 @@ int fsys_watch_init(char const *path, struct inotify_watch *watch, int flags) {
         return -1;
     }
 
-    if(!realpath(path, abspath)) {
+    if(readlink(path, abspath, sizeof(abspath)) == -1) {
         syslog(LOG_ERR, "Could not determine real path of %s: %s", path, strerror(errno));
         return -1;
     }
@@ -112,7 +111,7 @@ int fsys_watch_event(char const *path, struct inotify_watch *watch) {
 
     watch->triggered = false;
 
-    if(!realpath(path, abspath)) {
+    if(readlink(path, abspath, sizeof(abspath) == -1)) {
         syslog(LOG_ERR, "Could not determine real path of %s: %s", path, strerror(errno));
         return -1;
     }

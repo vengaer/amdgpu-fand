@@ -1,3 +1,4 @@
+#include "defs.h"
 #include "drm.h"
 #include "macro.h"
 #include "strutils.h"
@@ -95,5 +96,5 @@ int drm_get_temp(void) {
     }
 
     /* Convert millidegrees to degrees */
-    return temp / 1000;
+    return temp / MILLIDEGC_ADJUST;
 }

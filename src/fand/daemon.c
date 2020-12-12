@@ -101,7 +101,7 @@ static int daemon_init(bool fork, char const *config, struct fand_config *data, 
         return 1;
     }
 
-    return fanctrl_acquire();
+    return 0;
 }
 
 static int daemon_reload(char const *path, struct fand_config *data) {
