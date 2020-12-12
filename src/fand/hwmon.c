@@ -160,18 +160,17 @@ static int hwmon_set_sysfs_paths(void) {
     return hwmon_init_single_sysfs_path(hwmon_pwm_enable, hwmon_iface, SYSFS_PWM_ENABLE, hwmon_pwm_enable_size);
 }
 
-static int hwmon_validate_cache(void) {
-
-}
-
 int hwmon_open(void) {
     int status;
-    if(cache_load() < 0) {
+    if(cache_load()) {
         status = hwmon_set_sysfs_paths();
         if(status < 0) {
             return status;
         }
         status = cache_write();
+        if(status < 0) {
+            return status;
+        }
     }
 
     status = hwmon_set_pwm_mode_manual();
