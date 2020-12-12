@@ -27,6 +27,8 @@ incdirs     :=
 fand_objs   :=
 fanctl_objs :=
 
+drm_support := $(if $(wildcard /usr/*/libdrm/amdgpu_drm.h),y,n)
+
 FAND        := amdgpu-fand-4.0
 FANCTL      := amdgpu-fanctl-4.0
 
@@ -94,8 +96,19 @@ endef
 define declare-trivial-c-module
 $(eval __src    := $(wildcard $(module_path)/*.$(cext)))
 $(eval __obj    := $(patsubst $(srcdir)/%,$(builddir)/%,$(__src:.$(cext)=.$(oext))))
+$(foreach __co,$(cond_objs),
+    $(if $(filter-out y,$($(firstword $(subst $(cond_separator), ,$(__co))))),
+        $(eval __obj := $(filter-out %/$(lastword $(subst $(cond_separator), ,$(__co))).$(oext),$(__obj)))))
+$(eval cond_objs := )
 $(foreach t,$(required_by),$(eval $(t)_objs += $(__obj)))
 $(eval cppflags += -I$(module_path))
+endef
+
+# Results in the object file indicated by object_basename
+# being filtered out if the flag is not set to 'y'
+# $(call conditional-obj,object_basename,flag)
+define conditional-obj
+$(eval obj_deps := $(obj_deps) $(2):$(1))
 endef
 
 # $(call echo-build-step, program, file)
@@ -139,6 +152,7 @@ module_mk      := Makefile
 module_path    := $(root)
 
 stack_top_symb := :
+cond_separator := :
 
 prepare_deps   :=
 build_deps     :=
