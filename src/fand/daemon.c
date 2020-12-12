@@ -33,7 +33,7 @@ static int daemon_fork(void) {
     pid_t pid = fork();
 
     if(pid < 0) {
-        return 1;
+        return -1;
     }
 
     if(pid > 0) {
@@ -41,7 +41,7 @@ static int daemon_fork(void) {
     }
 
     if(setsid() < 0) {
-        return 1;
+        return -1;
     }
 
     signal(SIGCHLD, SIG_IGN);
@@ -50,7 +50,7 @@ static int daemon_fork(void) {
     pid = fork();
 
     if(pid < 0) {
-        return 1;
+        return -1;
     }
 
     if(pid > 0) {
@@ -69,7 +69,7 @@ static int daemon_init(bool fork, char const *config, struct fand_config *data, 
     signal(SIGTERM, daemon_sig_handler);
 
     if(fork && daemon_fork()) {
-        return 1;
+        return -1;
     }
 
     openlog(0, !fork * LOG_PERROR, LOG_DAEMON);
@@ -77,34 +77,34 @@ static int daemon_init(bool fork, char const *config, struct fand_config *data, 
 
     if(mkdir(DAEMON_WORKING_DIR, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH)) {
         syslog(LOG_ERR, "Failed to create working directory: %s", strerror(errno));
-        return 1;
+        return -1;
     }
 
     if(chdir(DAEMON_WORKING_DIR)) {
         syslog(LOG_ERR, "Failed to set working directory: %s", strerror(errno));
-        return 1;
+        return -1;
     }
 
     if(config_parse(config, data)) {
-        return 1;
+        return -1;
     }
 
     if(server_init()) {
-        return 1;
+        return -1;
     }
 
     if(fsys_watch_init(config, watch, IN_MODIFY)) {
-        return 1;
+        return -1;
     }
 
     if(fanctrl_init() < 0) {
         syslog(LOG_EMERG, "Fancontroller initialization failed");
-        return 1;
+        return -1;
     }
 
     if(fanctrl_configure(data) < 0) {
         syslog(LOG_EMERG, "Fancontroller configuration failed");
-        return 1;
+        return -1;
     }
 
     return 0;
@@ -115,7 +115,7 @@ static int daemon_reload(char const *path, struct fand_config *data) {
 
     if(config_parse(path, &tmpdata)) {
         syslog(LOG_WARNING, "Failed to reload config");
-        return 1;
+        return -1;
     }
     *data = tmpdata;
 
@@ -133,20 +133,20 @@ static int daemon_kill(struct inotify_watch const *watch) {
     int status = 0;
 
     if(fsys_watch_clear(watch)) {
-        status = 1;
+        status = -1;
     }
 
     if(server_kill()) {
-        status = 1;
+        status = -1;
     }
     if(rmdir(DAEMON_WORKING_DIR)) {
         syslog(LOG_ERR, "Failed to remove working directory: %s", strerror(errno));
-        status = 1;
+        status = -1;
     }
 
     if(fanctrl_release()) {
         syslog(LOG_EMERG, "Could not release control of fans");
-        status = 1;
+        status = -1;
     }
 
     closelog();
@@ -161,13 +161,13 @@ static int daemon_process_messages(struct fand_config *data) {
 
     nmessages = server_try_poll();
     if(nmessages < 0) {
-        return 0;
+        return -0;
     }
 
     for(int i = 0; i < nmessages; i++) {
         if(server_peek_request(&cmd)) {
             syslog(LOG_ERR, "Internal ipc processing error");
-            return 1;
+            return -1;
         }
 
         switch(cmd) {
