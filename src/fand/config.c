@@ -18,7 +18,7 @@
 #define CONFIG_KEY_MATRIX "matrix"
 #define CONFIG_KEY_THROTTLE "aggressive_throttle"
 
-enum { CONFIG_BUFFER_SIZE = DEVICE_PATH_MAX_SIZE };
+enum { CONFIG_BUFFER_SIZE = 256 };
 enum { CONFIG_KEY_SIZE = 64 };
 enum { CONFIG_NUMBUF_SIZE = 4 };
 enum { REGEX_ERRBUF_SIZE = 64 };

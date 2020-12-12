@@ -1,3 +1,4 @@
+#include "cache.h"
 #include "defs.h"
 #include "file.h"
 #include "filesystem.h"
@@ -30,13 +31,16 @@ enum { PWM_MODE_MANUAL = 1 };
 enum { PWM_MODE_AUTO = 2 };
 
 enum { MAX_DRI_DIR_IDX = 128 };
-enum { HWMON_PATH_SIZE = 256 };
 
 static int hwmon_pwm_enable_fd = -1;
 
-static char hwmon_pwm[HWMON_PATH_SIZE];
-static char hwmon_pwm_enable[HWMON_PATH_SIZE];
-static char hwmon_temp_input[HWMON_PATH_SIZE];
+static char *hwmon_pwm = fand_cache.pwm;
+static char *hwmon_pwm_enable = fand_cache.pwm_enable;
+static char *hwmon_temp_input = fand_cache.temp_input;
+
+static size_t hwmon_pwm_size = sizeof(fand_cache.pwm);
+static size_t hwmon_pwm_enable_size = sizeof(fand_cache.pwm_enable);
+static size_t hwmon_temp_input_size = sizeof(fand_cache.temp_input);
 
 static int hwmon_detect_card_index(void) {
     char buffer[HWMON_PATH_SIZE];
@@ -106,7 +110,7 @@ cleanup:
     return status;
 }
 
-static ssize_t hwmon_init_sysfs_path(char *dst, char const *hwmon_iface_dir, char const *filename, size_t dstsize) {
+static ssize_t hwmon_init_single_sysfs_path(char *dst, char const *hwmon_iface_dir, char const *filename, size_t dstsize) {
     ssize_t pos = strscpy(dst, hwmon_iface_dir, dstsize);
     if(pos < 0) {
         return pos;
@@ -126,8 +130,8 @@ static int hwmon_set_pwm_mode_manual(void) {
     return -!!fdwrite_ulong(hwmon_pwm_enable_fd, PWM_MODE_MANUAL);
 }
 
-int hwmon_open(void) {
-    /* TODO: check cache */
+
+static int hwmon_set_sysfs_paths(void) {
     char hwmon_iface[HWMON_PATH_SIZE];
     ssize_t status;
 
@@ -136,27 +140,38 @@ int hwmon_open(void) {
         return card_idx;
     }
 
+    fand_cache.card_idx = (unsigned)card_idx;
+
     status = hwmon_detect_iface_dir(hwmon_iface, card_idx, sizeof(hwmon_iface));
     if(status < 0) {
         return status;
     }
-    #ifndef FAND_DRM_SUPPORT
 
-    status = hwmon_init_sysfs_path(hwmon_temp_input, hwmon_iface, SYSFS_TEMP_INPUT, sizeof(hwmon_temp_input));
+    status = hwmon_init_single_sysfs_path(hwmon_temp_input, hwmon_iface, SYSFS_TEMP_INPUT, hwmon_temp_input_size);
     if(status < 0) {
         return status;
     }
 
-    #endif
-
-    status = hwmon_init_sysfs_path(hwmon_pwm, hwmon_iface, SYSFS_PWM, sizeof(hwmon_pwm));
+    status = hwmon_init_single_sysfs_path(hwmon_pwm, hwmon_iface, SYSFS_PWM, hwmon_pwm_size);
     if(status < 0) {
         return status;
     }
 
-    status = hwmon_init_sysfs_path(hwmon_pwm_enable, hwmon_iface, SYSFS_PWM_ENABLE, sizeof(hwmon_pwm_enable));
-    if(status < 0) {
-        return status;
+    return hwmon_init_single_sysfs_path(hwmon_pwm_enable, hwmon_iface, SYSFS_PWM_ENABLE, hwmon_pwm_enable_size);
+}
+
+static int hwmon_validate_cache(void) {
+
+}
+
+int hwmon_open(void) {
+    int status;
+    if(cache_load() < 0) {
+        status = hwmon_set_sysfs_paths();
+        if(status < 0) {
+            return status;
+        }
+        status = cache_write();
     }
 
     status = hwmon_set_pwm_mode_manual();
@@ -164,7 +179,7 @@ int hwmon_open(void) {
         return status;
     }
 
-    return card_idx;
+    return (int)fand_cache.card_idx;
 }
 
 int hwmon_close(void) {
