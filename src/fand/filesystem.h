@@ -22,4 +22,6 @@ int fsys_watch_init(char const *path, struct inotify_watch *watch, int flags);
 int fsys_watch_event(char const *path, struct inotify_watch *watch);
 int fsys_watch_clear(struct inotify_watch const *watch);
 
+ssize_t fsys_abspath(char *dst, char const *path, size_t dstsize);
+
 #endif /* FILESYSTEM_H */

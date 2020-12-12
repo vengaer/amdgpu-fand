@@ -16,13 +16,6 @@ struct fand_config {
     unsigned char hysteresis;
     unsigned short interval;
     unsigned char matrix[MATRIX_MAX_SIZE];
-    char hwmon[DIRENT_MAX_SIZE];
-    char ctrl_mode[DIRENT_MAX_SIZE];
-    char pwm_min[DIRENT_MAX_SIZE];
-    char pwm_max[DIRENT_MAX_SIZE];
-    char pwm_ctrl[DIRENT_MAX_SIZE];
-    char temp_sensor[DIRENT_MAX_SIZE];
-    char devpath[DEVICE_PATH_MAX_SIZE];
 };
 
 int config_parse(char const *path, struct fand_config *data);

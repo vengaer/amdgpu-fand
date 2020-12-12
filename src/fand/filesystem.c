@@ -2,7 +2,9 @@
 #include "strutils.h"
 
 #include <errno.h>
+#include <limits.h>
 #include <stddef.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <syslog.h>
@@ -63,8 +65,8 @@ int fsys_watch_init(char const *path, struct inotify_watch *watch, int flags) {
         return -1;
     }
 
-    if(readlink(path, abspath, sizeof(abspath)) == -1) {
-        syslog(LOG_ERR, "Could not determine real path of %s: %s", path, strerror(errno));
+    if(fsys_abspath(abspath, path, sizeof(abspath)) < 0) {
+        syslog(LOG_ERR, "Could not determine absolue path of %s", path);
         return -1;
     }
 
@@ -103,18 +105,16 @@ int fsys_watch_init(char const *path, struct inotify_watch *watch, int flags) {
 }
 
 int fsys_watch_event(char const *path, struct inotify_watch *watch) {
-    char abspath[FSYS_PATH_MAX_LENGTH];
     unsigned char inotify_buf[INOTIFY_BUF_LENGTH];
     unsigned char *ibufp;
     struct inotify_event *inevent;
     ssize_t nbytes;
+    char const *filename;
 
     watch->triggered = false;
 
-    if(readlink(path, abspath, sizeof(abspath) == -1)) {
-        syslog(LOG_ERR, "Could not determine real path of %s: %s", path, strerror(errno));
-        return -1;
-    }
+    filename = strrchr(path, '/');
+    filename = filename ? filename + 1 : path;
 
     nbytes = read(watch->fd, inotify_buf, sizeof(inotify_buf));
     if(nbytes == -1) {
@@ -124,7 +124,7 @@ int fsys_watch_event(char const *path, struct inotify_watch *watch) {
     ibufp = inotify_buf;
     while(ibufp < inotify_buf + nbytes) {
         inevent = (struct inotify_event *)ibufp;
-        if((inevent->mask & watch->flags) && inevent->len && strcmp(inevent->name, abspath) == 0) {
+        if((inevent->mask & watch->flags) && inevent->len && strcmp(inevent->name, filename) == 0) {
             watch->triggered = true;
             break;
         }
@@ -135,7 +135,11 @@ int fsys_watch_event(char const *path, struct inotify_watch *watch) {
 }
 
 int fsys_watch_clear(struct inotify_watch const *watch) {
+    if(watch->fd == -1 && watch->wd == -1) {
+        return 0;
+    }
     int status = 0;
+
     if(inotify_rm_watch(watch->fd, watch->wd) == -1) {
         syslog(LOG_ERR, "Could not remove inotify watch: %s", strerror(errno));
         status = -1;
@@ -145,4 +149,20 @@ int fsys_watch_clear(struct inotify_watch const *watch) {
         status = -1;
     }
     return status;
+}
+
+ssize_t fsys_abspath(char *dst, char const *path, size_t dstsize) {
+    char buffer[PATH_MAX];
+    if(!realpath(path, buffer)) {
+        syslog(LOG_ERR, "Failed to determine absolute path of %s: %s", path, strerror(errno));
+        return -1;
+    }
+
+    ssize_t nbytes = strscpy(dst, buffer, dstsize);
+    if(nbytes < 0) {
+        syslog(LOG_ERR, "Absolue path %s overflows buffer (size %zu)", path, dstsize);
+        return -1;
+    }
+
+    return nbytes;
 }

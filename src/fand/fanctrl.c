@@ -33,7 +33,7 @@ static unsigned long fanctrl_percentage_to_pwm(unsigned long percentage) {
     return pwm;
 }
 
-static int fanctrl_init_matrix(unsigned char const* mat, unsigned char nrows) {
+static int fanctrl_set_matrix(unsigned char const* mat, unsigned char nrows) {
     if(nrows > MATRIX_MAX_SIZE / 2) {
         return -1;
     }
@@ -46,20 +46,36 @@ static int fanctrl_init_matrix(unsigned char const* mat, unsigned char nrows) {
     return 0;
 }
 
-int fanctrl_init(struct fand_config *config) {
+int fanctrl_init() {
+    int status = 0;
+    int card_idx = hwmon_open();
 
-    hysteresis = config->hysteresis;
-    throttle = config->throttle;
-
-    if(fanctrl_init_matrix(config->matrix, config->matrix_rows) < 0)  {
-        return -1;
+    if(card_idx < 0) {
+        return card_idx;
     }
 
-    return hwmon_open();
+    #ifdef FAND_DRM_SUPPORT
+
+    status = drm_open(card_idx);
+
+    #endif
+
+    return status;
 }
 
 int fanctrl_release(void) {
+    #ifdef FAND_DRM_SUPPORT
+
+    drm_close();
+
+    #endif
     return hwmon_close();
+}
+
+int fanctrl_configure(struct fand_config *config) {
+    hysteresis = config->hysteresis;
+    throttle = config->throttle;
+    return fanctrl_set_matrix(config->matrix, config->matrix_rows);
 }
 
 int fanctrl_adjust(void) {

@@ -24,7 +24,7 @@ static int drm_fd = -1;
 enum { DRM_BUF_SIZE = 128 };
 enum { DRM_CARD_IDX_OFFSET = 128 };
 
-int drm_init(unsigned card_idx) {
+int drm_open(unsigned card_idx) {
     char buffer[DRM_BUF_SIZE];
     regex_t devregex;
     regmatch_t pmatch[2];
@@ -78,7 +78,11 @@ cleanup:
 }
 
 int drm_close(void) {
-    return close(drm_fd);
+    int status = close(drm_fd);
+    if(status == -1) {
+        syslog(LOG_WARNING, "Failed to close drm file desriptor: %s", strerror(errno));
+    }
+    return status;
 }
 
 int drm_get_temp(void) {

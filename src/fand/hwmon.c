@@ -59,8 +59,7 @@ static int hwmon_detect_card_index(void) {
 static ssize_t hwmon_detect_iface_dir(char *dst, unsigned card_idx, size_t dstsize) {
     char buffer[HWMON_PATH_SIZE];
 
-    /* + 1 for null byte */
-    int pos = snprintf(buffer, sizeof(buffer), SYSFS_HWMON_PATH_FMT, card_idx) + 1;
+    int pos = snprintf(buffer, sizeof(buffer), SYSFS_HWMON_PATH_FMT, card_idx);
     ssize_t status = 0;
 
     if((size_t)pos > sizeof(buffer)) {
@@ -88,13 +87,15 @@ static ssize_t hwmon_detect_iface_dir(char *dst, unsigned card_idx, size_t dstsi
             status = -1;
             goto cleanup;
         }
+        break;
     }
 
     /* Found matching entry */
     if(dp) {
-        status = readlink(buffer, dst, dstsize);
-        if(status == -1) {
-            syslog(LOG_ERR, "Following hwmon iface %s symlink overflows internal buffer of size %zu", buffer, dstsize);
+        status = fsys_abspath(dst, buffer, dstsize);
+        int err = errno;
+        if(status == -1 && err != EINVAL) {
+            syslog(LOG_ERR, "Could not follow symlink %s: %s", buffer, strerror(err));
             goto cleanup;
         }
     }
@@ -110,7 +111,7 @@ static ssize_t hwmon_init_sysfs_path(char *dst, char const *hwmon_iface_dir, cha
     if(pos < 0) {
         return pos;
     }
-    pos = strscpy(dst + pos, "/", dstsize  - pos);
+    pos += strscpy(dst + pos, "/", dstsize  - pos);
     if(pos < 0) {
         return pos;
     }
@@ -158,13 +159,18 @@ int hwmon_open(void) {
         return status;
     }
 
-    return hwmon_set_pwm_mode_manual();
+    status = hwmon_set_pwm_mode_manual();
+    if(status < 0) {
+        return status;
+    }
+
+    return card_idx;
 }
 
 int hwmon_close(void) {
     if(hwmon_pwm_enable_fd == -1) {
-        syslog(LOG_ERR, "No open control mode file descriptor");
-        return -1;
+        syslog(LOG_WARNING, "No open control mode file descriptor");
+        return 0;
     }
 
     fdwrite_ulong(hwmon_pwm_enable_fd, PWM_MODE_AUTO);

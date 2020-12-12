@@ -8,6 +8,7 @@
 
 #include <errno.h>
 #include <signal.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -96,8 +97,13 @@ static int daemon_init(bool fork, char const *config, struct fand_config *data, 
         return 1;
     }
 
-    if(fanctrl_init(data)) {
+    if(fanctrl_init() < 0) {
         syslog(LOG_EMERG, "Fancontroller initialization failed");
+        return 1;
+    }
+
+    if(fanctrl_configure(data) < 0) {
+        syslog(LOG_EMERG, "Fancontroller configuration failed");
         return 1;
     }
 
@@ -113,8 +119,8 @@ static int daemon_reload(char const *path, struct fand_config *data) {
     }
     *data = tmpdata;
 
-    if(fanctrl_init(data)) {
-        syslog(LOG_EMERG, "Fancontroller reinitialization failed");
+    if(fanctrl_configure(data)) {
+        syslog(LOG_EMERG, "Fancontroller reconfiguration failed");
         return FAND_FATAL_ERR;
     }
 
@@ -232,7 +238,12 @@ static inline void daemon_watch_event(char const *config, struct fand_config *da
 int daemon_main(bool fork, char const *config) {
     int status;
     struct fand_config data = { 0 };
-    struct inotify_watch watch = { 0 };
+    struct inotify_watch watch = {
+        .fd = -1,
+        .wd = -1,
+        .flags = 0,
+        .triggered = false
+    };
 
     if(daemon_init(fork, config, &data, &watch)) {
         status = 1;
