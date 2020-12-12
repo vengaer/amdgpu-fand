@@ -1,5 +1,5 @@
-#include "defs.h"
 #include "drm.h"
+#include "fandcfg.h"
 #include "macro.h"
 #include "strutils.h"
 

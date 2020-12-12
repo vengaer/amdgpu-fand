@@ -1,4 +1,4 @@
-#include "defs.h"
+#include "fandcfg.h"
 #include "macro.h"
 #include "record_queue.h"
 #include "server.h"

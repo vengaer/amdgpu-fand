@@ -1,7 +1,7 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-#include "defs.h"
+#include "fandcfg.h"
 
 #include <stdbool.h>
 

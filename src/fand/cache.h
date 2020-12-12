@@ -1,7 +1,7 @@
 #ifndef CACHE_H
 #define CACHE_H
 
-#include "defs.h"
+#include "fandcfg.h"
 #include "sha1.h"
 
 struct fand_cache {

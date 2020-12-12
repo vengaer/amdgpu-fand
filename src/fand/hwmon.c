@@ -1,5 +1,5 @@
 #include "cache.h"
-#include "defs.h"
+#include "fandcfg.h"
 #include "file.h"
 #include "filesystem.h"
 #include "hwmon.h"

@@ -1,6 +1,6 @@
-#include "defs.h"
 #include "drm.h"
 #include "fanctrl.h"
+#include "fandcfg.h"
 #include "file.h"
 #include "filesystem.h"
 #include "hwmon.h"

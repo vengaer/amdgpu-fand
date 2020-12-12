@@ -1,7 +1,7 @@
 #include "config.h"
 #include "daemon.h"
-#include "defs.h"
 #include "fanctrl.h"
+#include "fandcfg.h"
 #include "filesystem.h"
 #include "ipc.h"
 #include "server.h"
