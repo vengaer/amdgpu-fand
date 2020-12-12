@@ -22,16 +22,16 @@ pipeline {
                 sh 'mkdir -p ${ARTIFACT_DIR}'
 
                 echo 'Build: CC=gcc DRM=y'
-                sh 'make FAND=${ARTIFACT_DIR}/amdgpu-fand-3.0-gcc FANCTL=${ARTIFACT_DIR}/amdgpu-fanctl-3.0-gcc -j$(nproc) -B'
+                sh 'make FAND=${ARTIFACT_DIR}/amdgpu-fand-4.0-gcc FANCTL=${ARTIFACT_DIR}/amdgpu-fanctl-4.0-gcc -j$(nproc) -B'
 
                 echo 'Build: CC=clang DRM=y'
-                sh 'make CC=clang FAND=${ARTIFACT_DIR}/amdgpu-fand-3.0-clang FANCTL=${ARTIFACT_DIR}/amdgpu-fanctl-3.0-clang -j$(nproc) -B'
+                sh 'make CC=clang FAND=${ARTIFACT_DIR}/amdgpu-fand-4.0-clang FANCTL=${ARTIFACT_DIR}/amdgpu-fanctl-4.0-clang -j$(nproc) -B'
 
                 echo 'Build: CC=gcc DRM=n'
-                sh 'make FAND=${ARTIFACT_DIR}/amdgpu-fand-3.0-gcc FANCTL=${ARTIFACT_DIR}/amdgpu-fanctl-3.0-gcc drm_support=n -j$(nproc) -B'
+                sh 'make FAND=${ARTIFACT_DIR}/amdgpu-fand-4.0-gcc FANCTL=${ARTIFACT_DIR}/amdgpu-fanctl-4.0-gcc drm_support=n -j$(nproc) -B'
 
                 echo 'Build: CC=clang DRM=n'
-                sh 'make CC=clang FAND=${ARTIFACT_DIR}/amdgpu-fand-3.0-clang FANCTL=${ARTIFACT_DIR}/amdgpu-fanctl-3.0-clang drm_support=n -j$(nproc) -B'
+                sh 'make CC=clang FAND=${ARTIFACT_DIR}/amdgpu-fand-4.0-clang FANCTL=${ARTIFACT_DIR}/amdgpu-fanctl-4.0-clang drm_support=n -j$(nproc) -B'
             }
         }
         stage('Gitlab Success') {
