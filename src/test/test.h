@@ -23,9 +23,13 @@
                 "ok" : "fail");                                                         \
     } while(0);
 
+#define section(name)   \
+    test_section(#name)
+
 extern int failed_assertions;
 extern int total_assertions;
 
+void test_section(char const *name);
 int test_summary(void);
 
 #endif /* TEST_H */
