@@ -1,6 +1,6 @@
+#include "record_queue_test.h"
+#include "sha1_test.h"
 #include "test.h"
-#include "test_sha1.h"
-#include "test_record_queue.h"
 
 int main(void) {
     run(test_sha1);

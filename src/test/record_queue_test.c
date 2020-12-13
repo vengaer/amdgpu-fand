@@ -1,7 +1,7 @@
 #include "macro.h"
 #include "test.h"
-#include "test_record_queue.h"
 #include "record_queue.h"
+#include "record_queue_test.h"
 
 #include <string.h>
 

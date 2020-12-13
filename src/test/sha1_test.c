@@ -1,6 +1,6 @@
 #include "sha1.h"
+#include "sha1_test.h"
 #include "test.h"
-#include "test_sha1.h"
 
 #include <string.h>
 
