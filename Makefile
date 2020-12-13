@@ -132,6 +132,7 @@ endef
 
 # $(call build-configuration)
 define build-configuration
+$(strip
 $(eval __cfg := )
 $(if $(MAKECMDGOALS),
     $(if $(findstring $(FAND),$(MAKECMDGOALS)),
@@ -142,6 +143,7 @@ $(if $(MAKECMDGOALS),
         $(eval __cfg := test)),
   $(eval __cfg += fand fanctl))
 $(__cfg)
+)
 endef
 
 # $(call override-implicit-vars)
@@ -151,7 +153,6 @@ $(eval override CPPFLAGS += $(cppflags))
 $(eval override LDFLAGS  += $(ldflags))
 $(eval override LDLIBS   += $(ldlibs))
 endef
-
 
 mk-build-root  := $(shell $(MKDIR) $(builddir))
 module_mk      := Makefile
@@ -166,6 +167,8 @@ target_deps    :=
 
 configuration  := $(call build-configuration)
 
+prepare        := $(builddir)/.prepare.stamp
+
 .PHONY: all
 all: $(FAND) $(FANCTL)
 
@@ -174,6 +177,9 @@ ifneq ($(configuration),)
 endif
 
 $(call override-implicit-vars)
+
+$(prepare): $(prepare_deps)
+	$(QUIET)$(TOUCH) $@
 
 $(FAND): $(target_deps) $(fand_objs)
 	$(call echo-ld,$@)
@@ -187,13 +193,16 @@ $(FAND_TEST): $(target_deps) $(test_objs)
 	$(call echo-ld,$@)
 	$(QUIET)$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
-$(builddir)/%.$(oext): $(srcdir)/%.$(cext)
+$(builddir)/%.$(oext): $(srcdir)/%.$(cext) | $(build_deps)
 	$(call echo-cc,$@)
 	$(QUIET)$(CC) -o $@ $^ $(CFLAGS) $(CPPFLAGS)
+
+.PHONY: prepare
+prepare: $(prepare)
 
 .PHONY: test
 test: $(FAND_TEST)
 
 .PHONY: clean
 clean:
-	$(QUIET)$(RM) $(builddir) $(FAND) $(FANCTL)
+	$(QUIET)$(RM) $(builddir) $(FAND) $(FANCTL) $(FAND_TEST)

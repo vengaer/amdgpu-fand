@@ -1,3 +1,6 @@
+$(call include-module,configure)
+$(call include-module,common)
+
 ifneq ($(findstring fand,$(configuration)),)
     $(call include-module,fand)
 endif
@@ -10,8 +13,6 @@ ifneq ($(findstring test,$(configuration)),)
     $(call include-module,fand)
     $(call include-module,test)
 endif
-
-$(call include-module,common)
 
 ifeq ($(module_name),)
 target := $(if $(MAKECMDGOALS),$(MAKECMDGOALS),recurse)
