@@ -2,7 +2,7 @@
 
 #include <math.h>
 
-float inverse_lerp(unsigned long a, unsigned long b, unsigned long x) {
+float lerp_inverse(unsigned long a, unsigned long b, unsigned long x) {
     return (float)(x - a) / (float)(b - a);
 }
 

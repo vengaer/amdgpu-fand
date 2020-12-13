@@ -120,7 +120,7 @@ int fanctrl_adjust(void) {
         /* Between two thresholds */
         for(unsigned i = 0; i < matrix.rows - 1u; i++) {
             if(matrix.temps[i] < temp && matrix.temps[i + 1] >= temp) {
-                frac = inverse_lerp(matrix.temps[i], matrix.temps[i + 1], temp);
+                frac = lerp_inverse(matrix.temps[i], matrix.temps[i + 1], temp);
                 speed = lerp(matrix.speeds[i], matrix.speeds[i + 1], frac);
                 break;
             }
@@ -159,7 +159,7 @@ int fanctrl_get_speed(void) {
     if(pwm < 0) {
         return -1;
     }
-    float frac = inverse_lerp(PWM_MIN, PWM_MAX, pwm);
+    float frac = lerp_inverse(PWM_MIN, PWM_MAX, pwm);
     return (int)(100 * frac);
 }
 
