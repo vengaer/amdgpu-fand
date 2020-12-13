@@ -31,9 +31,9 @@ test_objs    = $(filter-out %/main.$(oext),$(fand_objs) $(fanctl_objs))
 drm_support := $(if $(wildcard /usr/*/libdrm/amdgpu_drm.h),y,n)
 cppflags    += $(if $(findstring _y_,_$(drm_support)_),-DFAND_DRM_SUPPORT)
 
-FAND        := amdgpu-fand-4.0
-FANCTL      := amdgpu-fanctl-4.0
-FAND_TEST   := amdgpu-fand-test
+FAND        ?= amdgpu-fand-4.0
+FANCTL      ?= amdgpu-fanctl-4.0
+FAND_TEST   ?= amdgpu-fand-test
 
 
 # $(call mk-module-build-dir)

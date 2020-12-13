@@ -6,6 +6,7 @@ pipeline {
         CC='gcc'
         CFLAGS='-Werror'
         ARTIFACT_DIR='artifacts'
+        TEST_DIR='tests'
     }
     stages {
         stage('Gitlab Pending') {
@@ -22,16 +23,84 @@ pipeline {
                 sh 'mkdir -p ${ARTIFACT_DIR}'
 
                 echo 'Build: CC=gcc DRM=y'
-                sh 'make FAND=${ARTIFACT_DIR}/amdgpu-fand-4.0-gcc FANCTL=${ARTIFACT_DIR}/amdgpu-fanctl-4.0-gcc -j$(nproc) -B'
+                sh '''
+                    export CC=gcc
+                    export FAND=${ARTIFACT_DIR}/amdgpu-fand-4.0.${BUILD_NUMBER}-drm-${CC}
+                    export FANCTL=${ARTIFACT_DIR}/amdgpu-fanctl-4.0.${BUILD_NUMBER}-drm-${CC}
+                    make -j$(nproc) -B
+                '''
 
                 echo 'Build: CC=clang DRM=y'
-                sh 'make CC=clang FAND=${ARTIFACT_DIR}/amdgpu-fand-4.0-clang FANCTL=${ARTIFACT_DIR}/amdgpu-fanctl-4.0-clang -j$(nproc) -B'
+                sh '''
+                    export CC=clang
+                    export FAND=${ARTIFACT_DIR}/amdgpu-fand-4.0.${BUILD_NUMBER}-drm-${CC}
+                    export FANCTL=${ARTIFACT_DIR}/amdgpu-fanctl-4.0.${BUILD_NUMBER}-drm-${CC}
+                    make -j$(nproc) -B
+                '''
 
                 echo 'Build: CC=gcc DRM=n'
-                sh 'make FAND=${ARTIFACT_DIR}/amdgpu-fand-4.0-gcc FANCTL=${ARTIFACT_DIR}/amdgpu-fanctl-4.0-gcc drm_support=n -j$(nproc) -B'
+                sh '''
+                    export CC=gcc
+                    export FAND=${ARTIFACT_DIR}/amdgpu-fand-4.0.${BUILD_NUMBER}-${CC}
+                    export FANCTL=${ARTIFACT_DIR}/amdgpu-fanctl-4.0.${BUILD_NUMBER}-${CC}
+                    make drm_support=n -j$(nproc) -B
+                '''
 
                 echo 'Build: CC=clang DRM=n'
-                sh 'make CC=clang FAND=${ARTIFACT_DIR}/amdgpu-fand-4.0-clang FANCTL=${ARTIFACT_DIR}/amdgpu-fanctl-4.0-clang drm_support=n -j$(nproc) -B'
+                sh '''
+                    export CC=clang
+                    export FAND=${ARTIFACT_DIR}/amdgpu-fand-4.0.${BUILD_NUMBER}-${CC}
+                    export FANCTL=${ARTIFACT_DIR}/amdgpu-fanctl-4.0.${BUILD_NUMBER}-${CC}
+                    make drm_support=n -j$(nproc) -B
+                '''
+
+                echo 'Creating test directory'
+                sh 'mkdir -p ${TEST_DIR}'
+
+                echo 'Build: CC=gcc DRM=y test'
+                sh '''
+                    export CC=gcc
+                    export FAND_TEST=${TEST_DIR}/amdgpu-fand-test-${BUILD_NUMBER}-drm-${CC}
+                    make test -j$(nproc) -B
+                '''
+
+                echo 'Build: CC=clang DRM=y test'
+                sh '''
+                    export CC=clang
+                    export FAND_TEST=${TEST_DIR}/amdgpu-fand-test-${BUILD_NUMBER}-drm-${CC}
+                    make test -j$(nproc) -B
+                '''
+
+                echo 'Build: CC=gcc DRM=n test'
+                sh '''
+                    export CC=gcc
+                    export FAND_TEST=${TEST_DIR}/amdgpu-fand-test-${BUILD_NUMBER}-${CC}
+                    make test drm_support=n -j$(nproc) -B
+                '''
+
+                echo 'Build: CC=clang DRM=n test'
+                sh '''
+                    export CC=clang
+                    export FAND_TEST=${TEST_DIR}/amdgpu-fand-test-${BUILD_NUMBER}-${CC}
+                    make test drm_support=n -j$(nproc) -B
+                '''
+            }
+        }
+        stage('Test') {
+            steps {
+                echo '-- Starting tests --'
+
+                echo 'Test: CC=gcc DRM=y'
+                sh '${TEST_DIR}/amdgpu-fand-test-${BUILD_NUMBER}-drm-gcc'
+
+                echo 'Test: CC=clang DRM=y'
+                sh '${TEST_DIR}/amdgpu-fand-test-${BUILD_NUMBER}-drm-clang'
+
+                echo 'Test: CC=gcc DRM=n'
+                sh '${TEST_DIR}/amdgpu-fand-test-${BUILD_NUMBER}-gcc'
+
+                echo 'Test: CC=clang DRM=n'
+                sh '${TEST_DIR}/amdgpu-fand-test-${BUILD_NUMBER}-clang'
             }
         }
         stage('Gitlab Success') {
