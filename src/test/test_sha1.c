@@ -29,11 +29,11 @@ void test_sha1(void) {
     sha1_update(&ctx, (unsigned char const *)short_input, strlen(short_input));
     sha1_final(&ctx, digest);
 
-    fand_assert(memcmp(digest, (unsigned char const *)short_hash, SHA1_DIGESTSIZE) == 0);
+    fand_assert(memcmp(digest, short_hash, SHA1_DIGESTSIZE) == 0);
 
     sha1_init(&ctx);
     sha1_update(&ctx, (unsigned char const *)long_input, strlen(long_input));
     sha1_final(&ctx, digest);
 
-    fand_assert(memcmp(digest, (unsigned char const *)long_hash, SHA1_DIGESTSIZE) == 0);
+    fand_assert(memcmp(digest, long_hash, SHA1_DIGESTSIZE) == 0);
 }
