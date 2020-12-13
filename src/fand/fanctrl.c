@@ -135,6 +135,10 @@ int fanctrl_adjust(void) {
 }
 
 int fanctrl_get_temp(void) {
+    if(dryrun) {
+        return 0;
+    }
+
     #ifdef FAND_DRM_SUPPORT
 
     return drm_get_temp();
@@ -147,6 +151,10 @@ int fanctrl_get_temp(void) {
 }
 
 int fanctrl_get_speed(void) {
+    if(dryrun) {
+        return 0;
+    }
+
     int pwm = hwmon_read_pwm();
     if(pwm < 0) {
         return -1;
