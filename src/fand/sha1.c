@@ -12,11 +12,15 @@ static inline uint32_t rol(uint32_t value, uint32_t bits) {
     return (value >> (32u - bits)) | (value << bits);
 }
 
+#ifdef FAND_LITTLE_ENDIAN
+
 static inline uint32_t sha1_to_big_endian(union sha1_block *block, uint32_t i) {
     block->as_dwords[i] = (rol(block->as_dwords[i], 24u) & 0xff00ff00) |
                           (rol(block->as_dwords[i], 8u)  & 0x00ff00ff);
     return block->as_dwords[i];
 }
+
+#endif
 
 static inline uint32_t expand(union sha1_block *block, uint32_t i) {
     block->as_dwords[i & 0xf] = rol(block->as_dwords[(i + 0xd) & 0xf] ^
@@ -28,7 +32,15 @@ static inline uint32_t expand(union sha1_block *block, uint32_t i) {
 }
 
 static inline void r0(union sha1_block *block, uint32_t v, uint32_t *w, uint32_t x, uint32_t y, uint32_t *z, uint32_t i) {
+    #ifdef FAND_LITTLE_ENDIAN
+
     *z += ((*w & (x ^ y)) ^ y) + sha1_to_big_endian(block, i) + 0x5a827999u + rol(v, 5u);
+
+    #else
+
+    *z += ((*w & (x ^ y)) ^ y) + 0x5a827999u + rol(v, 5u);
+
+    #endif
     *w  = rol(*w, 30u);
 }
 
