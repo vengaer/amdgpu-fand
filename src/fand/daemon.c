@@ -64,7 +64,7 @@ static int daemon_fork(void) {
     return 0;
 }
 
-static int daemon_init(bool fork, char const *config, struct fand_config *data, struct inotify_watch *watch) {
+static int daemon_init(bool fork, bool dryrun, char const *config, struct fand_config *data, struct inotify_watch *watch) {
     signal(SIGINT, daemon_sig_handler);
     signal(SIGTERM, daemon_sig_handler);
 
@@ -97,7 +97,7 @@ static int daemon_init(bool fork, char const *config, struct fand_config *data, 
         return -1;
     }
 
-    if(fanctrl_init() < 0) {
+    if(fanctrl_init(dryrun) < 0) {
         syslog(LOG_EMERG, "Fancontroller initialization failed");
         return -1;
     }
@@ -235,7 +235,7 @@ static inline void daemon_watch_event(char const *config, struct fand_config *da
     }
 }
 
-int daemon_main(bool fork, char const *config) {
+int daemon_main(bool fork, bool dryrun, char const *config) {
     int status;
     struct fand_config data = { 0 };
     struct inotify_watch watch = {
@@ -245,7 +245,7 @@ int daemon_main(bool fork, char const *config) {
         .triggered = false
     };
 
-    if(daemon_init(fork, config, &data, &watch)) {
+    if(daemon_init(fork, dryrun, config, &data, &watch)) {
         status = 1;
         daemon_alive = 0;
     }

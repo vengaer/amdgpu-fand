@@ -27,6 +27,8 @@ static struct fanctrl_matrix matrix;
 static unsigned char hysteresis;
 static bool throttle;
 
+static bool dryrun = false;
+
 static unsigned long fanctrl_percentage_to_pwm(unsigned long percentage) {
     float frac = (float)percentage / 100.f;
     unsigned long pwm = lerp(PWM_MIN, PWM_MAX, frac);
@@ -46,7 +48,12 @@ static int fanctrl_set_matrix(unsigned char const* mat, unsigned char nrows) {
     return 0;
 }
 
-int fanctrl_init() {
+int fanctrl_init(bool init_dryrun) {
+    if(init_dryrun) {
+        dryrun = init_dryrun;
+        return 0;
+    }
+
     int status = 0;
     int card_idx = hwmon_open();
 
@@ -64,6 +71,11 @@ int fanctrl_init() {
 }
 
 int fanctrl_release(void) {
+    if(dryrun) {
+        /* Neither drm nor hwmon are opened in dry runs */
+        return 0;
+    }
+
     #ifdef FAND_DRM_SUPPORT
 
     drm_close();
@@ -81,6 +93,10 @@ int fanctrl_configure(struct fand_config *config) {
 int fanctrl_adjust(void) {
     int temp, speed;
     float frac;
+
+    if(dryrun) {
+        return 0;
+    }
 
     if(matrix.rows == 0) {
         syslog(LOG_EMERG, "Matrix is empty");

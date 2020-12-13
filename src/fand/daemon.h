@@ -3,6 +3,6 @@
 
 #include <stdbool.h>
 
-int daemon_main(bool fork, char const *config);
+int daemon_main(bool fork, bool dryryn, char const *config);
 
 #endif /* DAEMON_H */
