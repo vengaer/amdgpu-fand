@@ -135,9 +135,9 @@ define build-configuration
 $(strip
 $(eval __cfg := )
 $(if $(MAKECMDGOALS),
-    $(if $(findstring $(FAND),$(MAKECMDGOALS)),
+    $(if $(or $(findstring $(FAND),$(MAKECMDGOALS)), $(findstring fand,$(MAKECMDGOALS))),
         $(eval __cfg += fand))
-    $(if $(findstring $(FANCTL),$(MAKECMDGOALS)),
+    $(if $(or $(findstring $(FANCTL),$(MAKECMDGOALS)), $(findstring fanctl,$(MAKECMDGOALS))),
         $(eval __cfg += fanctl))
     $(if $(or $(findstring test,$(MAKECMDGOALS)),$(findstring $(FAND_TEST),$(MAKECMDGOALS))),
         $(eval __cfg := test)),
@@ -199,6 +199,12 @@ $(builddir)/%.$(oext): $(srcdir)/%.$(cext) | $(build_deps)
 
 .PHONY: prepare
 prepare: $(prepare)
+
+.PHONY: fand
+fand:  $(FAND)
+
+.PHONY: fanctl
+fanctl: $(FANCTL)
 
 .PHONY: test
 test: $(FAND_TEST)
