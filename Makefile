@@ -26,12 +26,14 @@ builddir    := $(root)/build
 incdirs     :=
 fand_objs   :=
 fanctl_objs :=
+test_objs    = $(filter-out %/main.$(oext),$(fand_objs) $(fanctl_objs))
 
 drm_support := $(if $(wildcard /usr/*/libdrm/amdgpu_drm.h),y,n)
 cppflags    += $(if $(findstring _y_,_$(drm_support)_),-DFAND_DRM_SUPPORT)
 
 FAND        := amdgpu-fand-4.0
 FANCTL      := amdgpu-fanctl-4.0
+FAND_TEST   := amdgpu-fand-test
 
 
 # $(call mk-module-build-dir)
@@ -135,7 +137,9 @@ $(if $(MAKECMDGOALS),
     $(if $(findstring $(FAND),$(MAKECMDGOALS)),
         $(eval __cfg += fand))
     $(if $(findstring $(FANCTL),$(MAKECMDGOALS)),
-        $(eval __cfg += fanctl)),
+        $(eval __cfg += fanctl))
+    $(if $(or $(findstring test,$(MAKECMDGOALS)),$(findstring $(FAND_TEST),$(MAKECMDGOALS))),
+        $(eval __cfg := test)),
   $(eval __cfg += fand fanctl))
 $(__cfg)
 endef
@@ -179,9 +183,16 @@ $(FANCTL): $(target_deps) $(fanctl_objs)
 	$(call echo-ld,$@)
 	$(QUIET)$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
+$(FAND_TEST): $(target_deps) $(test_objs)
+	$(call echo-ld,$@)
+	$(QUIET)$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
+
 $(builddir)/%.$(oext): $(srcdir)/%.$(cext)
 	$(call echo-cc,$@)
 	$(QUIET)$(CC) -o $@ $^ $(CFLAGS) $(CPPFLAGS)
+
+.PHONY: test
+test: $(FAND_TEST)
 
 .PHONY: clean
 clean:

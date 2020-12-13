@@ -5,6 +5,12 @@ ifneq ($(findstring fanctl,$(configuration)),)
     $(call include-module,fanctl)
 endif
 
+ifneq ($(findstring test,$(configuration)),)
+    $(call include-module,fanctl)
+    $(call include-module,fand)
+    $(call include-module,test)
+endif
+
 $(call include-module,common)
 
 ifeq ($(module_name),)
