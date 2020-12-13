@@ -86,6 +86,14 @@ $(eval include $(module_path)/$(module_mk))
 $(call include-module-epilogue)
 endef
 
+# Includes the module $(module_name) if it is
+# listed in the $(configuration) list
+# $(call conditional-include-module, module_name)
+define conditional-include-module
+$(if $(findstring $(1),$(configuration)),
+    $(call include-module,$(1)))
+endef
+
 # $(call add-build-dep, rule)
 define add-build-dep
 $(eval build_deps += $(1))
@@ -142,12 +150,12 @@ define build-configuration
 $(strip
 $(eval __cfg := )
 $(if $(MAKECMDGOALS),
-    $(if $(or $(findstring $(FAND),$(MAKECMDGOALS)), $(findstring fand,$(MAKECMDGOALS))),
-        $(eval __cfg += fand))
-    $(if $(or $(findstring $(FANCTL),$(MAKECMDGOALS)), $(findstring fanctl,$(MAKECMDGOALS))),
-        $(eval __cfg += fanctl))
-    $(if $(or $(findstring test,$(MAKECMDGOALS)),$(findstring $(FAND_TEST),$(MAKECMDGOALS))),
-        $(eval __cfg := test)),
+    $(if $(or $(findstring $(FAND_TEST),$(MAKECMDGOALS)), $(findstring test,$(MAKECMDGOALS))),
+        $(eval __cfg := fand fanctl test),
+      $(if $(or $(findstring $(FAND),$(MAKECMDGOALS)), $(findstring fand,$(MAKECMDGOALS))),
+          $(eval __cfg += fand))
+      $(if $(or $(findstring $(FANCTL),$(MAKECMDGOALS)), $(findstring fanctl,$(MAKECMDGOALS))),
+          $(eval __cfg += fanctl))),
   $(eval __cfg += fand fanctl))
 $(__cfg)
 )
