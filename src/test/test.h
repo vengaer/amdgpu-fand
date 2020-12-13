@@ -1,6 +1,8 @@
 #ifndef TEST_H
 #define TEST_H
 
+#include "macro.h"
+
 #include <stdio.h>
 
 #define fand_assert(condition)                                                  \
@@ -11,6 +13,15 @@
             ++failed_assertions;                                                \
         }                                                                       \
     } while(0)
+
+#define run(test)                                                                       \
+    do {                                                                                \
+        int CAT_EXPAND(prev_assertions_,__LINE__) = failed_assertions;                  \
+        printf("%-30s --> ", #test);                                                    \
+        test();                                                                         \
+        printf("%s\n", CAT_EXPAND(prev_assertions_,__LINE__) == failed_assertions ?     \
+                "ok" : "fail");                                                         \
+    } while(0);
 
 extern int failed_assertions;
 extern int total_assertions;

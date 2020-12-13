@@ -3,11 +3,12 @@
 #include "test_record_queue.h"
 
 int main(void) {
-    test_sha1();
-    test_record_queue_push_pop();
-    test_record_queue_peek();
-    test_record_queue_flush();
-    test_record_queue_full();
+    run(test_sha1);
+
+    run(test_record_queue_push_pop);
+    run(test_record_queue_peek);
+    run(test_record_queue_flush);
+    run(test_record_queue_full);
 
     return test_summary();;
 }
