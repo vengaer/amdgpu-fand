@@ -21,6 +21,13 @@ $($(module_name)_obj): $($(module_name)_src)
 $(endian_mk): $($(module_name)_target)
 	$(QUIET)$^ $@
 
-
 $($(module_name)_builddir):
 	$(QUIET)$(MKDIR) $@
+
+ifeq ($(module_name),)
+target := $(if $(MAKECMDGOALS),$(MAKECMDGOALS),recurse)
+
+.PHONY: $(target)
+$(target):
+	@$(MAKE) -C .. $(MAKECMDGOALS) --no-print-directory
+endif
