@@ -4,7 +4,7 @@
 #include "file.h"
 #include "filesystem.h"
 #include "hwmon.h"
-#include "interp.h"
+#include "interpolation.h"
 #include "strutils.h"
 
 #include <errno.h>

@@ -1,4 +1,4 @@
-#include "interp.h"
+#include "interpolation.h"
 
 #include <math.h>
 
