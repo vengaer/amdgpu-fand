@@ -1,7 +1,13 @@
 CC          ?= gcc
 
-cflags      := -std=c11 -Wall -Wextra -Wpedantic -Waggregate-return -Wbad-function-cast \
-                -Wcast-qual -Wfloat-equal -Wmissing-include-dirs -Wnested-externs -Wpointer-arith \
+FAND        ?= amdgpu-fand-4.0
+FANCTL      ?= amdgpu-fanctl-4.0
+FAND_TEST   ?= amdgpu-fand-test
+
+CROSS       := n
+
+cflags      := -std=c11 -Wall -Wextra -Wpedantic -Waggregate-return -Wbad-function-cast                \
+                -Wcast-qual -Wfloat-equal -Wmissing-include-dirs -Wnested-externs -Wpointer-arith      \
                 -Wredundant-decls -Wshadow -Wunknown-pragmas -Wswitch -Wundef -Wunused -Wwrite-strings \
                 -MD -MP -c -g
 cppflags    := -D_GNU_SOURCE
@@ -30,11 +36,6 @@ test_objs    = $(filter-out %/main.$(oext),$(fand_objs) $(fanctl_objs))
 
 drm_support := $(if $(wildcard /usr/*/libdrm/amdgpu_drm.h),y,n)
 cppflags    += $(if $(findstring _y_,_$(drm_support)_),-DFAND_DRM_SUPPORT)
-
-FAND        ?= amdgpu-fand-4.0
-FANCTL      ?= amdgpu-fanctl-4.0
-FAND_TEST   ?= amdgpu-fand-test
-
 
 # $(call mk-module-build-dir)
 define mk-module-build-dir
@@ -115,6 +116,13 @@ define conditional-obj
 $(eval obj_deps := $(obj_deps) $(2):$(1))
 endef
 
+define set-endian-flags
+$(if $(findstring _y_,_$(CROSS)_),
+    $(eval cppflags := -DFAND_RUNTIME_DETECT_ENDIAN $(cppflags)),
+  $(if $(little_endian),
+      $(eval cppflags := -DFAND_$(if $(filter-out y,$(little_endian)),BIG,LITTLE)_ENDIAN $(cppflags))))
+endef
+
 # $(call echo-build-step, program, file)
 define echo-build-step
 $(info [$(1)] $(notdir $(2)))
@@ -176,6 +184,7 @@ ifneq ($(configuration),)
     $(call include-module,src)
 endif
 
+$(call set-endian-flags)
 $(call override-implicit-vars)
 
 $(prepare): $(prepare_deps)

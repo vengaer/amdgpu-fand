@@ -8,7 +8,6 @@ endian_mk               := $(builddir)/endian.mk
 prepare_deps += $(endian_mk) $($(module_name)_builddir)
 build_deps   += $($(module_name)_target)
 target_deps  += $(eval include $(endian_mk))
-cppflags     += -DFAND_$(if $(filter-out y,$(little_endian)),BIG,LITTLE)_ENDIAN
 
 $($(module_name)_target): $($(module_name)_obj)
 	$(call echo-ld,$@)
