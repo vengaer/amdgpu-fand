@@ -1,15 +1,13 @@
 #include "test.h"
 #include "test_sha1.h"
+#include "test_record_queue.h"
 
 int main(void) {
     test_sha1();
+    test_record_queue_push_pop();
+    test_record_queue_peek();
+    test_record_queue_flush();
+    test_record_queue_full();
 
-    if(failed_assertions) {
-        printf("%d/%d assertions failed\n", failed_assertions, total_assertions);
-    }
-    else {
-        printf("Successfully finished %d asseritons\n", total_assertions);
-    }
-
-    return failed_assertions;
+    return test_summary();;
 }

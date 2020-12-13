@@ -15,4 +15,6 @@
 extern int failed_assertions;
 extern int total_assertions;
 
+int test_summary(void);
+
 #endif /* TEST_H */
