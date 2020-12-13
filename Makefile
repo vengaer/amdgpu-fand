@@ -29,7 +29,6 @@ root        := $(abspath $(CURDIR))
 srcdir      := $(root)/src
 builddir    := $(root)/build
 
-incdirs     :=
 fand_objs   :=
 fanctl_objs :=
 test_objs    = $(filter-out %/main.$(oext),$(fand_objs) $(fanctl_objs))
