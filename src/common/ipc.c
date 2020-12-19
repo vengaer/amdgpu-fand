@@ -7,4 +7,3 @@ unsigned char ipc_valid_requests[4] = {
     ipc_matrix_req
 };
 
-
