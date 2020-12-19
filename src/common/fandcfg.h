@@ -2,7 +2,7 @@
 #define DEFS_H
 
 #define DAEMON_WORKING_DIR "/var/run/amdgpu-fand"
-#define SERVER_SOCKET DAEMON_WORKING_DIR"/fand.sock"
+#define DAEMON_SERVER_SOCKET DAEMON_WORKING_DIR"/fand.sock"
 
 enum { HWMON_PATH_SIZE = 256 };
 enum { MAX_TEMP_THRESHOLDS = 16 };

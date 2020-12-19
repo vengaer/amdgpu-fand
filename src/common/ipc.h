@@ -4,24 +4,29 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
-enum { IPC_MAX_MSG_LENGTH = 35 };
+enum { IPC_MAX_MSG_LENGTH = 48 };
 
-enum ipc_cmd {
-    ipc_privileged = 0,
-    ipc_exit_req,
-    ipc_unprivileged = 32,
-    ipc_speed_req,
-    ipc_temp_req,
-    ipc_matrix_req,
-    ipc_exit_rsp,
-    ipc_speed_rsp,
-    ipc_temp_rsp,
-    ipc_matrix_rsp
+typedef unsigned char ipc_request;
+typedef unsigned char ipc_response;
+
+enum {
+    ipc_req_privileged = 0,
+    ipc_req_exit,
+    ipc_req_unprivileged = 32,
+    ipc_req_speed,
+    ipc_req_temp,
+    ipc_req_matrix,
+    ipc_req_inval = 0xff
 };
 
-enum ipc_rsp {
-    ipc_ok,
-    ipc_err
+struct ipc_pair {
+    char const *name;
+    ipc_request code;
+};
+
+enum {
+    ipc_rsp_ok,
+    ipc_rsp_err
 };
 
 union unsockaddr {
@@ -29,6 +34,7 @@ union unsockaddr {
     struct sockaddr_un addr_un;
 };
 
-extern unsigned char ipc_valid_requests[4];
+extern ipc_request ipc_valid_requests[4];
+extern struct ipc_pair ipc_request_map[4];
 
 #endif /* IPC_H */

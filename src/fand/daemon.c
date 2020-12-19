@@ -4,6 +4,7 @@
 #include "fandcfg.h"
 #include "filesystem.h"
 #include "ipc.h"
+#include "server.h"
 
 #include <errno.h>
 #include <signal.h>
@@ -15,15 +16,34 @@
 #include <sys/inotify.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 static sig_atomic_t volatile daemon_alive = 1;
+static struct sigaction sa;
+
+static void daemon_kill(void) {
+    daemon_alive = 0;
+}
 
 static void daemon_sig_handler(int signal) {
+    int childstatus;
+
     switch(signal) {
         case SIGINT:
         case SIGTERM:
-            daemon_alive = 0;
+            daemon_kill();
+            break;
+        case SIGPIPE:
+            syslog(LOG_WARNING, "Broken pipe");
+            break;
+        case SIGCHLD:
+            while(waitpid(-1, &childstatus, WNOHANG) > 0);
+
+            if(WEXITSTATUS(childstatus) == FAND_SERVER_EXIT) {
+                daemon_alive = 0;
+            }
+
             break;
     }
 }
@@ -43,9 +63,6 @@ static int daemon_fork(void) {
         return -1;
     }
 
-    signal(SIGCHLD, SIG_IGN);
-    signal(SIGHUP, SIG_IGN);
-
     pid = fork();
 
     if(pid < 0) {
@@ -64,14 +81,24 @@ static int daemon_fork(void) {
 }
 
 static int daemon_init(bool fork, bool dryrun, char const *config, struct fand_config *data, struct inotify_watch *watch) {
-    signal(SIGINT, daemon_sig_handler);
+    openlog(0, !fork * LOG_PERROR, LOG_DAEMON);
+
+    signal(SIGINT,  daemon_sig_handler);
     signal(SIGTERM, daemon_sig_handler);
+    signal(SIGPIPE, daemon_sig_handler);
+    signal(SIGHUP, SIG_IGN);
+
+    sa.sa_handler = daemon_sig_handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = SA_RESTART;
+    if(sigaction(SIGCHLD, &sa, 0) == -1) {
+        syslog(LOG_ERR, "Failed to set SIGCHLD handler: %s", strerror(errno));
+        return -1;
+    }
 
     if(fork && daemon_fork()) {
         return -1;
     }
-
-    openlog(0, !fork * LOG_PERROR, LOG_DAEMON);
     umask(0);
 
     if(mkdir(DAEMON_WORKING_DIR, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH)) {
@@ -88,9 +115,9 @@ static int daemon_init(bool fork, bool dryrun, char const *config, struct fand_c
         return -1;
     }
 
-    //if(server_init()) {
-        //return -1;
-    //}
+    if(server_init()) {
+        return -1;
+    }
 
     if(fsys_watch_init(config, watch, IN_MODIFY)) {
         return -1;
@@ -128,16 +155,16 @@ static int daemon_reload(char const *path, struct fand_config *data) {
     return 0;
 }
 
-static int daemon_kill(struct inotify_watch const *watch) {
+static int daemon_free(struct inotify_watch const *watch) {
     int status = 0;
 
     if(fsys_watch_clear(watch)) {
         status = -1;
     }
 
-    //if(server_kill()) {
-        //status = -1;
-    //}
+    if(server_kill()) {
+        status = -1;
+    }
     if(rmdir(DAEMON_WORKING_DIR)) {
         syslog(LOG_ERR, "Failed to remove working directory: %s", strerror(errno));
         status = -1;
@@ -152,15 +179,12 @@ static int daemon_kill(struct inotify_watch const *watch) {
     return status;
 }
 
-static int daemon_process_messages(struct fand_config *data) {
-}
-
 static inline int daemon_adjust_fanspeed(void) {
     int status = fanctrl_adjust();
 
     if(status == FAND_FATAL_ERR) {
         syslog(LOG_EMERG, "Fatal error encountered, exiting");
-        daemon_alive = 0;
+        daemon_kill();
     }
 
     return status;
@@ -174,7 +198,7 @@ static inline void daemon_watch_event(char const *config, struct fand_config *da
     if(watch->triggered) {
         if(daemon_reload(config, data) == FAND_FATAL_ERR) {
             syslog(LOG_EMERG, "Fatal error encountered, exiting");
-            daemon_alive = 0;
+            daemon_kill();
         }
     }
 }
@@ -191,15 +215,14 @@ int daemon_main(bool fork, bool dryrun, char const *config) {
 
     if(daemon_init(fork, dryrun, config, &data, &watch)) {
         status = 1;
-        daemon_alive = 0;
+        daemon_kill();
     }
 
     while(daemon_alive) {
         status = daemon_adjust_fanspeed();
         daemon_watch_event(config, &data, &watch);
-        daemon_process_messages(&data);
-        sleep(data.interval);
+        server_poll(&data);
     }
 
-    return status | daemon_kill(&watch);
+    return status | daemon_free(&watch);
 }
