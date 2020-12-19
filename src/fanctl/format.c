@@ -61,15 +61,15 @@ void format_matrix(unsigned char nrows, unsigned char const *matrix) {
 
 void format_temp(int temp) {
     if(format_utf8_support()) {
-        printf("%d " DEGC_UTF8 "\n", temp);
+        printf("%d" DEGC_UTF8 "\n", temp);
     }
     else {
-        printf("%d " DEGC_ASCII "\n", temp);
+        printf("%d" DEGC_ASCII "\n", temp);
     }
 }
 
 void format_speed(int speed) {
-    printf("%d %%\n", speed);
+    printf("%d%%\n", speed);
 }
 
 int format(union unpack_result const *result, ipc_request req, ipc_response rsp) {
