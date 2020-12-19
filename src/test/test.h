@@ -17,7 +17,7 @@
 #define run(test)                                                                       \
     do {                                                                                \
         int CAT_EXPAND(prev_assertions_,__LINE__) = failed_assertions;                  \
-        printf("%-30s --> ", #test);                                                    \
+        printf("%-36s --> ", #test);                                                    \
         test();                                                                         \
         printf("%s\n", CAT_EXPAND(prev_assertions_,__LINE__) == failed_assertions ?     \
                 "ok" : "fail");                                                         \

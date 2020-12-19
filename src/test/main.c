@@ -1,6 +1,7 @@
 #include "interpolation_test.h"
 #include "record_queue_test.h"
 #include "sha1_test.h"
+#include "serialize_test.h"
 #include "test.h"
 
 int main(void) {
@@ -16,6 +17,14 @@ int main(void) {
     section(interpolation);
     run(test_lerp);
     run(test_lerp_inverse);
+
+    section(serialize);
+    run(test_packf);
+    run(test_packf_insufficient_bufsize);
+    run(test_packf_invalid_fmtstring);
+    run(test_unpackf);
+    run(test_unpackf_insufficient_bufsize);
+    run(test_unpackf_invalid_fmtstring);
 
     return test_summary();;
 }
