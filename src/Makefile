@@ -1,4 +1,3 @@
-$(call include-module,configure)
 $(call include-module,common)
 
 $(call conditional-include-module,fand)

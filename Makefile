@@ -123,13 +123,6 @@ define conditional-obj
 $(eval obj_deps := $(obj_deps) $(2):$(1))
 endef
 
-define set-endian-flags
-$(if $(findstring _y_,_$(CROSS)_),
-    $(eval cppflags := -DFAND_RUNTIME_DETECT_ENDIAN $(cppflags)),
-  $(if $(little_endian),
-      $(eval cppflags := -DFAND_$(if $(filter-out y,$(little_endian)),BIG,LITTLE)_ENDIAN $(cppflags))))
-endef
-
 # $(call echo-build-step, program, file)
 define echo-build-step
 $(info [$(1)] $(notdir $(2)))
@@ -191,7 +184,6 @@ ifneq ($(configuration),)
     $(call include-module,src)
 endif
 
-$(call set-endian-flags)
 $(call override-implicit-vars)
 
 $(prepare): $(prepare_deps)
