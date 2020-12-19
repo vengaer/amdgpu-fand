@@ -1,7 +1,7 @@
 CC          ?= gcc
 
-FAND        ?= amdgpu-fand-4.0
-FANCTL      ?= amdgpu-fanctl-4.0
+FAND        ?= amdgpu-fand
+FANCTL      ?= amdgpu-fanctl
 FAND_TEST   ?= amdgpu-fand-test
 
 CROSS       := n
