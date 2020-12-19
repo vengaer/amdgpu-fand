@@ -61,6 +61,7 @@ int client_kill(void) {
 
 ssize_t client_send_and_recv(unsigned char *buffer, size_t bufsize, ipc_request request) {
     ssize_t nrecv;
+
     if(client_init()) {
         return -1;
     }
@@ -81,5 +82,4 @@ ssize_t client_send_and_recv(unsigned char *buffer, size_t bufsize, ipc_request 
 cleanup:
     client_kill();
     return nrecv;
-
 }

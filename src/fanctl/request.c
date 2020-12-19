@@ -9,9 +9,6 @@
 
 int request_convert(char const *target, ipc_request *request) {
     *request = ipc_req_inval;
-    if(!target) {
-        return 0;
-    }
     for(unsigned i = 0; i < array_size(ipc_request_map); i++) {
         if(strcmp(target, ipc_request_map[i].name) == 0) {
             *request = ipc_request_map[i].code;

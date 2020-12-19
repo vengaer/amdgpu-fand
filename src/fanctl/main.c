@@ -69,12 +69,12 @@ int main(int argc, char **argv) {
         return 0;
     }
 
-    ipc_request request;
-    if(request_convert(args.target, &request)) {
-        return 1;
-    }
-
     if(args.target) {
+        ipc_request request;
+        if(request_convert(args.target, &request)) {
+            return 1;
+        }
+
         if(request_process_get(request)) {
             return 1;
         }
