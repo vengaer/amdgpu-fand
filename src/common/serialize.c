@@ -36,22 +36,22 @@ struct dfa_node {
     struct dfa_edge edges[5];
 };
 
-static struct dfa_node dfa_reject = {
+static struct dfa_node const dfa_reject = {
     .flags = DFA_REJECT,
     .edges = { { 0 } }
 };
 
-static struct dfa_node dfa_node_d = {
+static struct dfa_node const dfa_node_d = {
     .flags = DFA_ACCEPT | DFA_SIGNED,
     .edges = { { 0 } }
 };
 
-static struct dfa_node dfa_node_u = {
+static struct dfa_node const dfa_node_u = {
     .flags = DFA_ACCEPT | DFA_UNSIGNED,
     .edges = { { 0 } }
 };
 
-static struct dfa_node dfa_node_l1 = {
+static struct dfa_node const dfa_node_l1 = {
     .flags = DFA_LONG1,
     .edges = {
         { .c = 'd',     .end = &dfa_node_d },
@@ -61,7 +61,7 @@ static struct dfa_node dfa_node_l1 = {
     }
 };
 
-static struct dfa_node dfa_node_l0 = {
+static struct dfa_node const dfa_node_l0 = {
     .flags = DFA_LONG0,
     .edges = {
         { .c = 'd',     .end = &dfa_node_d  },
@@ -72,7 +72,7 @@ static struct dfa_node dfa_node_l0 = {
     }
 };
 
-static struct dfa_node dfa_node_h1 = {
+static struct dfa_node const dfa_node_h1 = {
     .flags = DFA_HALF1,
     .edges = {
         { .c = 'd',     .end = &dfa_node_d },
@@ -82,7 +82,7 @@ static struct dfa_node dfa_node_h1 = {
     }
 };
 
-static struct dfa_node dfa_node_h0 = {
+static struct dfa_node const dfa_node_h0 = {
     .flags = DFA_HALF0,
     .edges = {
         { .c = 'h',     .end = &dfa_node_h1 },
@@ -93,7 +93,7 @@ static struct dfa_node dfa_node_h0 = {
     }
 };
 
-static struct dfa_node dfa_start = {
+static struct dfa_node const dfa_start = {
     .flags = 0,
     .edges = {
         { .c = 'h',     .end = &dfa_node_h0 },
