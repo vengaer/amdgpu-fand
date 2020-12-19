@@ -1,3 +1,4 @@
+#include "ipc.h"
 #include "macro.h"
 #include "serialize.h"
 
@@ -347,7 +348,7 @@ ssize_t packf(unsigned char *restrict buffer, size_t bufsize, char const *restri
 
         nbytes = nrepeat * valsize;
 
-        if((size_t)nwritten + nbytes >= bufsize) {
+        if((size_t)nwritten + nbytes > bufsize) {
             nwritten = -E2BIG;
             goto cleanup;
         }
@@ -402,7 +403,7 @@ ssize_t unpackf(unsigned char const *restrict buffer, size_t bufsize, char const
 
         nbytes = nrepeat * valsize;
 
-        if((size_t)nread + nbytes >= bufsize) {
+        if((size_t)nread + nbytes > bufsize) {
             nread = -E2BIG;
             goto cleanup;
         }
@@ -415,4 +416,107 @@ ssize_t unpackf(unsigned char const *restrict buffer, size_t bufsize, char const
 cleanup:
     va_end(args);
     return nread;
+}
+
+static ssize_t unpack_int(unsigned char const *restrict buffer, size_t bufsize, union unpack_result *restrict result) {
+    unsigned char len;
+    ipc_response rsp;
+    ssize_t rsplen = unpackf(buffer, bufsize, "%hhu%hhu", &len, &rsp);
+
+    if(rsplen < 0) {
+        return rsplen;
+    }
+
+    if(rsp) {
+        rsplen += unpackf(&buffer[rsplen], bufsize - rsplen, "%d", &result->error);
+    }
+    else {
+        rsplen += unpackf(&buffer[rsplen], bufsize - rsplen, "%d", &result->temp);
+    }
+
+    if(rsplen != len) {
+        return -1;
+    }
+
+    return rsp;
+}
+
+ssize_t pack_error(unsigned char *restrict buffer, size_t bufsize, int error) {
+    return packf(buffer, bufsize, "%hhu%hhu%d", sizeof(unsigned char) + sizeof(ipc_response) + sizeof(error), ipc_rsp_err, error);
+}
+
+ssize_t pack_speed(unsigned char *restrict buffer, size_t bufsize, int speed) {
+    return packf(buffer, bufsize, "%hhu%hhu%d", sizeof(unsigned char) + sizeof(ipc_response) + sizeof(speed), ipc_rsp_ok, speed);
+}
+
+ssize_t unpack_speed(unsigned char const *restrict buffer, size_t bufsize, union unpack_result *restrict result) {
+    return unpack_int(buffer, bufsize, result);
+}
+
+ssize_t pack_temp(unsigned char *restrict buffer, size_t bufsize, int temp) {
+    return packf(buffer, bufsize, "%hhu%hhu%d", sizeof(unsigned char) + sizeof(ipc_response) + sizeof(temp), ipc_rsp_ok, temp);
+}
+
+ssize_t unpack_temp(unsigned char const* restrict buffer, size_t bufsize, union unpack_result *restrict result) {
+    return unpack_int(buffer, bufsize, result);
+}
+
+ssize_t pack_matrix(unsigned char *restrict buffer, size_t bufsize, unsigned char const *restrict matrix, unsigned char nrows) {
+    unsigned char const len = sizeof(ipc_response) + sizeof(unsigned char) * (nrows * 2 + 2);
+    return packf(buffer, bufsize, "%hhu%hhu%hhu%*hhu", len, ipc_rsp_ok, nrows, 2 * nrows, matrix);
+}
+
+ssize_t unpack_matrix(unsigned char const *restrict buffer, size_t bufsize, union unpack_result *restrict result) {
+    unsigned char len;
+    ipc_response rsp;
+    ssize_t rsplen = unpackf(buffer, bufsize, "%hhu%hhu", &len, &rsp);
+    if(rsplen < 0) {
+        return rsplen;
+    }
+
+    if(rsp) {
+        rsplen += unpackf(&buffer[rsplen], bufsize - rsplen, "%d", &result->error);
+    }
+    else {
+        rsplen += unpackf(&buffer[rsplen], bufsize - rsplen, "%hhu", &result->matrix[0]);
+        if(rsplen < 0) {
+            return rsplen;
+        }
+
+        rsplen += unpackf(&buffer[rsplen], bufsize - rsplen, "%*hhu", 2 * result->matrix[0], &result->matrix[1]);
+    }
+
+    if(rsplen < 0) {
+        return rsplen;
+    }
+
+    if(rsplen != len) {
+        return -1;
+    }
+
+    return rsp;
+}
+
+ssize_t pack_exit_rsp(unsigned char *restrict buffer, size_t bufsize) {
+    return packf(buffer, bufsize, "%hhu%hhu", sizeof(unsigned char) + sizeof(ipc_response), ipc_rsp_ok);
+}
+
+ssize_t unpack_exit_rsp(unsigned char const *restrict buffer, size_t bufsize, union unpack_result *restrict result) {
+    unsigned char len;
+    ipc_response rsp;
+    ssize_t rsplen = unpackf(buffer, bufsize, "%hhu%hhu", &len, &rsp);
+
+    if(rsplen < 0) {
+        return rsplen;
+    }
+
+    if(rsp) {
+        rsplen += unpackf(&buffer[rsplen], bufsize - rsplen, "%d", &result->error);
+    }
+
+    if(len != rsplen) {
+        return -1;
+    }
+
+    return rsp;
 }
