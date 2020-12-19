@@ -22,9 +22,11 @@ int main(void) {
     run(test_packf);
     run(test_packf_insufficient_bufsize);
     run(test_packf_invalid_fmtstring);
+    run(test_packf_repeat);
     run(test_unpackf);
     run(test_unpackf_insufficient_bufsize);
     run(test_unpackf_invalid_fmtstring);
+    run(test_unpackf_repeat);
 
     return test_summary();;
 }

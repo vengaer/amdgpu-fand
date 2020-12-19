@@ -37,6 +37,21 @@ void test_packf_invalid_fmtstring(void) {
     fand_assert(packf(buffer, sizeof(buffer), "%hhhu", 23) < 0);
 }
 
+void test_packf_repeat(void) {
+    unsigned char packbuf[32];
+    unsigned char inbuf[] = {
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+    };
+    fand_assert(packf(packbuf, sizeof(packbuf), "%*hhu%d", sizeof(inbuf), inbuf, 30) == sizeof(inbuf) + sizeof(int));
+    int out;
+
+    for(unsigned i = 0; i < sizeof(inbuf); i++) {
+        fand_assert(inbuf[i] == packbuf[i]);
+    }
+    memcpy(&out, &packbuf[sizeof(inbuf)], sizeof(out));
+    fand_assert(out == 30);
+}
+
 void test_unpackf(void) {
     unsigned char buffer[32];
     ssize_t size = sizeof(unsigned char) +
@@ -76,4 +91,19 @@ void test_unpackf_invalid_fmtstring(void) {
 
     fand_assert(hhu == 0xff);
     fand_assert(d == 0xff);
+}
+
+void test_unpackf_repeat(void) {
+    unsigned char packbuf[32];
+    unsigned char inbuf[] = {
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+    };
+    fand_assert(packf(packbuf, sizeof(packbuf), "%*hhu%d", sizeof(inbuf), inbuf, 30) == sizeof(inbuf) + sizeof(int));
+    unsigned char outbuf[sizeof(inbuf)];
+    int outd;
+    fand_assert(unpackf(packbuf, sizeof(packbuf), "%*hhu%d", sizeof(outbuf), outbuf, &outd) == sizeof(outbuf) + sizeof(int));
+    for(unsigned i = 0; i < sizeof(outbuf); i++) {
+        fand_assert(outbuf[i] == inbuf[i]);
+    }
+    fand_assert(outd == 30);
 }
