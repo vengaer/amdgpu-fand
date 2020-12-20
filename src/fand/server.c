@@ -4,7 +4,6 @@
 #include "macro.h"
 #include "serialize.h"
 #include "server.h"
-#include "sigutil.h"
 #include "strutils.h"
 
 #include <errno.h>
@@ -81,7 +80,7 @@ int server_init(void) {
 
     int srvfd = socket(PF_UNIX, SOCK_STREAM, 0);
     if(srvfd == -1) {
-        syslog(LOG_ERR, "socket failed: %s", strerror(errno));
+        syslog(LOG_ERR, "Error while creating socket: %s", strerror(errno));
         return -1;
     }
 
@@ -94,19 +93,19 @@ int server_init(void) {
     }
 
     if(bind(srvfd, &srvaddr.addr, sizeof(srvaddr)) == -1) {
-        syslog(LOG_ERR, "bind failed: %s", strerror(errno));
+        syslog(LOG_ERR, "Error while binding socket: %s", strerror(errno));
         status = -1;
         goto closesock;
     }
 
     if(chmod(DAEMON_SERVER_SOCKET, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH) == -1) {
-        syslog(LOG_ERR, "chmod failed: %s", strerror(errno));
+        syslog(LOG_ERR, "Error while changing socket permissions: %s", strerror(errno));
         status = -1;
         goto rmsock;
     }
 
     if(listen(srvfd, SRVBACKLOG) == -1) {
-        syslog(LOG_ERR, "listen failed: %s", strerror(errno));
+        syslog(LOG_ERR, "Error on listen: %s", strerror(errno));
         status = -1;
         goto rmsock;
     }
@@ -128,12 +127,12 @@ closesock:
 int server_kill(void) {
     int status = 0;
     if(close(pollfd.fd) == -1) {
-        syslog(LOG_WARNING, "Could not close socket: %s", strerror(errno));
+        syslog(LOG_WARNING, "Error closing socket: %s", strerror(errno));
         status = -1;
     }
 
     if(unlink(DAEMON_SERVER_SOCKET) == -1) {
-        syslog(LOG_WARNING, "Could not unlink socket: %s", strerror(errno));
+        syslog(LOG_WARNING, "Error unlinking socket: %s", strerror(errno));
         status = -1;
     }
     return status;
@@ -150,9 +149,11 @@ int server_recv_and_respond(int fd, struct fand_config const *config) {
 
     switch(nbytes) {
         case -1:
-            return errno | CHLDRECV_ERR;
+            syslog(LOG_ERR, "Error on recv: %s", strerror(errno));
+            return 1;
         case 0:
-            return ECONNRESET | CHLDRECV_ERR;
+            syslog(LOG_INFO, "Connection reset by peer");
+            return 1;
         default:
             /* NOP */
             break;
@@ -166,8 +167,9 @@ int server_recv_and_respond(int fd, struct fand_config const *config) {
     else {
         switch(request) {
             case ipc_req_exit:
+                syslog(LOG_INFO, "Exit request received, signalling parent");
                 rsplen = pack_exit_rsp(buffer, sizeof(buffer));
-                exitcode |= CHLDEXIT;
+                exitcode = FAND_SERVER_EXIT;
                 break;
             case ipc_req_speed:
                 rsplen = server_pack_result(buffer, sizeof(buffer), request);
@@ -179,20 +181,22 @@ int server_recv_and_respond(int fd, struct fand_config const *config) {
                 rsplen = pack_matrix(buffer, sizeof(buffer), config->matrix, config->matrix_rows);
                 break;
             default:
-                exitcode |= (CHLDINVAL | (int)request);
+                syslog(LOG_WARNING, "Received invalid request %hhu, this should never happen!", request);
                 rsplen = pack_error(buffer, sizeof(buffer), EINVAL);
                 break;
         }
     }
 
     if(rsplen < 0) {
-        return exitcode | CHLDPACK_ERR;
+        syslog(LOG_ERR, "Error while packing response for %hhu", request);
+        return exitcode | 1;
     }
 
     nsent = send(fd, buffer, rsplen, 0);
 
     if(nsent == -1) {
-        exitcode |= (CHLDSEND_ERR | errno);
+        syslog(LOG_ERR, "Error on send: %s", strerror(errno));
+        exitcode |= 1;
     }
 
     return exitcode;

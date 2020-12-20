@@ -22,30 +22,8 @@
 #define SIGUTIL_ERRMASK 0xdc00
 #define SIGUTIL_VALMASK 0xffu
 
-extern sig_atomic_t volatile sigbits;
-
 typedef void (*sighandler_function)(int);
 
 int sigutil_sethandler(int signal, int flags, sighandler_function handler);
-void sigutil_catch(int signal);
-
-ssize_t sigutil_geterr(char *buffer, size_t bufsize);
-
-static inline bool sigutil_sigpipe_caught(void) {
-    return sigbits & SIGPIPE_CAUGHT;
-}
-
-static inline bool sigutil_sighup_caught(void) {
-    return sigbits & SIGHUP_CAUGHT;
-}
-
-static inline bool sigutil_has_error(void) {
-    return sigbits & SIGUTIL_ERRMASK;
-}
-
-static inline bool sigutil_exit(void) {
-    return sigbits & CHLDEXIT;
-}
-
 
 #endif /* SIGUTIL_H */

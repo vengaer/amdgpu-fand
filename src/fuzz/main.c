@@ -28,8 +28,7 @@ static void sighandler(int signal) {
             break;
         case SIGCHLD:
             while(waitpid(-1, &childstatus, WNOHANG) > 0);
-            sigbits = WEXITSTATUS(childstatus);
-            if(sigutil_exit()) {
+            if(WEXITSTATUS(childstatus) == FAND_SERVER_EXIT) {
                 abort();
             }
             break;

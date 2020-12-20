@@ -21,10 +21,9 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-enum { DAEMON_ERRBUF_SIZE = 64 };
-
 static sig_atomic_t volatile daemon_alive = 1;
-static bool daemon_reload_pending = false;
+static sig_atomic_t volatile daemon_reload_pending = 0;
+static sig_atomic_t volatile daemon_sigpipe_caught = 0;
 
 static void daemon_kill(void) {
     daemon_alive = 0;
@@ -38,12 +37,16 @@ static void daemon_sighandler(int signal) {
             daemon_kill();
             break;
         case SIGPIPE:
+            daemon_sigpipe_caught = 1;
+            break;
         case SIGHUP:
-            sigutil_catch(signal);
+            daemon_reload_pending = 1;
             break;
         case SIGCHLD:
             while(waitpid(-1, &status, WNOHANG) > 0);
-            sigbits = WEXITSTATUS(status);
+            if(WEXITSTATUS(status) == FAND_SERVER_EXIT) {
+                daemon_alive = 0;
+            }
             break;
     }
 }
@@ -54,37 +57,6 @@ static inline int daemon_set_sigacts(void) {
            sigutil_sethandler(SIGPIPE, SA_RESTART, daemon_sighandler) |
            sigutil_sethandler(SIGHUP,  SA_RESTART, daemon_sighandler) |
            sigutil_sethandler(SIGCHLD, SA_RESTART, daemon_sighandler);
-}
-
-static inline void daemon_handle_sigbits(void) {
-    char errbuf[DAEMON_ERRBUF_SIZE];
-    if(!sigbits) {
-        return;
-    }
-
-    if(sigutil_sigpipe_caught()) {
-        syslog(LOG_WARNING, "Broken pipe");
-    }
-    if(sigutil_sighup_caught()) {
-        syslog(LOG_INFO, "SIGHUP caught");
-        daemon_reload_pending = true;
-    }
-
-    if(sigutil_has_error()) {
-        if(sigutil_geterr(errbuf, sizeof(errbuf)) < 0) {
-            syslog(LOG_ERR, "Unable to get error");
-        }
-        else {
-            syslog(LOG_ERR, "%s", errbuf);
-        }
-    }
-
-    if(sigutil_exit()) {
-        syslog(LOG_INFO, "Exit request received");
-        daemon_alive = 0;
-    }
-
-    sigbits = 0;
 }
 
 static int daemon_fork(void) {
@@ -250,12 +222,34 @@ static inline void daemon_watch_event(char const *config, struct fand_config *da
     }
 
     if(daemon_reload_pending || watch->triggered) {
-        daemon_reload_pending = false;
+        daemon_reload_pending = 0;
 
         if(daemon_reload(config, data) == FAND_FATAL_ERR) {
             syslog(LOG_EMERG, "Fatal error encountered, exiting");
             daemon_kill();
         }
+    }
+}
+
+static int daemon_restart(bool fork, bool verbose, char const *config, struct fand_config *data, struct inotify_watch *watch) {
+    daemon_free(watch);
+    if(daemon_init(fork, verbose, config, data, watch)) {
+        return -1;
+    }
+
+    return 0;
+}
+
+static inline void daemon_handle_pending_signals(bool fork, bool verbose, char const *config, struct fand_config *data, struct inotify_watch *watch) {
+    if(daemon_sigpipe_caught) {
+        syslog(LOG_ERR, "Broken pipe, attempting to restart");
+        if(daemon_restart(fork, verbose, config, data, watch)) {
+            syslog(LOG_EMERG, "Restart failed");
+            daemon_alive = 0;
+        }
+
+        syslog(LOG_INFO, "Restart successful");
+        daemon_sigpipe_caught = 0;
     }
 }
 
@@ -277,7 +271,7 @@ int daemon_main(bool fork, bool verbose, char const *config) {
     while(daemon_alive) {
         status = daemon_adjust_fanspeed();
         daemon_watch_event(config, &data, &watch);
-        daemon_handle_sigbits();
+        daemon_handle_pending_signals(fork, verbose, config, &data, &watch);
         server_poll(&data);
     }
 

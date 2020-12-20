@@ -3,6 +3,8 @@
 
 #include "config.h"
 
+enum { FAND_SERVER_EXIT = 0x3 };
+
 int server_init(void);
 int server_kill(void);
 int server_recv_and_respond(int fd, struct fand_config const *config);
