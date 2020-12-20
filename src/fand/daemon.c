@@ -59,7 +59,7 @@ static int daemon_sigset(int signal, int flags) {
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = flags;
     if(sigaction(signal, &sa, 0) == -1) {
-        syslog(LOG_ERR, "Failed to set handler for signal %d: %s", signal, strerror(errno));
+        syslog(LOG_ERR, "Failed to set %s handler: %s", strsignal(signal), strerror(errno));
         return -1;
     }
     return 0;
