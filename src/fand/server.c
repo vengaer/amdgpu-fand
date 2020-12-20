@@ -162,7 +162,7 @@ int server_init(void) {
         goto closesock;
     }
 
-    if(chmod(DAEMON_SERVER_SOCKET, S_IRUSR | S_IWUSR | S_IWGRP | S_IROTH | S_IWOTH) == -1) {
+    if(chmod(DAEMON_SERVER_SOCKET, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH) == -1) {
         syslog(LOG_ERR, "chmod failed: %s", strerror(errno));
         status = -1;
         goto rmsock;
