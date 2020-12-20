@@ -202,10 +202,28 @@ int server_kill(void) {
     return status;
 }
 
+int server_handle_connection(int fd, struct fand_config const *config) {
+    int status = 0;
+    int pid = fork();
+    if(pid == -1) {
+        syslog(LOG_ERR, "Unable to fork to respond to incoming connection: %s", strerror(errno));
+        return -1;
+    }
+
+    if(!pid) {
+        /* Child process */
+        close(pollfd.fd);
+        status = server_recv_and_respond(fd, config);
+        close(fd);
+        exit(status);
+    }
+
+    return 0;
+}
+
 int server_poll(struct fand_config const *config) {
     union unsockaddr clientaddr;
     int newfd;
-    int status;
 
     int nready = poll(&pollfd, 1u, config->interval * 1000);
 
@@ -230,19 +248,10 @@ int server_poll(struct fand_config const *config) {
         return -1;
     }
 
-    int pid = fork();
-    if(pid == -1) {
-        syslog(LOG_ERR, "Unable to fork to respond to incoming connection: %s", strerror(errno));
+    if(server_handle_connection(newfd, config) < 0) {
         return -1;
     }
 
-    if(!pid) {
-        /* Child process */
-        close(pollfd.fd);
-        status = server_recv_and_respond(newfd, config);
-        close(newfd);
-        exit(status);
-    }
     close(newfd);
 
     return 0;
