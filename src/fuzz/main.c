@@ -12,6 +12,7 @@
 #include <string.h>
 
 #include <fcntl.h>
+#include <syslog.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -75,6 +76,9 @@ int LLVMFuzzerTestOneInput(uint8_t const *data, size_t size) {
         return 0;
     }
 
+    setlogmask(0);
+    openlog(0, 0, LOG_DAEMON);
+
     int fd = open(SOCKFILE, O_RDWR | O_CREAT);
 
     if(fd == -1) {
@@ -100,6 +104,7 @@ cleanup:
     if(server_kill()) {
         fputs("Error stopping server\n", stderr);
     }
+    closelog();
 
     return 0;
 }

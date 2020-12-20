@@ -97,11 +97,6 @@ static void daemon_openlog(bool fork, bool verbose) {
      * LOG_DEBUG as well */
     int mask = 0x1f | (0xe0 * verbose);
 
-#ifdef FAND_FUZZ_CONFIG
-    /* Don't log at all while fuzzing */
-    mask = 0;
-#endif
-
     setlogmask(mask);
     openlog(0, !fork * LOG_PERROR, LOG_DAEMON);
 }
