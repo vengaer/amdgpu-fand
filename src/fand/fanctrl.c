@@ -25,6 +25,7 @@ struct fanctrl_matrix {
 
 static struct fanctrl_matrix matrix;
 static unsigned char hysteresis;
+static short current_threshold;
 static bool throttle;
 
 static unsigned long fanctrl_percentage_to_pwm(unsigned long percentage) {
@@ -73,6 +74,7 @@ int fanctrl_release(void) {
 }
 
 int fanctrl_configure(struct fand_config *config) {
+    current_threshold = -1;
     hysteresis = config->hysteresis;
     throttle = config->throttle;
     return fanctrl_set_matrix(config->matrix, config->matrix_rows);
@@ -81,6 +83,7 @@ int fanctrl_configure(struct fand_config *config) {
 int fanctrl_adjust(void) {
     int temp, speed;
     float frac;
+    short threshold;
 
     if(matrix.rows == 0) {
         syslog(LOG_EMERG, "Matrix is empty");
@@ -94,16 +97,16 @@ int fanctrl_adjust(void) {
         return temp;
     }
 
-    /* TODO: add hysteresis support */
-
     /* Below low threshold */
     if(temp <= matrix.temps[0]) {
+        threshold = -1;
         speed = matrix.speeds[0] * !throttle;
     }
     else if(temp <= matrix.temps[matrix.rows - 1]) {
         /* Between two thresholds */
         for(unsigned i = 0; i < matrix.rows - 1u; i++) {
             if(matrix.temps[i] < temp && matrix.temps[i + 1] >= temp) {
+                threshold = i;
                 frac = lerp_inverse(matrix.temps[i], matrix.temps[i + 1], temp);
                 speed = lerp(matrix.speeds[i], matrix.speeds[i + 1], frac);
                 break;
@@ -112,7 +115,17 @@ int fanctrl_adjust(void) {
     }
     else {
         /* Above high threshold */
+        threshold = matrix.rows - 1;
         speed = matrix.speeds[matrix.rows - 1];
+    }
+
+    if(current_threshold > -1 && threshold < current_threshold) {
+        if(temp + hysteresis > matrix.speeds[current_threshold]) {
+            speed = matrix.speeds[current_threshold];
+        }
+        else {
+            current_threshold = threshold;
+        }
     }
 
     return hwmon_write_pwm(fanctrl_percentage_to_pwm(speed));
