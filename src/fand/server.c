@@ -4,6 +4,7 @@
 #include "macro.h"
 #include "serialize.h"
 #include "server.h"
+#include "sigutil.h"
 #include "strutils.h"
 
 #include <errno.h>
@@ -149,9 +150,9 @@ int server_recv_and_respond(int fd, struct fand_config const *config) {
 
     switch(nbytes) {
         case -1:
-            return errno | SRVCHLD_RECV_ERR;
+            return errno | CHLDRECV_ERR;
         case 0:
-            return errno | SRVCHLD_CON_RESET;
+            return ECONNRESET | CHLDRECV_ERR;
         default:
             /* NOP */
             break;
@@ -165,9 +166,8 @@ int server_recv_and_respond(int fd, struct fand_config const *config) {
     else {
         switch(request) {
             case ipc_req_exit:
-                syslog(LOG_INFO, "Exit request received, signalling parent");
                 rsplen = pack_exit_rsp(buffer, sizeof(buffer));
-                exitcode |= SRVCHLD_EXIT;
+                exitcode |= CHLDEXIT;
                 break;
             case ipc_req_speed:
                 rsplen = server_pack_result(buffer, sizeof(buffer), request);
@@ -179,20 +179,20 @@ int server_recv_and_respond(int fd, struct fand_config const *config) {
                 rsplen = pack_matrix(buffer, sizeof(buffer), config->matrix, config->matrix_rows);
                 break;
             default:
-                exitcode |= (SRVCHLD_INVAL | (int)request);
+                exitcode |= (CHLDINVAL | (int)request);
                 rsplen = pack_error(buffer, sizeof(buffer), EINVAL);
                 break;
         }
     }
 
     if(rsplen < 0) {
-        return exitcode | SRVCHLD_PACK_ERR;
+        return exitcode | CHLDPACK_ERR;
     }
 
     nsent = send(fd, buffer, rsplen, 0);
 
     if(nsent == -1) {
-        exitcode |= (SRVCHLD_SEND_ERR | errno);
+        exitcode |= (CHLDSEND_ERR | errno);
     }
 
     return exitcode;

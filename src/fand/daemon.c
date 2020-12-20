@@ -5,6 +5,7 @@
 #include "filesystem.h"
 #include "ipc.h"
 #include "pidfile.h"
+#include "sigutil.h"
 #include "server.h"
 
 #include <errno.h>
@@ -20,15 +21,16 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+enum { DAEMON_ERRBUF_SIZE = 64 };
+
 static sig_atomic_t volatile daemon_alive = 1;
-static sig_atomic_t volatile sighup_recvd = 0;
-static sig_atomic_t volatile sigbits = 0;
+static bool daemon_reload_pending = false;
 
 static void daemon_kill(void) {
     daemon_alive = 0;
 }
 
-static void daemon_sig_handler(int signal) {
+static void daemon_sighandler(int signal) {
     int status;
     switch(signal) {
         case SIGINT:
@@ -36,62 +38,48 @@ static void daemon_sig_handler(int signal) {
             daemon_kill();
             break;
         case SIGPIPE:
-            break;
         case SIGHUP:
-            sighup_recvd = 1;
+            sigutil_catch(signal);
             break;
         case SIGCHLD:
             while(waitpid(-1, &status, WNOHANG) > 0);
-            sigbits |= WEXITSTATUS(status);
+            sigbits = WEXITSTATUS(status);
             break;
     }
 }
 
-static int daemon_sigset(int signal, int flags) {
-    struct sigaction sa;
-
-    sa.sa_handler = daemon_sig_handler;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = flags;
-    if(sigaction(signal, &sa, 0) == -1) {
-        syslog(LOG_ERR, "Failed to set %s handler: %s", strsignal(signal), strerror(errno));
-        return -1;
-    }
-    return 0;
-}
-
 static inline int daemon_set_sigacts(void) {
-    return daemon_sigset(SIGINT,  SA_RESTART) |
-           daemon_sigset(SIGTERM, SA_RESTART) |
-           daemon_sigset(SIGPIPE, SA_RESTART) |
-           daemon_sigset(SIGHUP,  SA_RESTART) |
-           daemon_sigset(SIGCHLD, SA_RESTART);
+    return sigutil_sethandler(SIGINT,  SA_RESTART, daemon_sighandler) |
+           sigutil_sethandler(SIGTERM, SA_RESTART, daemon_sighandler) |
+           sigutil_sethandler(SIGPIPE, SA_RESTART, daemon_sighandler) |
+           sigutil_sethandler(SIGHUP,  SA_RESTART, daemon_sighandler) |
+           sigutil_sethandler(SIGCHLD, SA_RESTART, daemon_sighandler);
 }
 
 static inline void daemon_handle_sigbits(void) {
-    static unsigned const valmask = 0xff;
-    int status = sigbits;
-
-    if(!status) {
+    char errbuf[DAEMON_ERRBUF_SIZE];
+    if(!sigbits) {
         return;
     }
 
-    if(status & SRVCHLD_CON_RESET) {
-        syslog(LOG_INFO, "Connection reset by peer");
+    if(sigutil_sigpipe_caught()) {
+        syslog(LOG_WARNING, "Broken pipe");
     }
-    if(status & SRVCHLD_RECV_ERR) {
-        syslog(LOG_ERR, "Error on recv: %s", strerror(status & valmask));
+    if(sigutil_sighup_caught()) {
+        syslog(LOG_INFO, "SIGHUP caught");
+        daemon_reload_pending = true;
     }
-    if(status & SRVCHLD_PACK_ERR) {
-        syslog(LOG_ERR, "Could not pack response");
+
+    if(sigutil_has_error()) {
+        if(sigutil_geterr(errbuf, sizeof(errbuf)) < 0) {
+            syslog(LOG_ERR, "Unable to get error");
+        }
+        else {
+            syslog(LOG_ERR, "%s", errbuf);
+        }
     }
-    if(status & SRVCHLD_SEND_ERR) {
-        syslog(LOG_ERR, "Error on send: %s", strerror(status & valmask));
-    }
-    if(status & SRVCHLD_INVAL) {
-        syslog(LOG_ERR, "Received invalid request %d, this should never happen", status & valmask);
-    }
-    if(status & SRVCHLD_EXIT) {
+
+    if(sigutil_exit()) {
         syslog(LOG_INFO, "Exit request received");
         daemon_alive = 0;
     }
@@ -261,9 +249,8 @@ static inline void daemon_watch_event(char const *config, struct fand_config *da
         syslog(LOG_WARNING, "Failed to poll inotify events");
     }
 
-    /* Reload on SIGHUP or if config has been modified */
-    if(sighup_recvd || watch->triggered) {
-        sighup_recvd = 0;
+    if(daemon_reload_pending || watch->triggered) {
+        daemon_reload_pending = false;
 
         if(daemon_reload(config, data) == FAND_FATAL_ERR) {
             syslog(LOG_EMERG, "Fatal error encountered, exiting");

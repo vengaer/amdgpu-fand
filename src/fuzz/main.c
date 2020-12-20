@@ -1,5 +1,6 @@
 #include "config.h"
 #include "server.h"
+#include "sigutil.h"
 
 #include <errno.h>
 #include <signal.h>
@@ -27,24 +28,12 @@ static void sighandler(int signal) {
             break;
         case SIGCHLD:
             while(waitpid(-1, &childstatus, WNOHANG) > 0);
-            if(WEXITSTATUS(childstatus) == FAND_SERVER_EXIT) {
-                //abort();
+            sigbits = WEXITSTATUS(childstatus);
+            if(sigutil_exit()) {
+                abort();
             }
             break;
     }
-}
-
-static int fuzz_sigset(int signal, int flags) {
-    struct sigaction sa;
-
-    sa.sa_handler = sighandler;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = flags;
-    if(sigaction(signal, &sa, 0) == -1) {
-        fprintf(stderr, "Failed to set %s: %s\n", strsignal(signal), strerror(errno));
-        return -1;
-    }
-    return 0;
 }
 
 int write_data(int fd, uint8_t const *data, size_t size) {
@@ -78,7 +67,7 @@ int LLVMFuzzerTestOneInput(uint8_t const *data, size_t size) {
         .interval = 2,
         .matrix = { 0 }
     };
-    if(fuzz_sigset(SIGPIPE, SA_RESTART) < 0 || fuzz_sigset(SIGCHLD, SA_RESTART) < 0) {
+    if(sigutil_sethandler(SIGPIPE, SA_RESTART, sighandler) < 0 || sigutil_sethandler(SIGCHLD, SA_RESTART, sighandler) < 0) {
         return 0;
     }
 
