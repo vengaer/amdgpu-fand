@@ -21,7 +21,7 @@
 #include <unistd.h>
 
 static sig_atomic_t volatile daemon_alive = 1;
-static struct sigaction sa;
+static sig_atomic_t volatile sighup_recvd = 0;
 
 static void daemon_kill(void) {
     daemon_alive = 0;
@@ -38,6 +38,9 @@ static void daemon_sig_handler(int signal) {
         case SIGPIPE:
             syslog(LOG_WARNING, "Broken pipe");
             break;
+        case SIGHUP:
+            sighup_recvd = 1;
+            break;
         case SIGCHLD:
             while(waitpid(-1, &childstatus, WNOHANG) > 0);
 
@@ -47,6 +50,27 @@ static void daemon_sig_handler(int signal) {
 
             break;
     }
+}
+
+static int daemon_sigset(int signal, int flags) {
+    struct sigaction sa;
+
+    sa.sa_handler = daemon_sig_handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = flags;
+    if(sigaction(signal, &sa, 0) == -1) {
+        syslog(LOG_ERR, "Failed to set handler for signal %d: %s", signal, strerror(errno));
+        return -1;
+    }
+    return 0;
+}
+
+static inline int daemon_set_sigacts(void) {
+    return daemon_sigset(SIGINT,  SA_RESTART) |
+           daemon_sigset(SIGTERM, SA_RESTART) |
+           daemon_sigset(SIGPIPE, SA_RESTART) |
+           daemon_sigset(SIGHUP,  SA_RESTART) |
+           daemon_sigset(SIGCHLD, SA_RESTART);
 }
 
 static int daemon_fork(void) {
@@ -84,16 +108,7 @@ static int daemon_fork(void) {
 static int daemon_init(bool fork, bool dryrun, char const *config, struct fand_config *data, struct inotify_watch *watch) {
     openlog(0, !fork * LOG_PERROR, LOG_DAEMON);
 
-    signal(SIGINT,  daemon_sig_handler);
-    signal(SIGTERM, daemon_sig_handler);
-    signal(SIGPIPE, daemon_sig_handler);
-    signal(SIGHUP, SIG_IGN);
-
-    sa.sa_handler = daemon_sig_handler;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = SA_RESTART;
-    if(sigaction(SIGCHLD, &sa, 0) == -1) {
-        syslog(LOG_ERR, "Failed to set SIGCHLD handler: %s", strerror(errno));
+    if(daemon_set_sigacts()) {
         return -1;
     }
 
@@ -205,7 +220,10 @@ static inline void daemon_watch_event(char const *config, struct fand_config *da
         syslog(LOG_WARNING, "Failed to poll inotify events");
     }
 
-    if(watch->triggered) {
+    /* Reload on SIGHUP or if config has been modified */
+    if(sighup_recvd || watch->triggered) {
+        sighup_recvd = 0;
+
         if(daemon_reload(config, data) == FAND_FATAL_ERR) {
             syslog(LOG_EMERG, "Fatal error encountered, exiting");
             daemon_kill();
