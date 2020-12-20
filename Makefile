@@ -2,9 +2,8 @@ CC          ?= gcc
 
 FAND        ?= amdgpu-fand
 FANCTL      ?= amdgpu-fanctl
-FAND_TEST   ?= amdgpu-fand-test
-
-CROSS       := n
+FAND_TEST   ?= amdgpu-testd
+FAND_FUZZ   ?= amdgpu-fuzzd
 
 cflags      := -std=c11 -Wall -Wextra -Wpedantic -Waggregate-return -Wbad-function-cast                \
                 -Wcast-qual -Wfloat-equal -Wmissing-include-dirs -Wnested-externs -Wpointer-arith      \
@@ -32,6 +31,7 @@ builddir    := $(root)/build
 fand_objs   :=
 fanctl_objs :=
 test_objs    = $(filter-out %/main.$(oext),$(fand_objs) $(fanctl_objs))
+fuzz_objs    = $(filter-out %/main.$(oext),$(fand_objs))
 
 drm_support := $(if $(wildcard /usr/*/libdrm/amdgpu_drm.h),y,n)
 cppflags    += $(if $(findstring _y_,_$(drm_support)_),-DFAND_DRM_SUPPORT)
@@ -145,10 +145,12 @@ $(eval __cfg := )
 $(if $(MAKECMDGOALS),
     $(if $(or $(findstring $(FAND_TEST),$(MAKECMDGOALS)), $(findstring test,$(MAKECMDGOALS))),
         $(eval __cfg := fand fanctl test),
-      $(if $(or $(findstring $(FAND),$(MAKECMDGOALS)), $(findstring fand,$(MAKECMDGOALS))),
-          $(eval __cfg += fand))
-      $(if $(or $(findstring $(FANCTL),$(MAKECMDGOALS)), $(findstring fanctl,$(MAKECMDGOALS))),
-          $(eval __cfg += fanctl))),
+      $(if $(or $(findstring $(FAND_FUZZ),$(MAKECMDGOALS)), $(findstring fuzz,$(MAKECMDGOALS))),
+          $(eval __cfg := fand fuzz),
+        $(if $(or $(findstring $(FAND),$(MAKECMDGOALS)), $(findstring fand,$(MAKECMDGOALS))),
+            $(eval __cfg += fand))
+        $(if $(or $(findstring $(FANCTL),$(MAKECMDGOALS)), $(findstring fanctl,$(MAKECMDGOALS))),
+            $(eval __cfg += fanctl)))),
   $(eval __cfg += fand fanctl))
 $(__cfg)
 )
@@ -201,6 +203,14 @@ $(FAND_TEST): $(target_deps) $(test_objs)
 	$(call echo-ld,$@)
 	$(QUIET)$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
+$(FAND_FUZZ): CC       := clang
+$(FAND_FUZZ): CFLAGS   += -fsanitize=fuzzer
+$(FAND_FUZZ): CPPFLAGS := -DFAND_FUZZ_CONFIG $(CPPFLAGS)
+$(FAND_FUZZ): LDFLAGS  += -fsanitize=fuzzer
+$(FAND_FUZZ): $(target_deps) $(fuzz_objs)
+	$(call echo-ld,$@)
+	$(QUIET)$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
+
 $(builddir)/%.$(oext): $(srcdir)/%.$(cext) | $(build_deps)
 	$(call echo-cc,$@)
 	$(QUIET)$(CC) -o $@ $^ $(CFLAGS) $(CPPFLAGS)
@@ -217,6 +227,9 @@ fanctl: $(FANCTL)
 .PHONY: test
 test: $(FAND_TEST)
 
+.PHONY: fuzz
+fuzz: $(FAND_FUZZ)
+
 .PHONY: clean
 clean:
-	$(QUIET)$(RM) $(builddir) $(FAND) $(FANCTL) $(FAND_TEST)
+	$(QUIET)$(RM) $(builddir) $(FAND) $(FANCTL) $(FAND_TEST) $(FAND_FUZZ)
