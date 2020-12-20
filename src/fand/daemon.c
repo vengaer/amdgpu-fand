@@ -105,8 +105,23 @@ static int daemon_fork(void) {
     return 0;
 }
 
-static int daemon_init(bool fork, char const *config, struct fand_config *data, struct inotify_watch *watch) {
+static void daemon_openlog(bool fork, bool verbose) {
+    /* Enable LOG_WARNING through LOG_EMERG by default,
+     * if verbose is true, enable LOG_NOTICE, LOG_INFO and
+     * LOG_DEBUG as well */
+    int mask = 0x1f | (0xe0 * verbose);
+
+#ifdef FAND_FUZZ_CONFIG
+    /* Don't log at all while fuzzing */
+    mask = 0;
+#endif
+
+    setlogmask(mask);
     openlog(0, !fork * LOG_PERROR, LOG_DAEMON);
+}
+
+static int daemon_init(bool fork, bool verbose, char const *config, struct fand_config *data, struct inotify_watch *watch) {
+    daemon_openlog(fork, verbose);
 
     if(daemon_set_sigacts()) {
         return -1;
@@ -231,7 +246,7 @@ static inline void daemon_watch_event(char const *config, struct fand_config *da
     }
 }
 
-int daemon_main(bool fork, char const *config) {
+int daemon_main(bool fork, bool verbose, char const *config) {
     int status;
     struct fand_config data = { 0 };
     struct inotify_watch watch = {
@@ -241,7 +256,7 @@ int daemon_main(bool fork, char const *config) {
         .triggered = false
     };
 
-    if(daemon_init(fork, config, &data, &watch)) {
+    if(daemon_init(fork, verbose, config, &data, &watch)) {
         status = 1;
         daemon_kill();
     }
