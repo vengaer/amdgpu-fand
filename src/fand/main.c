@@ -14,13 +14,11 @@ static char args_doc[] = "";
 static struct argp_option options[] = {
     {"no-fork", 'F', 0,      0, "Do not fork into background", 0},
     {"config",  'c', "FILE", 0, "Specify config path", 0 },
-    {"dry-run", 'D', 0,      0, "Do not claim control of fans", 0},
     { 0 }
 };
 
 struct args {
     bool fork;
-    bool dryrun;
     char const *config;
 };
 
@@ -33,9 +31,6 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
             break;
         case 'c':
             args->config = arg;
-            break;
-        case 'D':
-            args->dryrun = true;
             break;
         default:
             return ARGP_ERR_UNKNOWN;
@@ -57,11 +52,10 @@ int main(int argc, char **argv) {
 
     struct args args = {
         .fork = true,
-        .dryrun = false,
         .config = CONFIG_DEFAULT_PATH
     };
 
     argp_parse(&argp, argc, argv, 0, 0, &args);
 
-    return daemon_main(args.fork, args.dryrun, args.config);
+    return daemon_main(args.fork, args.config);
 }

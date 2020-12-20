@@ -5,7 +5,7 @@
 
 #include <stdbool.h>
 
-int fanctrl_init(bool init_dryrun);
+int fanctrl_init(void);
 int fanctrl_release(void);
 int fanctrl_configure(struct fand_config *config);
 int fanctrl_adjust(void);
