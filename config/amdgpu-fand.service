@@ -1,10 +1,10 @@
 [Unit]
-Description=amdgpu-fand
+Description=amdgpu-fand -- Daemon controlling the fan speed on Radeon cards
 
 [Service]
-Type=simple
-ExecStartPre=/usr/bin/sleep 10
-ExecStart=/usr/local/bin/amdgpu-fand -v
+Type=forking
+PIDFile=/var/run/amdgpu-fand/pid
+ExecStart=/usr/bin/amdgpu-fand
 
 [Install]
 WantedBy=multi-user.target
