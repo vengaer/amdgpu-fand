@@ -22,32 +22,27 @@
 
 static sig_atomic_t volatile daemon_alive = 1;
 static sig_atomic_t volatile sighup_recvd = 0;
+static sig_atomic_t volatile sigbits = 0;
 
 static void daemon_kill(void) {
     daemon_alive = 0;
 }
 
 static void daemon_sig_handler(int signal) {
-    int childstatus;
-
+    int status;
     switch(signal) {
         case SIGINT:
         case SIGTERM:
             daemon_kill();
             break;
         case SIGPIPE:
-            syslog(LOG_WARNING, "Broken pipe");
             break;
         case SIGHUP:
             sighup_recvd = 1;
             break;
         case SIGCHLD:
-            while(waitpid(-1, &childstatus, WNOHANG) > 0);
-
-            if(WEXITSTATUS(childstatus) == FAND_SERVER_EXIT) {
-                daemon_alive = 0;
-            }
-
+            while(waitpid(-1, &status, WNOHANG) > 0);
+            sigbits |= WEXITSTATUS(status);
             break;
     }
 }
@@ -71,6 +66,37 @@ static inline int daemon_set_sigacts(void) {
            daemon_sigset(SIGPIPE, SA_RESTART) |
            daemon_sigset(SIGHUP,  SA_RESTART) |
            daemon_sigset(SIGCHLD, SA_RESTART);
+}
+
+static inline void daemon_handle_sigbits(void) {
+    static unsigned const valmask = 0xff;
+    int status = sigbits;
+
+    if(!status) {
+        return;
+    }
+
+    if(status & SRVCHLD_CON_RESET) {
+        syslog(LOG_INFO, "Connection reset by peer");
+    }
+    if(status & SRVCHLD_RECV_ERR) {
+        syslog(LOG_ERR, "Error on recv: %s", strerror(status & valmask));
+    }
+    if(status & SRVCHLD_PACK_ERR) {
+        syslog(LOG_ERR, "Could not pack response");
+    }
+    if(status & SRVCHLD_SEND_ERR) {
+        syslog(LOG_ERR, "Error on send: %s", strerror(status & valmask));
+    }
+    if(status & SRVCHLD_INVAL) {
+        syslog(LOG_ERR, "Received invalid request %d, this should never happen", status & valmask);
+    }
+    if(status & SRVCHLD_EXIT) {
+        syslog(LOG_INFO, "Exit request received");
+        daemon_alive = 0;
+    }
+
+    sigbits = 0;
 }
 
 static int daemon_fork(void) {
@@ -264,6 +290,7 @@ int daemon_main(bool fork, bool verbose, char const *config) {
     while(daemon_alive) {
         status = daemon_adjust_fanspeed();
         daemon_watch_event(config, &data, &watch);
+        daemon_handle_sigbits();
         server_poll(&data);
     }
 

@@ -149,11 +149,9 @@ int server_recv_and_respond(int fd, struct fand_config const *config) {
 
     switch(nbytes) {
         case -1:
-            syslog(LOG_ERR, "Error on recv: %s", strerror(errno));
-            return 1;
+            return errno | SRVCHLD_RECV_ERR;
         case 0:
-            syslog(LOG_INFO, "Connection reset by peer");
-            return 1;
+            return errno | SRVCHLD_CON_RESET;
         default:
             /* NOP */
             break;
@@ -169,7 +167,7 @@ int server_recv_and_respond(int fd, struct fand_config const *config) {
             case ipc_req_exit:
                 syslog(LOG_INFO, "Exit request received, signalling parent");
                 rsplen = pack_exit_rsp(buffer, sizeof(buffer));
-                exitcode = FAND_SERVER_EXIT;
+                exitcode |= SRVCHLD_EXIT;
                 break;
             case ipc_req_speed:
                 rsplen = server_pack_result(buffer, sizeof(buffer), request);
@@ -181,22 +179,20 @@ int server_recv_and_respond(int fd, struct fand_config const *config) {
                 rsplen = pack_matrix(buffer, sizeof(buffer), config->matrix, config->matrix_rows);
                 break;
             default:
-                syslog(LOG_WARNING, "Received invalid request %hhu, this should never happen!", request);
+                exitcode |= (SRVCHLD_INVAL | (int)request);
                 rsplen = pack_error(buffer, sizeof(buffer), EINVAL);
                 break;
         }
     }
 
     if(rsplen < 0) {
-        syslog(LOG_ERR, "Failed to pack response for %hhu", request);
-        return exitcode | 1;
+        return exitcode | SRVCHLD_PACK_ERR;
     }
 
     nsent = send(fd, buffer, rsplen, 0);
 
     if(nsent == -1) {
-        syslog(LOG_ERR, "sendto failed: %s", strerror(errno));
-        exitcode |= 1;
+        exitcode |= (SRVCHLD_SEND_ERR | errno);
     }
 
     return exitcode;
