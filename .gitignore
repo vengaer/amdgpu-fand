@@ -1,5 +1,7 @@
 build/**
 amdgpu-fanctl*
 amdgpu-fand*
+amdgpu-fuzzd*
+amdgpu-testd*
 !src/*
 tags
