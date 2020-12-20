@@ -7,6 +7,7 @@ pipeline {
         CFLAGS='-Werror'
         ARTIFACT_DIR='artifacts'
         TEST_DIR='tests'
+        FUZZ_DIR='fuzz'
     }
     stages {
         stage('Gitlab Pending') {
@@ -84,6 +85,15 @@ pipeline {
                     export FAND_TEST=${TEST_DIR}/amdgpu-fand-test-${BUILD_NUMBER}-${CC}
                     make test drm_support=n -j$(nproc) -B
                 '''
+
+                echo 'Creating fuzz directory'
+                sh 'mkdir -p ${FUZZ_DIR}'
+
+                echo 'Build: CC=clang fuzz'
+                sh '''
+                    export FAND_FUZZ=${FUZZ_DIR}/amdgpu-fuzzd-${BUILD_NUMBER}-clang
+                    make fuzz -j$(nproc) -B
+                '''
             }
         }
         stage('Test') {
@@ -100,7 +110,13 @@ pipeline {
                 sh '${TEST_DIR}/amdgpu-fand-test-${BUILD_NUMBER}-gcc'
 
                 echo 'Test: CC=clang DRM=n'
-                sh '${TEST_DIR}/amdgpu-fand-test-${BUILD_NUMBER}-clang'
+                sh '${TEST_DIR}/amdgpu-fand-test-${BUILD_NUMBER}-clang -max_len=256 -max_total_time=240'
+            }
+        }
+        stage('Fuzz') {
+            steps {
+                echo '-- Starting fuzzing --'
+                sh '${FUZZ_DIR}/amdgpu-fuzzd-${BUILD_NUMBER}-clang -max_len=256 -max_total_time=240'
             }
         }
         stage('Gitlab Success') {
