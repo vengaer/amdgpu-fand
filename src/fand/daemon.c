@@ -4,6 +4,7 @@
 #include "fandcfg.h"
 #include "filesystem.h"
 #include "ipc.h"
+#include "pidfile.h"
 #include "server.h"
 
 #include <errno.h>
@@ -106,6 +107,10 @@ static int daemon_init(bool fork, bool dryrun, char const *config, struct fand_c
         return -1;
     }
 
+    if(pidfile_write()) {
+        return -1;
+    }
+
     if(chdir(DAEMON_WORKING_DIR)) {
         syslog(LOG_ERR, "Failed to set working directory: %s", strerror(errno));
         return -1;
@@ -165,6 +170,11 @@ static int daemon_free(struct inotify_watch const *watch) {
     if(server_kill()) {
         status = -1;
     }
+
+    if(pidfile_unlink()) {
+        status = -1;
+    }
+
     if(rmdir(DAEMON_WORKING_DIR)) {
         syslog(LOG_ERR, "Failed to remove working directory: %s", strerror(errno));
         status = -1;
