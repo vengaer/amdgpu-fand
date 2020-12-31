@@ -26,7 +26,7 @@ int test_summary(void) {
         printf("\n%d/%d assertions failed\n", failed_assertions, total_assertions);
     }
     else {
-        printf("\nSuccessfully finished %d asseritons\n", total_assertions);
+        printf("\nSuccessfully finished %d assertions\n", total_assertions);
     }
 
     return failed_assertions;
