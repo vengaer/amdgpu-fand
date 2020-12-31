@@ -197,7 +197,6 @@ int hwmon_read_temp(void) {
     if(fread_ulong_excl(hwmon_temp_input, &temp)) {
         return -1;
     }
-    temp /= MILLIDEGC_ADJUST;
     return (int)temp;
 }
 

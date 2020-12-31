@@ -17,6 +17,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+enum { MILLIDEGC_ADJUST = 1000 };
+
 struct fanctrl_matrix {
     unsigned char rows;
     unsigned char temps[MATRIX_MAX_SIZE / 2];
@@ -132,15 +134,19 @@ int fanctrl_adjust(void) {
 }
 
 int fanctrl_get_temp(void) {
+    int temp;
     #ifdef FAND_DRM_SUPPORT
 
-    return drm_get_temp();
+    temp = drm_get_temp();
 
     #else
 
-    return hwmon_read_temp();
+    temp = hwmon_read_temp();
 
     #endif
+
+    /* Millidegrees Celsius to degrees Celsius */
+    return temp < 0 ? temp : temp / MILLIDEGC_ADJUST;
 }
 
 int fanctrl_get_speed(void) {

@@ -99,6 +99,5 @@ int drm_get_temp(void) {
         return -1;
     }
 
-    /* Convert millidegrees to degrees */
-    return temp / MILLIDEGC_ADJUST;
+    return temp;
 }
