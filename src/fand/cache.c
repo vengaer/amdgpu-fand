@@ -1,5 +1,6 @@
 #include "cache.h"
 #include "filesystem.h"
+#include "serialize.h"
 
 #include <errno.h>
 #include <stdbool.h>
@@ -73,26 +74,21 @@ static ssize_t cache_pack(unsigned char *buffer, size_t bufsize) {
     ssize_t nbytes = 0;
     unsigned char digest[SHA1_DIGESTSIZE];
 
-    memcpy(buffer, fand_cache.pwm, sizeof(fand_cache.pwm));
-    nbytes += sizeof(fand_cache.pwm);
-    memcpy(buffer + nbytes, fand_cache.pwm_enable, sizeof(fand_cache.pwm_enable));
-    nbytes += sizeof(fand_cache.pwm_enable);
-    memcpy(buffer + nbytes, fand_cache.temp_input, sizeof(fand_cache.temp_input));
-    nbytes += sizeof(fand_cache.temp_input);
-    memcpy(buffer + nbytes, &fand_cache.card_idx, sizeof(fand_cache.card_idx));
-    nbytes += sizeof(fand_cache.card_idx);
-
+    nbytes = packf(buffer, bufsize, "%*hhu%*hhu%*hhu%u", sizeof(fand_cache.pwm),        (unsigned char *)fand_cache.pwm,
+                                                         sizeof(fand_cache.pwm_enable), (unsigned char *)fand_cache.pwm_enable,
+                                                         sizeof(fand_cache.temp_input), (unsigned char *)fand_cache.temp_input,
+                                                         fand_cache.card_idx);
     sha1_ctx ctx;
     sha1_init(&ctx);
     sha1_update(&ctx, buffer, nbytes);
     sha1_final(&ctx, digest);
 
-    memcpy(buffer + nbytes, digest, sizeof(digest));
+    nbytes += packf(buffer + nbytes, bufsize - nbytes, "%*hhu", sizeof(digest), digest);
 
-    return nbytes + sizeof(digest);
+    return nbytes;
 }
 
-static ssize_t cache_unpack(unsigned char *buffer, size_t bufsize) {
+static ssize_t cache_unpack(unsigned char const *buffer, size_t bufsize) {
     if(bufsize < CACHE_SIZE) {
         syslog(LOG_WARNING, "Cache file corrupted");
         return -1;
@@ -103,16 +99,11 @@ static ssize_t cache_unpack(unsigned char *buffer, size_t bufsize) {
         nbytes = sizeof(fand_cache);
     }
     else {
-        memcpy(fand_cache.pwm, buffer, sizeof(fand_cache.pwm));
-        nbytes += sizeof(fand_cache.pwm);
-        memcpy(fand_cache.pwm_enable, buffer + nbytes, sizeof(fand_cache.pwm_enable));
-        nbytes += sizeof(fand_cache.pwm_enable);
-        memcpy(fand_cache.temp_input, buffer + nbytes, sizeof(fand_cache.temp_input));
-        nbytes += sizeof(fand_cache.temp_input);
-        memcpy(&fand_cache.card_idx, buffer + nbytes, sizeof(fand_cache.card_idx));
-        nbytes += sizeof(fand_cache.card_idx);
-        memcpy(&fand_cache.checksum, buffer + nbytes, sizeof(fand_cache.checksum));
-        nbytes += sizeof(fand_cache.checksum);
+        nbytes = unpackf(buffer, bufsize, "%*hhu%*hhu%*hhu%u%*hhu", sizeof(fand_cache.pwm),        (unsigned char *)fand_cache.pwm,
+                                                                    sizeof(fand_cache.pwm_enable), (unsigned char *)fand_cache.pwm_enable,
+                                                                    sizeof(fand_cache.temp_input), (unsigned char *)fand_cache.temp_input,
+                                                                    &fand_cache.card_idx,
+                                                                    sizeof(fand_cache.checksum), fand_cache.checksum);
     }
     return nbytes;
 }
