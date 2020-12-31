@@ -53,11 +53,11 @@ static int cache_validate(unsigned char *buffer, size_t nbytes) {
         status = -1;
     }
     if(!fsys_file_exists(fand_cache.pwm_enable)) {
-        syslog(LOG_WARNING, "Cached pwm file %s does not exist", fand_cache.pwm);
+        syslog(LOG_WARNING, "Cached pwm enable file %s does not exist", fand_cache.pwm_enable);
         status = -1;
     }
     if(!fsys_file_exists(fand_cache.temp_input)) {
-        syslog(LOG_WARNING, "Cached pwm file %s does not exist", fand_cache.pwm);
+        syslog(LOG_WARNING, "Cached temp input file %s does not exist", fand_cache.temp_input);
         status = -1;
     }
 
