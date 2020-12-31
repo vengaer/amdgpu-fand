@@ -1,4 +1,3 @@
-#include "arch.h"
 #include "sha1.h"
 #include "macro.h"
 
