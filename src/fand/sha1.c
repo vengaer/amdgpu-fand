@@ -197,12 +197,12 @@ static inline unsigned char sha1_compute_final(uint32_t n, uint32_t i) {
 }
 
 static inline unsigned char sha1_compute_digest_byte(sha1_ctx const *ctx, uint32_t i) {
-    uintptr_t offset_table[] = {
-        (uintptr_t)&ctx->h0 - (uintptr_t)ctx,
-        (uintptr_t)&ctx->h1 - (uintptr_t)ctx,
-        (uintptr_t)&ctx->h2 - (uintptr_t)ctx,
-        (uintptr_t)&ctx->h3 - (uintptr_t)ctx,
-        (uintptr_t)&ctx->h4 - (uintptr_t)ctx
+    static uintptr_t const offset_table[] = {
+        (uintptr_t)&((sha1_ctx *)0)->h0,
+        (uintptr_t)&((sha1_ctx *)0)->h1,
+        (uintptr_t)&((sha1_ctx *)0)->h2,
+        (uintptr_t)&((sha1_ctx *)0)->h3,
+        (uintptr_t)&((sha1_ctx *)0)->h4
     };
     return (*(uint32_t const*)((uintptr_t)ctx + offset_table[i >> 2u]) >> ((3u - (i & 3u)) << 3u)) & 0xffu;
 }
