@@ -69,6 +69,9 @@ int drm_open(unsigned card_idx) {
         drm_fd = open(buffer, O_RDONLY);
     }
 
+    if(drm_fd == -1) {
+        syslog(LOG_ERR, "Error on opening dri device: %s\n", strerror(errno));
+    }
 
 cleanup:
     regfree(&devregex);
