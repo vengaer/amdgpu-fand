@@ -22,7 +22,7 @@ static inline bool format_utf8_support(void) {
 
     if(reti) {
         regerror(reti, &utf8rgx, errbuf, sizeof(errbuf));
-        fprintf(stderr, "Failed to compile local regex: %s", errbuf);
+        fprintf(stderr, "Failed to compile utf8 regex: %s", errbuf);
         return false;
     }
 
