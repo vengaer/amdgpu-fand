@@ -44,9 +44,7 @@ void format_matrix(unsigned char nrows, unsigned char const *matrix) {
     char buffer[MATRIX_CELL_WIDTH] = { 0 };
     memset(buffer, '=', MATRIX_CELL_WIDTH - 1);
 
-    char const *degc_ascii = DEGC_ASCII;
-    char const *degc_utf8 = DEGC_UTF8;
-    char const *degc = format_utf8_support() ? degc_utf8 : degc_ascii;
+    char const *degc = format_utf8_support() ? DEGC_UTF8 : DEGC_ASCII;
 
     printf("*%s*%s*\n", buffer, buffer);
     puts("|  temp  | speed  |");
