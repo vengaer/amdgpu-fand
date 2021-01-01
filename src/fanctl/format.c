@@ -72,7 +72,7 @@ void format_speed(int speed) {
 
 int format(union unpack_result const *result, ipc_request req, ipc_response rsp) {
     if(rsp == ipc_rsp_err) {
-        fprintf(stderr, "%d\n", result->error);
+        fprintf(stderr, "%s\n", strerror(result->error));
         return -1;
     }
 
