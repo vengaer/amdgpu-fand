@@ -79,7 +79,7 @@ int fsys_watch_init(char const *path, struct inotify_watch *watch, int flags) {
     }
 
     if(!fsys_dir_exists(abspath)) {
-        syslog(LOG_ERR, "Could not determine directory to watch");
+        syslog(LOG_ERR, "Could not determine watch directory");
         return -1;
     }
 

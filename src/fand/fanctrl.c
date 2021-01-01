@@ -88,7 +88,7 @@ int fanctrl_adjust(void) {
     short threshold;
 
     if(matrix.rows == 0) {
-        syslog(LOG_EMERG, "Matrix is empty");
+        syslog(LOG_ERR, "Matrix is empty");
         return FAND_FATAL_ERR;
     }
 

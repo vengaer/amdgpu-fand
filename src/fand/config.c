@@ -50,7 +50,7 @@ static inline int config_regcomp(regex_t *regex, char const *pat, int cflags, ch
 
     if(reti) {
         regerror(reti, regex, errbuf, sizeof(errbuf));
-        syslog(LOG_EMERG, "Failed to compile %s regex: %s", desc, errbuf);
+        syslog(LOG_ERR, "Failed to compile %s regex: %s", desc, errbuf);
         return -1;
     }
 
@@ -287,7 +287,7 @@ int config_parse(char const *path, struct fand_config *data) {
         }
 
         if(regexec(&valregex, buffer, array_size(pmatch), pmatch, 0)) {
-            syslog(LOG_ERR, "Syntax error on line %u: %s", lineno, buffer);
+           syslog(LOG_ERR, "Syntax error on line %u: %s", lineno, buffer);
             status = -1;
             goto cleanup;
         }

@@ -114,7 +114,7 @@ static int daemon_init(bool fork, bool verbose, char const *config, struct fand_
     umask(0);
 
     if(mkdir(DAEMON_WORKING_DIR, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH)) {
-        syslog(LOG_ERR, "Failed to create working directory: %s", strerror(errno));
+        syslog(LOG_ERR, "Could not create working directory: %s", strerror(errno));
         return -1;
     }
 
@@ -123,7 +123,7 @@ static int daemon_init(bool fork, bool verbose, char const *config, struct fand_
     }
 
     if(chdir(DAEMON_WORKING_DIR)) {
-        syslog(LOG_ERR, "Failed to set working directory: %s", strerror(errno));
+        syslog(LOG_ERR, "Could not set working directory: %s", strerror(errno));
         return -1;
     }
 
@@ -140,12 +140,12 @@ static int daemon_init(bool fork, bool verbose, char const *config, struct fand_
     }
 
     if(fanctrl_init() < 0) {
-        syslog(LOG_EMERG, "Fancontroller initialization failed");
+        syslog(LOG_ERR, "Fancontroller initialization failed");
         return -1;
     }
 
     if(fanctrl_configure(data) < 0) {
-        syslog(LOG_EMERG, "Fancontroller configuration failed");
+        syslog(LOG_ERR, "Fancontroller configuration failed");
         return -1;
     }
 
@@ -162,7 +162,7 @@ static int daemon_reload(char const *path, struct fand_config *data) {
     *data = tmpdata;
 
     if(fanctrl_configure(data)) {
-        syslog(LOG_EMERG, "Fancontroller reconfiguration failed");
+        syslog(LOG_ERR, "Fancontroller reconfiguration failed");
         return FAND_FATAL_ERR;
     }
 
@@ -192,7 +192,7 @@ static int daemon_free(struct inotify_watch const *watch) {
     }
 
     if(fanctrl_release()) {
-        syslog(LOG_EMERG, "Could not release control of fans");
+        syslog(LOG_ALERT, "Could not release control of fans");
         status = -1;
     }
 
@@ -204,7 +204,7 @@ static inline int daemon_adjust_fanspeed(void) {
     int status = fanctrl_adjust();
 
     if(status == FAND_FATAL_ERR) {
-        syslog(LOG_EMERG, "Fatal error encountered, exiting");
+        syslog(LOG_ERR, "Fatal error encountered, exiting");
         daemon_kill();
     }
 
@@ -220,7 +220,7 @@ static inline void daemon_watch_event(char const *config, struct fand_config *da
         daemon_reload_pending = 0;
 
         if(daemon_reload(config, data) == FAND_FATAL_ERR) {
-            syslog(LOG_EMERG, "Fatal error encountered, exiting");
+            syslog(LOG_ERR, "Fatal error encountered, exiting");
             daemon_kill();
         }
     }
@@ -237,9 +237,9 @@ static int daemon_restart(bool fork, bool verbose, char const *config, struct fa
 
 static inline void daemon_handle_pending_signals(bool fork, bool verbose, char const *config, struct fand_config *data, struct inotify_watch *watch) {
     if(daemon_sigpipe_caught) {
-        syslog(LOG_ERR, "Broken pipe, attempting to restart");
+        syslog(LOG_WARNING, "Broken pipe, attempting to restart");
         if(daemon_restart(fork, verbose, config, data, watch)) {
-            syslog(LOG_EMERG, "Restart failed");
+            syslog(LOG_ERR, "Restart failed");
             daemon_alive = 0;
         }
 

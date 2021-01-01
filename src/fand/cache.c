@@ -129,12 +129,12 @@ int cache_load(void) {
         status = -1;
     }
     else if((size_t)nbytes != sizeof(buffer)) {
-        syslog(LOG_INFO, "Corrupted cache file found, expected %zu bytes but read %zu", sizeof(fand_cache), (size_t)nbytes);
+        syslog(LOG_INFO, "Cache file corrupted, expected %zu bytes but read %zu", sizeof(fand_cache), (size_t)nbytes);
         status = -1;
     }
 
     if(close(fd) == -1) {
-        syslog(LOG_WARNING, "Failed to close cache file descriptor: %s", strerror(errno));
+        syslog(LOG_WARNING, "Could not close cache file descriptor: %s", strerror(errno));
     }
     if(status < 0) {
         return status;
@@ -153,7 +153,7 @@ int cache_write(void) {
     int status = 0;
     if(!fsys_dir_exists(FAND_CACHE_DIR)) {
         if(mkdir(FAND_CACHE_DIR, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH)) {
-            syslog(LOG_WARNING, "Failed to create cache directory: %s", strerror(errno));
+            syslog(LOG_WARNING, "Could not create cache directory: %s", strerror(errno));
             return -1;
         }
     }
@@ -169,7 +169,7 @@ int cache_write(void) {
     }
 
     if(write(fd, buffer, sizeof(buffer)) != sizeof(buffer)) {
-        syslog(LOG_WARNING, "Failed to write cache file: %s", strerror(errno));
+        syslog(LOG_WARNING, "Could not write cache file: %s", strerror(errno));
         status = -1;
     }
 

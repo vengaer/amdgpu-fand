@@ -39,7 +39,7 @@ int drm_open(unsigned card_idx) {
 
     if(reti) {
         regerror(reti, &devregex, buffer, sizeof(buffer));
-        syslog(LOG_EMERG, "Failed to compile dri regex: %s", buffer);
+        syslog(LOG_ERR, "Failed to compile dri regex: %s", buffer);
         return -1;
     }
 
@@ -70,7 +70,7 @@ int drm_open(unsigned card_idx) {
     }
 
     if(drm_fd == -1) {
-        syslog(LOG_ERR, "Error on opening dri device: %s\n", strerror(errno));
+        syslog(LOG_ERR, "Error when opening dri device: %s\n", strerror(errno));
     }
 
 cleanup:
@@ -83,7 +83,7 @@ cleanup:
 int drm_close(void) {
     int status = close(drm_fd);
     if(status == -1) {
-        syslog(LOG_WARNING, "Failed to close drm file desriptor: %s", strerror(errno));
+        syslog(LOG_WARNING, "Could not close drm file desriptor: %s", strerror(errno));
     }
     return status;
 }

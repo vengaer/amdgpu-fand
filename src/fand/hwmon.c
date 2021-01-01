@@ -76,7 +76,7 @@ static ssize_t hwmon_detect_iface_dir(char *dst, unsigned card_idx, size_t dstsi
 
     if(reti) {
         regerror(reti, &hwmon_regex, buffer, sizeof(buffer));
-        syslog(LOG_EMERG, "Failed to compile hwmon regex: %s", buffer);
+        syslog(LOG_ERR, "Failed to compile hwmon regex: %s", buffer);
         return -1;
     }
 

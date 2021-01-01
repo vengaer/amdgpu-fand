@@ -216,7 +216,7 @@ int server_poll(struct fand_config const *config) {
                 /* SIGCHLD caught */
                 return 0;
             }
-            syslog(LOG_ERR, "poll failed: %s", strerror(errno));
+            syslog(LOG_ERR, "Error on poll: %s", strerror(errno));
             return -1;
         case 0:
             return 0;
