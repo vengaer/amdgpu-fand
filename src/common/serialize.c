@@ -55,16 +55,21 @@ static struct dfa_state const dfa_reject = {
     .edges = { { 0 } }
 };
 
+/* @dot: signed -> accept [ label="epsilon" ] */
 static struct dfa_state const dfa_state_d = {
     .flags = DFA_ACCEPT | DFA_SIGNED,
     .edges = { { 0 } }
 };
 
+/* @dot: unsigned -> accept [ label="epsilon" ] */
 static struct dfa_state const dfa_state_u = {
     .flags = DFA_ACCEPT | DFA_UNSIGNED,
     .edges = { { 0 } }
 };
 
+/* @dot: long_long -> signed   [ label="d" ] */
+/* @dot: long_long -> unsigned [ label="u" ] */
+/* @dot: long_long -> reject   [ label="." ] */
 static struct dfa_state const dfa_state_l1 = {
     .flags = DFA_LONG1,
     .edges = {
@@ -75,6 +80,10 @@ static struct dfa_state const dfa_state_l1 = {
     }
 };
 
+/* @dot: long -> signed    [ label="d" ] */
+/* @dot: long -> unsigned  [ label="u" ] */
+/* @dot: long -> long_long [ label="l" ] */
+/* @dot: long -> reject    [ label="." ] */
 static struct dfa_state const dfa_state_l0 = {
     .flags = DFA_LONG0,
     .edges = {
@@ -86,6 +95,9 @@ static struct dfa_state const dfa_state_l0 = {
     }
 };
 
+/* @dot: half_half -> signed   [ label="d" ] */
+/* @dot: half_half -> unsigned [ label="u" ] */
+/* @dot: half_half -> reject   [ label="." ] */
 static struct dfa_state const dfa_state_h1 = {
     .flags = DFA_HALF1,
     .edges = {
@@ -96,6 +108,10 @@ static struct dfa_state const dfa_state_h1 = {
     }
 };
 
+/* @dot: half -> half_half [ label="h" ] */
+/* @dot: half -> signed    [ label="d" ] */
+/* @dot: half -> unsigned  [ label="u" ] */
+/* @dot: half -> reject    [ label="." ] */
 static struct dfa_state const dfa_state_h0 = {
     .flags = DFA_HALF0,
     .edges = {
@@ -107,6 +123,11 @@ static struct dfa_state const dfa_state_h0 = {
     }
 };
 
+/* @dot: start -> half     [ label="h" ] */
+/* @dot: start -> long     [ label="l" ] */
+/* @dot: start -> signed   [ label="d" ] */
+/* @dot: start -> unsigned [ label="u" ] */
+/* @dot: start -> reject   [ label="." ] */
 static struct dfa_state const dfa_start = {
     .flags = 0,
     .edges = {
