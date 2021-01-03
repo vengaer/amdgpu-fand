@@ -1,7 +1,5 @@
 pipeline {
-    agent {
-        docker { image 'build/minimal' }
-    }
+    agent { dockerfile true }
     environment {
         CC='gcc'
         CFLAGS='-Werror'
