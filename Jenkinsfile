@@ -16,6 +16,12 @@ pipeline {
                 updateGitlabCommitStatus name: 'build', state: 'pending'
             }
         }
+        stage('Doc') {
+            steps {
+                echo '-- Building docs -- '
+                sh 'make doc'
+            }
+        }
         stage('Build') {
             steps {
                 echo '-- Starting build --'
