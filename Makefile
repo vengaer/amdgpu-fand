@@ -28,6 +28,11 @@ root        := $(abspath $(CURDIR))
 srcdir      := $(root)/src
 builddir    := $(root)/build
 
+audot       := audot/audot
+docdir      := docs
+graphsrc    := src/common/serialize.c
+digraph     := $(docdir)/serialize.png
+
 fand_objs   :=
 fanctl_objs :=
 test_objs    = $(filter-out %/main.$(oext),$(fand_objs) $(fanctl_objs))
@@ -215,6 +220,16 @@ $(builddir)/%.$(oext): $(srcdir)/%.$(cext) | $(build_deps)
 	$(call echo-cc,$@)
 	$(QUIET)$(CC) -o $@ $^ $(CFLAGS) $(CPPFLAGS)
 
+$(audot):
+	$(QUIET)git submodule update --init
+
+$(digraph): $(graphsrc) | $(docdir) $(audot)
+	$(info [audot] $@)
+	$(QUIET)$(audot) -o $@ $^
+
+$(docdir):
+	$(QUIET)mkdir -p $@
+
 .PHONY: prepare
 prepare: $(prepare)
 
@@ -230,6 +245,9 @@ test: $(FAND_TEST)
 .PHONY: fuzz
 fuzz: $(FAND_FUZZ)
 
+.PHONY: doc
+doc: $(digraph)
+
 .PHONY: clean
 clean:
-	$(QUIET)$(RM) $(builddir) $(FAND) $(FANCTL) $(FAND_TEST) $(FAND_FUZZ)
+	$(QUIET)$(RM) $(builddir) $(FAND) $(FANCTL) $(FAND_TEST) $(FAND_FUZZ) $(docdir)
