@@ -1,0 +1,3 @@
+[submodule "audot"]
+	path = audot
+	url = https://gitlab.com/vilhelmengstrom/audot.git
