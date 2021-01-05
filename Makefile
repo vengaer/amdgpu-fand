@@ -6,13 +6,18 @@ FAND_TEST   ?= amdgpu-testd
 FAND_FUZZ   ?= amdgpu-fuzzd
 
 cflags      := -std=c11 -Wall -Wextra -Wpedantic -Waggregate-return -Wbad-function-cast                \
-                -Wcast-qual -Wfloat-equal -Wmissing-include-dirs -Wnested-externs -Wpointer-arith      \
-                -Wredundant-decls -Wshadow -Wunknown-pragmas -Wswitch -Wundef -Wunused -Wwrite-strings \
-                -MD -MP -c -g
+               -Wcast-qual -Wfloat-equal -Wmissing-include-dirs -Wnested-externs -Wpointer-arith      \
+               -Wredundant-decls -Wshadow -Wunknown-pragmas -Wswitch -Wundef -Wunused -Wwrite-strings \
+               -MD -MP -c -g
 cppflags    := -D_GNU_SOURCE
 
 ldflags     :=
 ldlibs      := -lm
+
+FUZZLEN     := 256
+FUZZTIME    := 240
+FUZZVALPROF := 1
+FUZZFLAGS   := -max_len=$(FUZZLEN) -max_total_time=$(FUZZTIME) -use_value_profile=$(FUZZVALPROF)
 
 TOUCH       := touch
 QUIET       := @
@@ -161,6 +166,15 @@ $(__cfg)
 )
 endef
 
+$(call set-config-specific-vars)
+define set-config-specific-vars
+$(if $(findstring fuzz,$(configuration)),
+    $(eval CC       := clang)
+    $(eval cflags   += -fsanitize=fuzzer,address)
+    $(eval cppflags := -DFAND_FUZZ_CONFIG $(cppflags))
+    $(eval ldflags  := -fsanitize=fuzzer,address))
+endef
+
 # $(call override-implicit-vars)
 define override-implicit-vars
 $(eval override CFLAGS   += $(cflags))
@@ -191,6 +205,7 @@ ifneq ($(configuration),)
     $(call include-module,src)
 endif
 
+$(call set-config-specific-vars)
 $(call override-implicit-vars)
 
 $(prepare): $(prepare_deps)
@@ -208,10 +223,6 @@ $(FAND_TEST): $(target_deps) $(test_objs)
 	$(call echo-ld,$@)
 	$(QUIET)$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
-$(FAND_FUZZ): CC       := clang
-$(FAND_FUZZ): CFLAGS   += -fsanitize=fuzzer
-$(FAND_FUZZ): CPPFLAGS := -DFAND_FUZZ_CONFIG $(CPPFLAGS)
-$(FAND_FUZZ): LDFLAGS  += -fsanitize=fuzzer
 $(FAND_FUZZ): $(target_deps) $(fuzz_objs)
 	$(call echo-ld,$@)
 	$(QUIET)$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
@@ -244,6 +255,10 @@ test: $(FAND_TEST)
 
 .PHONY: fuzz
 fuzz: $(FAND_FUZZ)
+
+.PHONY: fuzzrun
+fuzzrun: $(FAND_FUZZ)
+	$(QUIET)./$^ $(FUZZFLAGS)
 
 .PHONY: doc
 doc: $(digraph)
