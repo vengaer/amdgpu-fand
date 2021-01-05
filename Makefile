@@ -28,6 +28,9 @@ root        := $(abspath $(CURDIR))
 srcdir      := $(root)/src
 builddir    := $(root)/build
 
+# Generated during prepare step, provides variable libc
+config_mk   := $(builddir)/config.mk
+
 FUZZLEN     := 256
 FUZZTIME    := 240
 FUZZVALPROF := 1
@@ -44,6 +47,8 @@ convsymbs   := server_init server_poll server_validate_request server_recv_and_r
                valist_strip_pointer valist_strip_integral dfa_fmtlen dfa_valsize dfa_simulate      \
                dfa_flags_to_fmttype dfa_accept dfa_bitflag_set dfa_edge_match
 COVFLAGS    := show $(FAND_FUZZ) -instr-profile=$(PROFDATA) $(addprefix -name ,$(convsymbs))
+
+fuzzinstr    = -fsanitize=fuzzer,address -fprofile-instr-generate -fcoverage-mapping
 
 audot       := audot/audot
 docdir      := docs
@@ -159,22 +164,20 @@ $(if $(MAKECMDGOALS),
         $(eval __cfg := fand fanctl test),
       $(if $(or $(findstring $(FAND_FUZZ),$(MAKECMDGOALS)), $(findstring fuzz,$(MAKECMDGOALS))),
           $(eval __cfg := fand fuzz),
-        $(if $(or $(findstring $(FAND),$(MAKECMDGOALS)), $(findstring fand,$(MAKECMDGOALS))),
-            $(eval __cfg += fand))
-        $(if $(or $(findstring $(FANCTL),$(MAKECMDGOALS)), $(findstring fanctl,$(MAKECMDGOALS))),
-            $(eval __cfg += fanctl)))),
+        $(if $(or $(findstring $(prepare),$(MAKECMDGOALS)), $(findstring prepare,$(MAKECMDGOALS))),
+            $(eval __cfg := prepare),
+          $(if $(or $(findstring $(FAND),$(MAKECMDGOALS)), $(findstring fand,$(MAKECMDGOALS))),
+              $(eval __cfg += fand))
+          $(if $(or $(findstring $(FANCTL),$(MAKECMDGOALS)), $(findstring fanctl,$(MAKECMDGOALS))),
+              $(eval __cfg += fanctl))))),
   $(eval __cfg += fand fanctl))
 $(__cfg)
 )
 endef
 
-$(call set-config-specific-vars)
+# $(call set-config-specific-vars)
 define set-config-specific-vars
 $(if $(findstring fuzz,$(configuration)),
-    $(eval CC       := clang)
-    $(eval cflags   += -fsanitize=fuzzer,address -fprofile-instr-generate -fcoverage-mapping)
-    $(eval cppflags := -DFAND_FUZZ_CONFIG $(cppflags))
-    $(eval ldflags  := -fsanitize=fuzzer,address -fprofile-instr-generate -fcoverage-mapping)
     $(eval export LLVM_PROFILE_FILE=$(builddir)/ipc.profraw))
 endef
 
@@ -184,6 +187,12 @@ $(eval override CFLAGS   += $(cflags))
 $(eval override CPPFLAGS += $(cppflags))
 $(eval override LDFLAGS  += $(ldflags))
 $(eval override LDLIBS   += $(ldlibs))
+endef
+
+$(call set-libc-flags)
+define set-libc-flags
+$(if $(findstring musl,$(libc)),
+    $(eval override LDLIBS += -largp))
 endef
 
 mk-build-root  := $(shell $(MKDIR) $(builddir))
@@ -224,11 +233,15 @@ $(FAND_TEST): $(test_objs)
 	$(call echo-ld,$@)
 	$(QUIET)$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
+$(FAND_FUZZ): CC       := clang
+$(FAND_FUZZ): CFLAGS   += $(fuzzinstr)
+$(FAND_FUZZ): CPPFLAGS := -DFAND_FUZZ_CONFIG $(CPPFLAGS)
+$(FAND_FUZZ): LDFLAGS  += $(fuzzinstr)
 $(FAND_FUZZ): $(fuzz_objs)
 	$(call echo-ld,$@)
 	$(QUIET)$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
-$(builddir)/%.$(oext): $(srcdir)/%.$(cext)
+$(builddir)/%.$(oext): $(srcdir)/%.$(cext) | $(prepare) $(build_deps)
 	$(call echo-cc,$@)
 	$(QUIET)$(CC) -o $@ $^ $(CFLAGS) $(CPPFLAGS)
 
