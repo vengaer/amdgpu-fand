@@ -295,6 +295,8 @@ pipeline {
         }
         always {
             node(null) {
+                archiveArtifacts artifacts: 'src/fuzz/corpora/*', fingerprint: false
+
                 echo 'Cleaning up'
                 deleteDir()
             }
