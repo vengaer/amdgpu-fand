@@ -23,11 +23,25 @@ pipeline {
         stage('Docker Images') {
             agent any
             steps {
-                echo '-- Building musl Docker image -- '
-                sh 'docker build -f docker/musl/Dockerfile -t ${MUSL_DOCKER_IMAGE} .'
+                sh '''
+                    image_age() {
+                        docker images | grep "$1" | sed -E 's/[[:space:]]+/ /g;s/[^ ]+$//g' | cut -d' ' -f 4- | tr '[:upper:]' '[:lower:]'
+                    }
 
-                echo '-- Building glibc Docker image --'
-                sh 'docker build -f docker/glibc/Dockerfile -t ${GLIBC_DOCKER_IMAGE} .'
+                    echo "-- Building musl Docker image -- "
+                    if docker images | grep -q "${MUSL_DOCKER_IMAGE}" ; then
+                        echo "Found existing image ${MUSL_DOCKER_IMAGE} built $(image_age ${MUSL_DOCKER_IMAGE})"
+                    else
+                        docker build -f docker/musl/Dockerfile -t ${MUSL_DOCKER_IMAGE} .
+                    fi
+
+                    echo "-- Building glibc Docker image --"
+                    if docker images | grep -q "${GLIBC_DOCKER_IMAGE}" ; then
+                        echo "Found existing image ${GLIBC_DOCKER_IMAGE} built $(image_age ${GLIBC_DOCKER_IMAGE})"
+                    else
+                        docker build -f docker/glibc/Dockerfile -t ${GLIBC_DOCKER_IMAGE} .
+                    fi
+                '''
             }
 
         }
