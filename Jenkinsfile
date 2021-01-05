@@ -40,117 +40,219 @@ pipeline {
                 sh 'make doc -B'
             }
         }
-        stage('Build musl') {
-            agent {
-                docker { image "${MUSL_DOCKER_IMAGE}" }
-            }
-            environment {
-                LIBC='musl'
-            }
-            steps {
-                echo '-- Starting musl build --'
+        stage('Build') {
+            failFast true
+            parallel {
+                stage('Build musl') {
+                    agent {
+                        docker { image "${MUSL_DOCKER_IMAGE}" }
+                    }
+                    environment {
+                        LIBC='musl'
+                        BUILDDIR='build_musl'
+                    }
+                    steps {
+                        echo '-- Starting musl build --'
 
-                echo 'Creating artifact directory'
-                sh 'mkdir -p ${ARTIFACT_DIR}'
+                        echo 'Creating artifact directory'
+                        sh 'mkdir -p ${ARTIFACT_DIR}'
 
-                echo 'Build: CC=gcc DRM=y'
-                sh '''
-                    export CC=gcc
-                    export FAND=${ARTIFACT_DIR}/${FAND_STEM}.${BUILD_NUMBER}-drm-${CC}-${LIBC}
-                    export FANCTL=${ARTIFACT_DIR}/${FANCTL_STEM}.${BUILD_NUMBER}-drm-${CC}-${LIBC}
-                    make -j$(nproc) -B
-                '''
+                        echo 'Build: CC=gcc DRM=y'
+                        sh '''
+                            export CC=gcc
+                            export FAND=${ARTIFACT_DIR}/${FAND_STEM}.${BUILD_NUMBER}-drm-${CC}-${LIBC}
+                            export FANCTL=${ARTIFACT_DIR}/${FANCTL_STEM}.${BUILD_NUMBER}-drm-${CC}-${LIBC}
+                            make -j$(nproc) -B builddir=${BUILDDIR}
+                        '''
 
-                echo 'Build: CC=clang DRM=y'
-                sh '''
-                    export CC=clang
-                    export FAND=${ARTIFACT_DIR}/${FAND_STEM}.${BUILD_NUMBER}-drm-${CC}-${LIBC}
-                    export FANCTL=${ARTIFACT_DIR}/${FANCTL_STEM}.${BUILD_NUMBER}-drm-${CC}-${LIBC}
-                    make -j$(nproc) -B
-                '''
+                        echo 'Build: CC=clang DRM=y'
+                        sh '''
+                            export CC=clang
+                            export FAND=${ARTIFACT_DIR}/${FAND_STEM}.${BUILD_NUMBER}-drm-${CC}-${LIBC}
+                            export FANCTL=${ARTIFACT_DIR}/${FANCTL_STEM}.${BUILD_NUMBER}-drm-${CC}-${LIBC}
+                            make -j$(nproc) -B builddir=${BUILDDIR}
+                        '''
 
-                echo 'Build: CC=gcc DRM=n'
-                sh '''
-                    export CC=gcc
-                    export FAND=${ARTIFACT_DIR}/${FAND_STEM}.${BUILD_NUMBER}-${CC}-${LIBC}
-                    export FANCTL=${ARTIFACT_DIR}/${FANCTL_STEM}.${BUILD_NUMBER}-${CC}-${LIBC}
-                    make drm_support=n -j$(nproc) -B
-                '''
+                        echo 'Build: CC=gcc DRM=n'
+                        sh '''
+                            export CC=gcc
+                            export FAND=${ARTIFACT_DIR}/${FAND_STEM}.${BUILD_NUMBER}-${CC}-${LIBC}
+                            export FANCTL=${ARTIFACT_DIR}/${FANCTL_STEM}.${BUILD_NUMBER}-${CC}-${LIBC}
+                            make drm_support=n -j$(nproc) -B builddir=${BUILDDIR}
+                        '''
 
-                echo 'Build: CC=clang DRM=n'
-                sh '''
-                    export CC=clang
-                    export FAND=${ARTIFACT_DIR}/${FAND_STEM}.${BUILD_NUMBER}-${CC}-${LIBC}
-                    export FANCTL=${ARTIFACT_DIR}/${FANCTL_STEM}.${BUILD_NUMBER}-${CC}-${LIBC}
-                    make drm_support=n -j$(nproc) -B
-                '''
+                        echo 'Build: CC=clang DRM=n'
+                        sh '''
+                            export CC=clang
+                            export FAND=${ARTIFACT_DIR}/${FAND_STEM}.${BUILD_NUMBER}-${CC}-${LIBC}
+                            export FANCTL=${ARTIFACT_DIR}/${FANCTL_STEM}.${BUILD_NUMBER}-${CC}-${LIBC}
+                            make drm_support=n -j$(nproc) -B builddir=${BUILDDIR}
+                        '''
 
-                echo 'Creating test directory'
-                sh 'mkdir -p ${TEST_DIR}'
+                        echo 'Creating test directory'
+                        sh 'mkdir -p ${TEST_DIR}'
 
-                echo 'Build: CC=gcc DRM=y test'
-                sh '''
-                    export CC=gcc
-                    export FAND_TEST=${TEST_DIR}/${TEST_STEM}.${BUILD_NUMBER}-drm-${CC}-${LIBC}
-                    make test -j$(nproc) -B
-                '''
+                        echo 'Build: CC=gcc DRM=y test'
+                        sh '''
+                            export CC=gcc
+                            export FAND_TEST=${TEST_DIR}/${TEST_STEM}.${BUILD_NUMBER}-drm-${CC}-${LIBC}
+                            make test -j$(nproc) -B builddir=${BUILDDIR}
+                        '''
 
-                echo 'Build: CC=clang DRM=y test'
-                sh '''
-                    export CC=clang
-                    export FAND_TEST=${TEST_DIR}/${TEST_STEM}.${BUILD_NUMBER}-drm-${CC}-${LIBC}
-                    make test -j$(nproc) -B
-                '''
+                        echo 'Build: CC=clang DRM=y test'
+                        sh '''
+                            export CC=clang
+                            export FAND_TEST=${TEST_DIR}/${TEST_STEM}.${BUILD_NUMBER}-drm-${CC}-${LIBC}
+                            make test -j$(nproc) -B builddir=${BUILDDIR}
+                        '''
 
-                echo 'Build: CC=gcc DRM=n test'
-                sh '''
-                    export CC=gcc
-                    export FAND_TEST=${TEST_DIR}/${TEST_STEM}.${BUILD_NUMBER}-${CC}-${LIBC}
-                    make test drm_support=n -j$(nproc) -B
-                '''
+                        echo 'Build: CC=gcc DRM=n test'
+                        sh '''
+                            export CC=gcc
+                            export FAND_TEST=${TEST_DIR}/${TEST_STEM}.${BUILD_NUMBER}-${CC}-${LIBC}
+                            make test drm_support=n -j$(nproc) -B builddir=${BUILDDIR}
+                        '''
 
-                echo 'Build: CC=clang DRM=n test'
-                sh '''
-                    export CC=clang
-                    export FAND_TEST=${TEST_DIR}/${TEST_STEM}.${BUILD_NUMBER}-${CC}-${LIBC}
-                    make test drm_support=n -j$(nproc) -B
-                '''
+                        echo 'Build: CC=clang DRM=n test'
+                        sh '''
+                            export CC=clang
+                            export FAND_TEST=${TEST_DIR}/${TEST_STEM}.${BUILD_NUMBER}-${CC}-${LIBC}
+                            make test drm_support=n -j$(nproc) -B builddir=${BUILDDIR}
+                        '''
+                    }
+                }
+                stage('Build glibc') {
+                    agent {
+                        docker { image "${GLIBC_DOCKER_IMAGE}" }
+                    }
+                    environment {
+                        LIBC='glibc'
+                        BUILDDIR='build_glibc'
+                    }
+                    steps {
+                        echo '-- Starting glibc build --'
+
+                        echo 'Creating artifact directory'
+                        sh 'mkdir -p ${ARTIFACT_DIR}'
+
+                        echo 'Build: CC=gcc DRM=y'
+                        sh '''
+                            export CC=gcc
+                            export FAND=${ARTIFACT_DIR}/${FAND_STEM}.${BUILD_NUMBER}-drm-${CC}-${LIBC}
+                            export FANCTL=${ARTIFACT_DIR}/${FANCTL_STEM}.${BUILD_NUMBER}-drm-${CC}-${LIBC}
+                            make -j$(nproc) -B builddir=${BUILDDIR}
+                        '''
+
+                        echo 'Build: CC=clang DRM=y'
+                        sh '''
+                            export CC=clang
+                            export FAND=${ARTIFACT_DIR}/${FAND_STEM}.${BUILD_NUMBER}-drm-${CC}-${LIBC}
+                            export FANCTL=${ARTIFACT_DIR}/${FANCTL_STEM}.${BUILD_NUMBER}-drm-${CC}-${LIBC}
+                            make -j$(nproc) -B builddir=${BUILDDIR}
+                        '''
+
+                        echo 'Build: CC=gcc DRM=n'
+                        sh '''
+                            export CC=gcc
+                            export FAND=${ARTIFACT_DIR}/${FAND_STEM}.${BUILD_NUMBER}-${CC}-${LIBC}
+                            export FANCTL=${ARTIFACT_DIR}/${FANCTL_STEM}.${BUILD_NUMBER}-${CC}-${LIBC}
+                            make drm_support=n -j$(nproc) -B builddir=${BUILDDIR}
+                        '''
+
+                        echo 'Build: CC=clang DRM=n'
+                        sh '''
+                            export CC=clang
+                            export FAND=${ARTIFACT_DIR}/${FAND_STEM}.${BUILD_NUMBER}-${CC}-${LIBC}
+                            export FANCTL=${ARTIFACT_DIR}/${FANCTL_STEM}.${BUILD_NUMBER}-${CC}-${LIBC}
+                            make drm_support=n -j$(nproc) -B builddir=${BUILDDIR}
+                        '''
+
+                        echo 'Creating test directory'
+                        sh 'mkdir -p ${TEST_DIR}'
+
+                        echo 'Build: CC=gcc DRM=y test'
+                        sh '''
+                            export CC=gcc
+                            export FAND_TEST=${TEST_DIR}/${TEST_STEM}.${BUILD_NUMBER}-drm-${CC}-${LIBC}
+                            make test -j$(nproc) -B builddir=${BUILDDIR}
+                        '''
+
+                        echo 'Build: CC=clang DRM=y test'
+                        sh '''
+                            export CC=clang
+                            export FAND_TEST=${TEST_DIR}/${TEST_STEM}.${BUILD_NUMBER}-drm-${CC}-${LIBC}
+                            make test -j$(nproc) -B builddir=${BUILDDIR}
+                        '''
+
+                        echo 'Build: CC=gcc DRM=n test'
+                        sh '''
+                            export CC=gcc
+                            export FAND_TEST=${TEST_DIR}/${TEST_STEM}.${BUILD_NUMBER}-${CC}-${LIBC}
+                            make test drm_support=n -j$(nproc) -B builddir=${BUILDDIR}
+                        '''
+
+                        echo 'Build: CC=clang DRM=n test'
+                        sh '''
+                            export CC=clang
+                            export FAND_TEST=${TEST_DIR}/${TEST_STEM}.${BUILD_NUMBER}-${CC}-${LIBC}
+                            make test drm_support=n -j$(nproc) -B builddir=${BUILDDIR}
+                        '''
+                    }
+                }
             }
         }
-        stage('Test musl') {
-            agent {
-                docker { image "${MUSL_DOCKER_IMAGE}" }
-            }
-            environment {
-                LIBC='musl'
-            }
-            steps {
-                echo '-- Starting musl tests --'
+        stage('Test') {
+            failFast true
+            parallel {
+                stage('Test musl') {
+                    agent {
+                        docker { image "${MUSL_DOCKER_IMAGE}" }
+                    }
+                    environment {
+                        LIBC='musl'
+                    }
+                    steps {
+                        echo '-- Starting musl tests --'
 
-                echo 'Test: CC=gcc DRM=y'
-                sh '${TEST_DIR}/${TEST_STEM}.${BUILD_NUMBER}-drm-gcc-${LIBC}'
+                        echo 'Test: CC=gcc DRM=y'
+                        sh '${TEST_DIR}/${TEST_STEM}.${BUILD_NUMBER}-drm-gcc-${LIBC}'
 
-                echo 'Test: CC=clang DRM=y'
-                sh '${TEST_DIR}/${TEST_STEM}.${BUILD_NUMBER}-drm-clang-${LIBC}'
+                        echo 'Test: CC=clang DRM=y'
+                        sh '${TEST_DIR}/${TEST_STEM}.${BUILD_NUMBER}-drm-clang-${LIBC}'
 
-                echo 'Test: CC=gcc DRM=n'
-                sh '${TEST_DIR}/${TEST_STEM}.${BUILD_NUMBER}-gcc-${LIBC}'
+                        echo 'Test: CC=gcc DRM=n'
+                        sh '${TEST_DIR}/${TEST_STEM}.${BUILD_NUMBER}-gcc-${LIBC}'
 
-                echo 'Test: CC=clang DRM=n'
-                sh '${TEST_DIR}/${TEST_STEM}.${BUILD_NUMBER}-clang-${LIBC}'
+                        echo 'Test: CC=clang DRM=n'
+                        sh '${TEST_DIR}/${TEST_STEM}.${BUILD_NUMBER}-clang-${LIBC}'
+                    }
+                }
+                stage('Test glibc') {
+                    agent {
+                        docker { image "${GLIBC_DOCKER_IMAGE}" }
+                    }
+                    environment {
+                        LIBC='glibc'
+                    }
+                    steps {
+                        echo '-- Starting glibc tests --'
+
+                        echo 'Test: CC=gcc DRM=y'
+                        sh '${TEST_DIR}/${TEST_STEM}.${BUILD_NUMBER}-drm-gcc-${LIBC}'
+
+                        echo 'Test: CC=clang DRM=y'
+                        sh '${TEST_DIR}/${TEST_STEM}.${BUILD_NUMBER}-drm-clang-${LIBC}'
+
+                        echo 'Test: CC=gcc DRM=n'
+                        sh '${TEST_DIR}/${TEST_STEM}.${BUILD_NUMBER}-gcc-${LIBC}'
+
+                        echo 'Test: CC=clang DRM=n'
+                        sh '${TEST_DIR}/${TEST_STEM}.${BUILD_NUMBER}-clang-${LIBC}'
+                    }
+                }
             }
         }
-        stage('Clean musl Files') {
-            agent {
-                docker { image "${MUSL_DOCKER_IMAGE}" }
-            }
-            steps {
-                echo '-- Cleaning up musl build files --'
-                sh 'make clean'
-            }
-
-        }
-        stage('Build glibc') {
+        stage('Build Fuzzer') {
             agent {
                 docker { image "${GLIBC_DOCKER_IMAGE}" }
             }
@@ -158,74 +260,6 @@ pipeline {
                 LIBC='glibc'
             }
             steps {
-                echo '-- Starting glibc build --'
-
-                echo 'Creating artifact directory'
-                sh 'mkdir -p ${ARTIFACT_DIR}'
-
-                echo 'Build: CC=gcc DRM=y'
-                sh '''
-                    export CC=gcc
-                    export FAND=${ARTIFACT_DIR}/${FAND_STEM}.${BUILD_NUMBER}-drm-${CC}-${LIBC}
-                    export FANCTL=${ARTIFACT_DIR}/${FANCTL_STEM}.${BUILD_NUMBER}-drm-${CC}-${LIBC}
-                    make -j$(nproc) -B
-                '''
-
-                echo 'Build: CC=clang DRM=y'
-                sh '''
-                    export CC=clang
-                    export FAND=${ARTIFACT_DIR}/${FAND_STEM}.${BUILD_NUMBER}-drm-${CC}-${LIBC}
-                    export FANCTL=${ARTIFACT_DIR}/${FANCTL_STEM}.${BUILD_NUMBER}-drm-${CC}-${LIBC}
-                    make -j$(nproc) -B
-                '''
-
-                echo 'Build: CC=gcc DRM=n'
-                sh '''
-                    export CC=gcc
-                    export FAND=${ARTIFACT_DIR}/${FAND_STEM}.${BUILD_NUMBER}-${CC}-${LIBC}
-                    export FANCTL=${ARTIFACT_DIR}/${FANCTL_STEM}.${BUILD_NUMBER}-${CC}-${LIBC}
-                    make drm_support=n -j$(nproc) -B
-                '''
-
-                echo 'Build: CC=clang DRM=n'
-                sh '''
-                    export CC=clang
-                    export FAND=${ARTIFACT_DIR}/${FAND_STEM}.${BUILD_NUMBER}-${CC}-${LIBC}
-                    export FANCTL=${ARTIFACT_DIR}/${FANCTL_STEM}.${BUILD_NUMBER}-${CC}-${LIBC}
-                    make drm_support=n -j$(nproc) -B
-                '''
-
-                echo 'Creating test directory'
-                sh 'mkdir -p ${TEST_DIR}'
-
-                echo 'Build: CC=gcc DRM=y test'
-                sh '''
-                    export CC=gcc
-                    export FAND_TEST=${TEST_DIR}/${TEST_STEM}.${BUILD_NUMBER}-drm-${CC}-${LIBC}
-                    make test -j$(nproc) -B
-                '''
-
-                echo 'Build: CC=clang DRM=y test'
-                sh '''
-                    export CC=clang
-                    export FAND_TEST=${TEST_DIR}/${TEST_STEM}.${BUILD_NUMBER}-drm-${CC}-${LIBC}
-                    make test -j$(nproc) -B
-                '''
-
-                echo 'Build: CC=gcc DRM=n test'
-                sh '''
-                    export CC=gcc
-                    export FAND_TEST=${TEST_DIR}/${TEST_STEM}.${BUILD_NUMBER}-${CC}-${LIBC}
-                    make test drm_support=n -j$(nproc) -B
-                '''
-
-                echo 'Build: CC=clang DRM=n test'
-                sh '''
-                    export CC=clang
-                    export FAND_TEST=${TEST_DIR}/${TEST_STEM}.${BUILD_NUMBER}-${CC}-${LIBC}
-                    make test drm_support=n -j$(nproc) -B
-                '''
-
                 echo 'Creating fuzz directory'
                 sh 'mkdir -p ${FUZZ_DIR}'
 
@@ -236,30 +270,7 @@ pipeline {
                 '''
             }
         }
-        stage('Test glibc') {
-            agent {
-                docker { image "${GLIBC_DOCKER_IMAGE}" }
-            }
-            environment {
-                LIBC='glibc'
-            }
-            steps {
-                echo '-- Starting glibc tests --'
-
-                echo 'Test: CC=gcc DRM=y'
-                sh '${TEST_DIR}/${TEST_STEM}.${BUILD_NUMBER}-drm-gcc-${LIBC}'
-
-                echo 'Test: CC=clang DRM=y'
-                sh '${TEST_DIR}/${TEST_STEM}.${BUILD_NUMBER}-drm-clang-${LIBC}'
-
-                echo 'Test: CC=gcc DRM=n'
-                sh '${TEST_DIR}/${TEST_STEM}.${BUILD_NUMBER}-gcc-${LIBC}'
-
-                echo 'Test: CC=clang DRM=n'
-                sh '${TEST_DIR}/${TEST_STEM}.${BUILD_NUMBER}-clang-${LIBC}'
-            }
-        }
-        stage('Fuzz') {
+        stage('Run Fuzzer') {
             agent {
                 docker { image "${GLIBC_DOCKER_IMAGE}" }
             }
