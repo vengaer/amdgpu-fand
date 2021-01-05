@@ -75,7 +75,6 @@ ssize_t client_send_and_recv(unsigned char *buffer, size_t bufsize, ipc_request 
     nrecv = recv(clientfd, buffer, bufsize, 0);
     if(nrecv == -1) {
         perror("No server response");
-        nrecv = -1;
         goto cleanup;
     }
 
