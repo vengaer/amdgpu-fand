@@ -17,7 +17,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#define SOCKFILE "/tmp/amdgpu-fuzzd"
+#define SOCKFILE "/tmp/fuzzd.sock"
 
 int write_data(int fd, uint8_t const *data, size_t size) {
     char *buffer = malloc(size + 1);
