@@ -284,6 +284,13 @@ pipeline {
                 '''
             }
         }
+        stage('Fetch Corpora') {
+            agent any
+            steps {
+                echo 'Copying existing corpora'
+                copyArtifacts(projectName: "${JOB_NAME}", target: 'src/fuzz/corpora')
+            }
+        }
         stage('Run Fuzzer') {
             agent {
                 docker { image "${GLIBC_DOCKER_IMAGE}" }
