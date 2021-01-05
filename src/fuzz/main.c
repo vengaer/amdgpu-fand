@@ -1,5 +1,7 @@
 #include "config.h"
+#include "ipc.h"
 #include "server.h"
+#include "strutils.h"
 
 #include <errno.h>
 #include <signal.h>
@@ -17,26 +19,58 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#define SOCKFILE "/tmp/fuzzd.sock"
+static int clientfd;
 
-int write_data(int fd, uint8_t const *data, size_t size) {
-    char *buffer = malloc(size + 1);
+ssize_t sockput_raw(unsigned char const *data, size_t size) {
+    union unsockaddr srvaddr;;
     int status = 0;
-    if(!buffer) {
-        fputs("Memory allocation failure\n", stderr);
+    clientfd  = socket(PF_UNIX, SOCK_STREAM, 0);
+
+    if(clientfd == -1) {
+        perror("socket");
         return -1;
     }
 
-    memcpy(buffer, data, size);
-    buffer[size] = '\0';
-
-    if(write(fd, buffer, size + 1) == -1) {
-        fprintf(stderr, "Could not write data to makeshift socket: %s\n", strerror(errno));
+    srvaddr.addr_un.sun_family = AF_UNIX;
+    if(strscpy(srvaddr.addr_un.sun_path, DAEMON_SERVER_SOCKET, sizeof(srvaddr.addr_un.sun_path)) < 0) {
+        fputs("socket path overflow\n", stderr);
         status = -1;
+        goto sockerr;
     }
 
-    free(buffer);
+    if(connect(clientfd, &srvaddr.addr, sizeof(srvaddr)) == -1) {
+        perror("connect");
+        status = -1;
+        goto sockerr;
+    }
+
+    if(send(clientfd, data, size, 0) == -1) {
+        perror("send");
+        status = -1;
+        goto sockerr;
+    }
+
+    return 0;
+
+sockerr:
+    close(clientfd);
     return status;
+}
+
+int sock_consume_and_close(void) {
+    unsigned char rsp[IPC_MAX_MSG_LENGTH];
+
+    ssize_t nrecv = recv(clientfd, rsp, sizeof(rsp), 0);
+    if(nrecv == -1) {
+        perror("recv");
+    }
+
+    if(close(clientfd) == -1) {
+        perror("close");
+        return -1;
+    }
+
+    return 0;
 }
 
 int LLVMFuzzerTestOneInput(uint8_t const *data, size_t size) {
@@ -59,27 +93,15 @@ int LLVMFuzzerTestOneInput(uint8_t const *data, size_t size) {
     setlogmask(0);
     openlog(0, 0, LOG_DAEMON);
 
-    int fd = open(SOCKFILE, O_RDWR | O_CREAT);
-
-    if(fd == -1) {
-        fprintf(stderr, "Could not open makeshift socket: %s\n", strerror(errno));
+    if(sockput_raw(data, size) == -1) {
+        fputs("Could not write to socket\n", stderr);
         goto cleanup;
     }
 
-    if(write_data(fd, data, size) < 0) {
-        goto cleanup;
-    }
-
-    server_recv_and_respond(fd, &config);
+    server_poll(&config);
 
 cleanup:
-    if(fd != -1) {
-        close(fd);
-    }
-
-    if(unlink(SOCKFILE) == -1) {
-        fprintf(stderr, "Could not unlink makeshift socket: %s\n", strerror(errno));
-    }
+    sock_consume_and_close();
 
     if(server_kill()) {
         fputs("Error stopping server\n", stderr);

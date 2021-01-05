@@ -231,6 +231,10 @@ int server_poll(struct fand_config const *config) {
         return -1;
     }
 
+#ifdef FAND_FUZZ_CONFIG
+    // Fuzz targets may not call exit
+    status = server_recv_and_respond(newfd, config);
+#else
     int pid = fork();
     if(pid == -1) {
         syslog(LOG_ERR, "Unable to fork to respond to incoming connection: %s", strerror(errno));
@@ -244,8 +248,9 @@ int server_poll(struct fand_config const *config) {
         close(newfd);
         exit(status);
     }
+#endif
 
     close(newfd);
 
-    return 0;
+    return status;
 }
