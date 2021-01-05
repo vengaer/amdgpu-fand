@@ -297,9 +297,6 @@ pipeline {
             node(null) {
                 echo 'Cleaning up'
                 deleteDir()
-
-                echo 'Removing Docker images'
-                sh 'docker image rm ${MUSL_DOCKER_IMAGE} ${GLIBC_DOCKER_IMAGE}'
             }
         }
     }
