@@ -116,16 +116,6 @@ $(if $(findstring $(1),$(configuration)),
     $(call include-module,$(1)))
 endef
 
-# $(call add-build-dep, rule)
-define add-build-dep
-$(eval build_deps += $(1))
-endef
-
-# $(call add-target-dep, rule)
-define add-target-dep
-$(eval target_deps += $(1))
-endef
-
 # $(call declare-trivial-c-module)
 define declare-trivial-c-module
 $(eval __src    := $(wildcard $(module_path)/*.$(cext)))
@@ -204,8 +194,6 @@ stack_top_symb := :
 cond_separator := :
 
 prepare_deps   :=
-build_deps     :=
-target_deps    :=
 
 configuration  := $(call build-configuration)
 
@@ -224,23 +212,23 @@ $(call override-implicit-vars)
 $(prepare): $(prepare_deps)
 	$(QUIET)$(TOUCH) $@
 
-$(FAND): $(target_deps) $(fand_objs)
+$(FAND): $(fand_objs)
 	$(call echo-ld,$@)
 	$(QUIET)$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
-$(FANCTL): $(target_deps) $(fanctl_objs)
+$(FANCTL): $(fanctl_objs)
 	$(call echo-ld,$@)
 	$(QUIET)$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
-$(FAND_TEST): $(target_deps) $(test_objs)
+$(FAND_TEST): $(test_objs)
 	$(call echo-ld,$@)
 	$(QUIET)$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
-$(FAND_FUZZ): $(target_deps) $(fuzz_objs)
+$(FAND_FUZZ): $(fuzz_objs)
 	$(call echo-ld,$@)
 	$(QUIET)$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
-$(builddir)/%.$(oext): $(srcdir)/%.$(cext) | $(build_deps)
+$(builddir)/%.$(oext): $(srcdir)/%.$(cext)
 	$(call echo-cc,$@)
 	$(QUIET)$(CC) -o $@ $^ $(CFLAGS) $(CPPFLAGS)
 
