@@ -47,6 +47,8 @@ convsymbs   := server_init server_poll server_validate_request server_recv_and_r
                valist_strip_pointer valist_strip_integral dfa_fmtlen dfa_valsize dfa_simulate      \
                dfa_flags_to_fmttype dfa_accept dfa_bitflag_set dfa_edge_match
 COVFLAGS    := show $(FAND_FUZZ) -instr-profile=$(PROFDATA) $(addprefix -name ,$(convsymbs))
+COVREPFLAGS := report $(FAND_FUZZ) -instr-profile=$(PROFDATA)
+
 
 fuzzinstr    = -fsanitize=fuzzer,address -fprofile-instr-generate -fcoverage-mapping
 
@@ -275,6 +277,7 @@ fuzzrun: $(FAND_FUZZ)
 	$(QUIET)./$^ $(FUZZFLAGS)
 	$(QUIET)llvm-profdata $(PROFFLAGS)
 	$(QUIET)llvm-cov $(COVFLAGS)
+	$(QUIET)llvm-cov $(COVREPFLAGS)
 
 .PHONY: doc
 doc: $(digraph)
