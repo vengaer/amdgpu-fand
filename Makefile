@@ -17,7 +17,8 @@ ldlibs      := -lm
 FUZZLEN     := 256
 FUZZTIME    := 240
 FUZZVALPROF := 1
-FUZZFLAGS   := -max_len=$(FUZZLEN) -max_total_time=$(FUZZTIME) -use_value_profile=$(FUZZVALPROF)
+FUZZCORPUS  := src/fuzz/corpora
+FUZZFLAGS   := -max_len=$(FUZZLEN) -max_total_time=$(FUZZTIME) -use_value_profile=$(FUZZVALPROF) $(FUZZCORPUS)
 
 TOUCH       := touch
 QUIET       := @
