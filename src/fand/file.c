@@ -5,8 +5,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <fcntl.h>
 #include <syslog.h>
 #include <sys/file.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 enum { FILE_ULONG_BUFSIZE = 16 };

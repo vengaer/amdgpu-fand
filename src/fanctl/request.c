@@ -6,6 +6,7 @@
 #include "serialize.h"
 
 #include <stdio.h>
+#include <string.h>
 
 int request_convert(char const *target, ipc_request *request) {
     *request = ipc_req_inval;
