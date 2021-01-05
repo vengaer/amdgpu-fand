@@ -14,14 +14,6 @@ cppflags    := -D_GNU_SOURCE
 ldflags     :=
 ldlibs      := -lm
 
-FUZZLEN     := 256
-FUZZTIME    := 240
-FUZZVALPROF := 1
-FUZZTIMEOUT := 30
-FUZZCORPUS  := src/fuzz/corpora
-FUZZFLAGS   := -max_len=$(FUZZLEN) -max_total_time=$(FUZZTIME) -use_value_profile=$(FUZZVALPROF) \
-               -timeout=$(FUZZTIMEOUT) $(FUZZCORPUS)
-
 TOUCH       := touch
 QUIET       := @
 MKDIR       := mkdir -p
@@ -35,6 +27,23 @@ root        := $(abspath $(CURDIR))
 
 srcdir      := $(root)/src
 builddir    := $(root)/build
+
+FUZZLEN     := 256
+FUZZTIME    := 240
+FUZZVALPROF := 1
+FUZZTIMEOUT := 30
+FUZZCORPUS  := src/fuzz/corpora
+FUZZFLAGS   := -max_len=$(FUZZLEN) -max_total_time=$(FUZZTIME) -use_value_profile=$(FUZZVALPROF) \
+               -timeout=$(FUZZTIMEOUT) $(FUZZCORPUS)
+
+PROFDATA    := $(builddir)/ipc.profdata
+PROFFLAGS    = merge -sparse $(LLVM_PROFILE_FILE) -o $(PROFDATA)
+
+convsymbs   := server_init server_poll server_validate_request server_recv_and_respond server_kill \
+               server_pack_result pack_error pack_exit_rsp pack_matrix pack_speed pack_temp packf  \
+               valist_strip_pointer valist_strip_integral dfa_fmtlen dfa_valsize dfa_simulate      \
+               dfa_flags_to_fmttype dfa_accept dfa_bitflag_set dfa_edge_match
+COVFLAGS    := show $(FAND_FUZZ) -instr-profile=$(PROFDATA) $(addprefix -name ,$(convsymbs))
 
 audot       := audot/audot
 docdir      := docs
@@ -173,9 +182,10 @@ $(call set-config-specific-vars)
 define set-config-specific-vars
 $(if $(findstring fuzz,$(configuration)),
     $(eval CC       := clang)
-    $(eval cflags   += -fsanitize=fuzzer,address)
+    $(eval cflags   += -fsanitize=fuzzer,address -fprofile-instr-generate -fcoverage-mapping)
     $(eval cppflags := -DFAND_FUZZ_CONFIG $(cppflags))
-    $(eval ldflags  := -fsanitize=fuzzer,address))
+    $(eval ldflags  := -fsanitize=fuzzer,address -fprofile-instr-generate -fcoverage-mapping)
+    $(eval export LLVM_PROFILE_FILE=$(builddir)/ipc.profraw))
 endef
 
 # $(call override-implicit-vars)
@@ -262,6 +272,8 @@ fuzz: $(FAND_FUZZ)
 .PHONY: fuzzrun
 fuzzrun: $(FAND_FUZZ)
 	$(QUIET)./$^ $(FUZZFLAGS)
+	$(QUIET)llvm-profdata $(PROFFLAGS)
+	$(QUIET)llvm-cov $(COVFLAGS)
 
 .PHONY: doc
 doc: $(digraph)
