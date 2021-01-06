@@ -13,7 +13,12 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#ifndef FAND_FUZZ_CONFIG
 #define FAND_CACHE_DIR "/var/cache/amdgpu-fand"
+#else
+#define FAND_CACHE_DIR "/tmp"
+#endif
+
 #define FAND_CACHE_FILE FAND_CACHE_DIR "/amdgpu-fand.cache"
 
 struct fand_cache fand_cache;

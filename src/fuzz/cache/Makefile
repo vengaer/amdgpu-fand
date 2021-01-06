@@ -1,4 +1,5 @@
-$(call include-module,$(FUZZIFACE))
+trivial_module  := y
+required_by     := fuzz
 
 ifeq ($(module_name),)
 target := $(if $(MAKECMDGOALS),$(MAKECMDGOALS),recurse)
