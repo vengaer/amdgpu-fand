@@ -35,6 +35,10 @@ static inline bool cache_struct_is_padded(void) {
     return sizeof(fand_cache) > CACHE_SIZE;
 }
 
+static inline bool cached_file_in_sys_tree(char const *file) {
+    return strncmp(file, "/sys/", strlen("/sys/")) == 0;
+}
+
 static int cache_validate(unsigned char *buffer, size_t nbytes) {
     if(nbytes != CACHE_SIZE) {
         syslog(LOG_WARNING, "Cache corrupted, expected %zu bytes, found %zu", (size_t)CACHE_SIZE, nbytes);
@@ -58,12 +62,24 @@ static int cache_validate(unsigned char *buffer, size_t nbytes) {
         syslog(LOG_WARNING, "Cached pwm file %s does not exist", fand_cache.pwm);
         status = -1;
     }
-    if(!fsys_file_exists(fand_cache.pwm_enable)) {
+    else if(!cached_file_in_sys_tree(fand_cache.pwm)) {
+        syslog(LOG_WARNING, "Cached pwm file %s is not in /sys tree", fand_cache.pwm);
+        status = -1;
+    }
+    else if(!fsys_file_exists(fand_cache.pwm_enable)) {
         syslog(LOG_WARNING, "Cached pwm enable file %s does not exist", fand_cache.pwm_enable);
         status = -1;
     }
-    if(!fsys_file_exists(fand_cache.temp_input)) {
+    else if(!cached_file_in_sys_tree(fand_cache.pwm_enable)) {
+        syslog(LOG_WARNING, "Cached pwm enable file %s is not in /sys tree", fand_cache.pwm_enable);
+        status = -1;
+    }
+    else if(!fsys_file_exists(fand_cache.temp_input)) {
         syslog(LOG_WARNING, "Cached temp input file %s does not exist", fand_cache.temp_input);
+        status = -1;
+    }
+    else if(!cached_file_in_sys_tree(fand_cache.temp_input)) {
+        syslog(LOG_WARNING, "Cached temp input file %s is not in /sys tree", fand_cache.temp_input);
         status = -1;
     }
 
