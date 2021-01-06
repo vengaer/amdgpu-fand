@@ -298,11 +298,23 @@ pipeline {
                 '''
             }
         }
-        stage('Fetch Corpora') {
-            agent any
+        stage('Fetch and Merge Corpora') {
+            agent {
+                docker { image "${GLIBC_DOCKER_IMAGE}" }
+            }
+            environment {
+                LIBC='glibc'
+            }
             steps {
                 echo 'Copying existing corpora'
-                copyArtifacts(projectName: "${JOB_NAME}", target: 'src/fuzz/corpora')
+                sh 'mkdir -p ${FUZZ_DIR}/corpora'
+                copyArtifacts(projectName: "${JOB_NAME}", target: '${FUZZ_DIR}/corpora')
+
+                echo 'Merging corpora'
+               sh '''
+                    export FAND_FUZZ=${FUZZ_DIR}/${FUZZ_STEM}.${BUILD_NUMBER}-clang-${LIBC}
+                    make fuzzmerge CORPUS_ARTIFACTS=${FUZZ_DIR}/corpora
+                '''
             }
         }
         stage('Run Fuzzer') {

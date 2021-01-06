@@ -39,6 +39,9 @@ FUZZCORPUS  := src/fuzz/corpora
 FUZZFLAGS   := -max_len=$(FUZZLEN) -max_total_time=$(FUZZTIME) -use_value_profile=$(FUZZVALPROF) \
                -timeout=$(FUZZTIMEOUT) $(FUZZCORPUS)
 
+# CORPUS_ARTIFACTS should be passed when invoking make
+MERGEFLAGS  := -merge=1 $(FUZZCORPUS) $(CORPUS_ARTIFACTS)
+
 PROFDATA    := $(builddir)/ipc.profdata
 PROFFLAGS    = merge -sparse $(LLVM_PROFILE_FILE) -o $(PROFDATA)
 
@@ -278,6 +281,12 @@ fuzzrun: $(FAND_FUZZ)
 	$(QUIET)llvm-profdata $(PROFFLAGS)
 	$(QUIET)llvm-cov $(COVFLAGS)
 	$(QUIET)llvm-cov $(COVREPFLAGS)
+
+.PHONY: fuzzmerge
+fuzzmerge: $(if $(findstring fuzzmerge,$(MAKECMDGOALS)),\
+               $(if $(CORPUS_ARTIFACTS),,$(error CORPUS_ARTIFACTS is empty)))
+fuzzmerge: $(FAND_FUZZ)
+	$(QUIET)./$^ $(MERGEFLAGS)
 
 .PHONY: doc
 doc: $(digraph)
