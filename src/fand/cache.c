@@ -163,7 +163,7 @@ int cache_write(void) {
     }
 
     int fd = open(FAND_CACHE_FILE, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR);
-    if(fd < 0) {
+    if(fd == -1) {
         syslog(LOG_WARNING, "Could not open cache file for writing: %s", strerror(errno));
         return -1;
     }
