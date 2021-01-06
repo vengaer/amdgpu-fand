@@ -21,29 +21,43 @@ pipeline {
             }
         }
         stage('Docker Images') {
-            agent any
-            steps {
-                sh '''
-                    image_age() {
-                        docker images | grep "$1" | sed -E 's/[[:space:]]+/ /g;s/[^ ]+$//g' | cut -d' ' -f 4- | tr '[:upper:]' '[:lower:]'
+            failFast true
+            parallel {
+                stage('Build musl Image') {
+                    agent any
+                    steps {
+                        echo '-- Docker musl image --'
+                        sh '''
+                            image_age() {
+                                docker images | grep "$1" | sed -E 's/[[:space:]]+/ /g;s/[^ ]+$//g' | cut -d' ' -f 4- | tr '[:upper:]' '[:lower:]'
+                            }
+
+                            if docker images | grep -q "${MUSL_DOCKER_IMAGE}" ; then
+                                echo "Found existing image ${MUSL_DOCKER_IMAGE} built $(image_age ${MUSL_DOCKER_IMAGE})"
+                            else
+                                docker build -f docker/musl/Dockerfile -t ${MUSL_DOCKER_IMAGE} .
+                            fi
+                        '''
                     }
+                }
+                stage('Build glibc Image') {
+                    agent any
+                    steps {
+                        echo '-- Docker glibc image --'
+                        sh '''
+                            image_age() {
+                                docker images | grep "$1" | sed -E 's/[[:space:]]+/ /g;s/[^ ]+$//g' | cut -d' ' -f 4- | tr '[:upper:]' '[:lower:]'
+                            }
 
-                    echo "-- Building musl Docker image -- "
-                    if docker images | grep -q "${MUSL_DOCKER_IMAGE}" ; then
-                        echo "Found existing image ${MUSL_DOCKER_IMAGE} built $(image_age ${MUSL_DOCKER_IMAGE})"
-                    else
-                        docker build -f docker/musl/Dockerfile -t ${MUSL_DOCKER_IMAGE} .
-                    fi
-
-                    echo "-- Building glibc Docker image --"
-                    if docker images | grep -q "${GLIBC_DOCKER_IMAGE}" ; then
-                        echo "Found existing image ${GLIBC_DOCKER_IMAGE} built $(image_age ${GLIBC_DOCKER_IMAGE})"
-                    else
-                        docker build -f docker/glibc/Dockerfile -t ${GLIBC_DOCKER_IMAGE} .
-                    fi
-                '''
+                            if docker images | grep -q "${GLIBC_DOCKER_IMAGE}" ; then
+                                echo "Found existing image ${GLIBC_DOCKER_IMAGE} built $(image_age ${GLIBC_DOCKER_IMAGE})"
+                            else
+                                docker build -f docker/glibc/Dockerfile -t ${GLIBC_DOCKER_IMAGE} .
+                            fi
+                        '''
+                    }
+                }
             }
-
         }
         stage('Doc') {
             agent {
