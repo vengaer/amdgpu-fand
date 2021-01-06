@@ -32,7 +32,11 @@ enum {
 };
 
 static inline bool cache_struct_is_padded(void) {
+#ifndef FAND_FUZZ_CONFIG
     return sizeof(fand_cache) > CACHE_SIZE;
+#else
+    return true;
+#endif
 }
 
 static inline bool cached_file_in_sys_tree(char const *file) {

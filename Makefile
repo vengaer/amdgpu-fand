@@ -18,6 +18,7 @@ TOUCH       := touch
 QUIET       := @
 MKDIR       := mkdir -p
 RM          := rm -rf
+ECHO        := @echo
 
 cext        := c
 oext        := o
@@ -33,12 +34,13 @@ config_mk   := $(builddir)/config.mk
 
 FUZZIFACE   ?= ipc
 
-FUZZLEN     := $(if $(filter-out ipc,$(FUZZIFACE)),2048,256)
 FUZZTIME    := 240
 FUZZVALPROF := 1
 FUZZTIMEOUT := 30
 FUZZCORPUS  := src/fuzz/$(FUZZIFACE)/corpora
-FUZZFLAGS   := -max_len=$(FUZZLEN) -max_total_time=$(FUZZTIME) -use_value_profile=$(FUZZVALPROF) \
+
+# FUZZLEN set in fuzz module Makefiles
+FUZZFLAGS    = -max_len=$(FUZZLEN) -max_total_time=$(FUZZTIME) -use_value_profile=$(FUZZVALPROF) \
                -timeout=$(FUZZTIMEOUT) $(FUZZCORPUS)
 
 # CORPUS_ARTIFACTS should be passed when invoking make
@@ -47,18 +49,8 @@ MERGEFLAGS  := -merge=1 $(FUZZCORPUS) $(CORPUS_ARTIFACTS)
 PROFDATA    := $(builddir)/ipc.profdata
 PROFFLAGS    = merge -sparse $(LLVM_PROFILE_FILE) -o $(PROFDATA)
 
-ifeq (ipc,$(FUZZIFACE))
-covsymbs    := server_init server_poll server_validate_request server_recv_and_respond server_kill \
-               server_pack_result pack_error pack_exit_rsp pack_matrix pack_speed pack_temp packf  \
-               valist_strip_pointer valist_strip_integral dfa_fmtlen dfa_valsize dfa_simulate      \
-               dfa_flags_to_fmttype dfa_accept dfa_bitflag_set dfa_edge_match
-else ifeq (cache,$(FUZZIFACE))
-covsymbs    := cache_load cache_validate cache_unpack cache_struct_is_padded
-else
-$(error Invalid FUZZIFACE $(FUZZIFACE))
-endif
-
-COVFLAGS    := show $(FAND_FUZZ) -instr-profile=$(PROFDATA) $(addprefix -name ,$(covsymbs))
+# covsymbs set in fuzz module Makefiles
+COVFLAGS     = show $(FAND_FUZZ) -instr-profile=$(PROFDATA) $(addprefix -name ,$(covsymbs))
 COVREPFLAGS := report $(FAND_FUZZ) -instr-profile=$(PROFDATA)
 
 fuzzinstr    = -fsanitize=fuzzer,address -fprofile-instr-generate -fcoverage-mapping
@@ -155,7 +147,7 @@ endef
 
 # $(call echo-build-step, program, file)
 define echo-build-step
-$(info [$(1)] $(notdir $(2)))
+$(ECHO) [$(1)] $(notdir $(2))
 endef
 
 # $(call echo-cc, file)
@@ -216,6 +208,7 @@ stack_top_symb := :
 cond_separator := :
 
 prepare_deps   :=
+build_deps     :=
 
 configuration  := $(call build-configuration)
 
