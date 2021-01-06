@@ -4,5 +4,6 @@ amdgpu-fand*
 amdgpu-fuzzd*
 amdgpu-testd*
 !src/*
-src/fuzz/**/corpora
+src/fuzz/**/corpora/*
+!src/fuzz/**/corpora/corpus_*
 tags
