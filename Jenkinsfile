@@ -23,7 +23,7 @@ pipeline {
         stage('Docker Images') {
             failFast true
             parallel {
-                stage('Build musl Image') {
+                stage('Build Musl Docker Image') {
                     agent any
                     steps {
                         echo '-- Docker musl image --'
@@ -40,7 +40,7 @@ pipeline {
                         '''
                     }
                 }
-                stage('Build glibc Image') {
+                stage('Build Glibc Docker Image') {
                     agent any
                     steps {
                         echo '-- Docker glibc image --'
@@ -71,7 +71,7 @@ pipeline {
         stage('Build') {
             failFast true
             parallel {
-                stage('Build musl') {
+                stage('Build Musl') {
                     agent {
                         docker { image "${MUSL_DOCKER_IMAGE}" }
                     }
@@ -149,7 +149,7 @@ pipeline {
                         '''
                     }
                 }
-                stage('Build glibc') {
+                stage('Build Glibc') {
                     agent {
                         docker { image "${GLIBC_DOCKER_IMAGE}" }
                     }
@@ -232,7 +232,7 @@ pipeline {
         stage('Test') {
             failFast true
             parallel {
-                stage('Test musl') {
+                stage('Test Musl') {
                     agent {
                         docker { image "${MUSL_DOCKER_IMAGE}" }
                     }
@@ -255,7 +255,7 @@ pipeline {
                         sh '${TEST_DIR}/${TEST_STEM}.${BUILD_NUMBER}-clang-${LIBC}'
                     }
                 }
-                stage('Test glibc') {
+                stage('Test Glibc') {
                     agent {
                         docker { image "${GLIBC_DOCKER_IMAGE}" }
                     }
@@ -291,9 +291,17 @@ pipeline {
                 echo 'Creating fuzz directory'
                 sh 'mkdir -p ${FUZZ_DIR}'
 
-                echo 'Build: CC=clang fuzz'
+                echo 'Build: CC=clang fuzz ipc'
                 sh '''
-                    export FAND_FUZZ=${FUZZ_DIR}/${FUZZ_STEM}.${BUILD_NUMBER}-clang-${LIBC}
+                    export FUZZIFACE=ipc
+                    export FAND_FUZZ=${FUZZ_DIR}/${FUZZ_STEM}.${BUILD_NUMBER}-${FUZZIFACE}-clang-${LIBC}
+                    make fuzz -j$(nproc) -B
+                '''
+
+                echo 'Build: CC=clang fuzz cache'
+                sh '''
+                    export FUZZIFACE=cache
+                    export FAND_FUZZ=${FUZZ_DIR}/${FUZZ_STEM}.${BUILD_NUMBER}-${FUZZIFACE}-clang-${LIBC}
                     make fuzz -j$(nproc) -B
                 '''
             }
@@ -307,14 +315,30 @@ pipeline {
             }
             steps {
                 echo 'Copying existing corpora'
-                sh 'mkdir -p ${FUZZ_DIR}/corpora'
-                copyArtifacts(projectName: "${JOB_NAME}", target: '${FUZZ_DIR}/corpora')
+                sh 'mkdir -p ${ARTIFACT_DIR}'
+                copyArtifacts filter: "${ARTIFACT_DIR}/corpora.zip", projectName: "${JOB_NAME}", fingerprintArtifacts: true, optional: true
+                script {
+                    if(fileExists("${ARTIFACT_DIR}/corpora.zip")) {
+                        unzip zipFile: "${ARTIFACT_DIR}/corpora.zip", dir: "${FUZZ_DIR}"
 
-                echo 'Merging corpora'
-               sh '''
-                    export FAND_FUZZ=${FUZZ_DIR}/${FUZZ_STEM}.${BUILD_NUMBER}-clang-${LIBC}
-                    make fuzzmerge CORPUS_ARTIFACTS=${FUZZ_DIR}/corpora
-                '''
+                        echo 'Merging ipc corpora'
+                        sh '''
+                            export FUZZIFACE=ipc
+                            export FAND_FUZZ=${FUZZ_DIR}/${FUZZ_STEM}.${BUILD_NUMBER}-${FUZZIFACE}-clang-${LIBC}
+                            make fuzzmerge CORPUS_ARTIFACTS=${FUZZ_DIR}/${FUZZIFACE}_corpora
+                        '''
+
+                        echo 'Merging cache corpora'
+                        sh '''
+                            export FUZZIFACE=cache
+                            export FAND_FUZZ=${FUZZ_DIR}/${FUZZ_STEM}.${BUILD_NUMBER}-${FUZZIFACE}-clang-${LIBC}
+                            make fuzzmerge CORPUS_ARTIFACTS=${FUZZ_DIR}/${FUZZIFACE}_corpora
+                        '''
+                    }
+                    else {
+                        echo 'No corpora found'
+                    }
+                }
             }
         }
         stage('Run Fuzzer') {
@@ -325,8 +349,18 @@ pipeline {
                 LIBC='glibc'
             }
             steps {
-                echo '-- Starting fuzzing --'
-                sh 'make fuzzrun FAND_FUZZ=${FUZZ_DIR}/${FUZZ_STEM}.${BUILD_NUMBER}-clang-${LIBC}'
+                echo '-- Starting fuzzing of ipc interface --'
+                sh '''
+                    export FUZZIFACE=ipc
+                    export FAND_FUZZ=${FUZZ_DIR}/${FUZZ_STEM}.${BUILD_NUMBER}-${FUZZIFACE}-clang-${LIBC}
+                    make fuzzrun
+                '''
+                echo '-- Starting fuzzing of cache interface --'
+                sh '''
+                    export FUZZIFACE=cache
+                    export FAND_FUZZ=${FUZZ_DIR}/${FUZZ_STEM}.${BUILD_NUMBER}-${FUZZIFACE}-clang-${LIBC}
+                    make fuzzrun
+                '''
             }
         }
         stage('Gitlab Success') {
@@ -342,7 +376,13 @@ pipeline {
         }
         always {
             node(null) {
-                archiveArtifacts artifacts: 'src/fuzz/corpora/*', fingerprint: false
+                sh '''
+                    mkdir -p ${ARTIFACT_DIR}/fuzz
+                    cp -r src/fuzz/ipc/corpora ${ARTIFACT_DIR}/fuzz/ipc_corpora
+                    cp -r src/fuzz/cache/corpora ${ARTIFACT_DIR}/fuzz/cache_corpora
+                '''
+                zip zipFile: "${ARTIFACT_DIR}/corpora.zip", archive: true, dir: "${ARTIFACT_DIR}/fuzz", overwrite: true
+                archiveArtifacts artifacts: "${ARTIFACT_DIR}/corpora.zip", fingerprint: true
 
                 echo 'Cleaning up'
                 deleteDir()
