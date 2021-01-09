@@ -1,4 +1,5 @@
 CC          ?= gcc
+OBJCOPY     ?= objcopy
 
 FAND        ?= amdgpu-fand
 FANCTL      ?= amdgpu-fanctl
@@ -63,7 +64,7 @@ digraph     := $(docdir)/serialize.png
 fand_objs   :=
 fanctl_objs :=
 test_objs    = $(filter-out %/main.$(oext),$(fand_objs) $(fanctl_objs))
-fuzz_objs    = $(filter-out %/main.$(oext),$(fand_objs))
+fuzz_objs   :=
 
 drm_support := $(if $(wildcard /usr/*/libdrm/amdgpu_drm.h),y,n)
 cppflags    += $(if $(findstring _y_,_$(drm_support)_),-DFAND_DRM_SUPPORT)
@@ -97,6 +98,7 @@ $(call stack-push,trivial_stack,$(trivial_module))
 $(eval module_path := $(module_path)/$(module_name))
 $(call mk-module-build-dir)
 $(eval trivial_module := n)
+$(eval mock_module := n)
 $(eval required_by := )
 endef
 
@@ -118,11 +120,11 @@ $(eval include $(module_path)/$(module_mk))
 $(call include-module-epilogue)
 endef
 
-# Includes the module $(module_name) if it is
-# listed in the $(configuration) list
+# Includes the module $(1) if it is
+# listed in the $(modules) list
 # $(call conditional-include-module, module_name)
 define conditional-include-module
-$(if $(findstring $(1),$(configuration)),
+$(if $(findstring $(1),$(modules)),
     $(call include-module,$(1)))
 endef
 
@@ -134,7 +136,11 @@ $(foreach __co,$(cond_objs),
     $(if $(filter-out y,$($(firstword $(subst $(cond_separator), ,$(__co))))),
         $(eval __obj := $(filter-out %/$(lastword $(subst $(cond_separator), ,$(__co))).$(oext),$(__obj)))))
 $(eval cond_objs := )
-$(foreach t,$(required_by),$(eval $(t)_objs += $(__obj)))
+$(foreach __t,$(required_by),
+    $(eval
+        $(if $(filter-out y,$(mock_module)),
+            $(__t)_objs += $(__obj),
+          $(__t)_objs := $(__obj) $($(__t)_objs))))
 $(eval cppflags += -I$(module_path))
 endef
 
@@ -160,15 +166,20 @@ define echo-ld
 $(call echo-build-step,LD,$(1))
 endef
 
-# $(call build-configuration)
-define build-configuration
+# $(call echo-objcopy, object)
+define echo-objcopy
+$(call echo-build-step,OBJCOPY,$(1))
+endef
+
+# $(call build-modules)
+define build-modules
 $(strip
 $(eval __cfg := )
 $(if $(MAKECMDGOALS),
     $(if $(or $(findstring $(FAND_TEST),$(MAKECMDGOALS)), $(findstring test,$(MAKECMDGOALS))),
         $(eval __cfg := fand fanctl test),
       $(if $(or $(findstring $(FAND_FUZZ),$(MAKECMDGOALS)), $(findstring fuzz,$(MAKECMDGOALS))),
-          $(eval __cfg := fand fuzz),
+          $(eval __cfg := fand fuzz mockups),
         $(if $(or $(findstring $(prepare),$(MAKECMDGOALS)), $(findstring prepare,$(MAKECMDGOALS))),
             $(eval __cfg := prepare),
           $(if $(or $(findstring $(FAND),$(MAKECMDGOALS)), $(findstring fand,$(MAKECMDGOALS))),
@@ -182,8 +193,9 @@ endef
 
 # $(call set-config-specific-vars)
 define set-config-specific-vars
-$(if $(findstring fuzz,$(configuration)),
-    $(eval export LLVM_PROFILE_FILE=$(builddir)/ipc.profraw))
+$(if $(findstring fuzz,$(modules)),
+    $(eval export LLVM_PROFILE_FILE=$(builddir)/ipc.profraw)
+    $(eval fand_main := n))
 endef
 
 # $(call override-implicit-vars)
@@ -194,10 +206,34 @@ $(eval override LDFLAGS  += $(ldflags))
 $(eval override LDLIBS   += $(ldlibs))
 endef
 
-$(call set-libc-flags)
+# $(call set-libc-flags)
 define set-libc-flags
 $(if $(findstring musl,$(libc)),
     $(eval override LDLIBS += -largp))
+endef
+
+# Make symbols listed in $(1) weak in ELF object files
+# listed in $(2)
+#$(call ldmock,mock_symbols,mock_objects)
+define ldmock
+$(if $(and $(1),$(2)),
+    $(eval __objcopy_flags := $(addprefix -W ,$(1)))
+
+    .PHONY: ldmock
+
+    $(eval link_deps += ldmock)
+
+    $(foreach __obj,$(2),
+        $(eval
+            $(eval __target := $(builddir)/.__ldmock_weaken$(words $(__ldmock_weak_ctr)))
+            $(__target): $(__obj)
+	            $(call echo-objcopy,$(__obj))
+	            $(QUIET)$(OBJCOPY) $(__objcopy_flags) $$^
+	            $(QUIET)$(TOUCH) $$@
+
+            ldmock: $(__target)
+            __ldmock_weak_ctr := _ $(__ldmock_weak_ctr)
+)))
 endef
 
 mk-build-root  := $(shell $(MKDIR) $(builddir))
@@ -209,33 +245,35 @@ cond_separator := :
 
 prepare_deps   :=
 build_deps     :=
+link_deps      :=
 
-configuration  := $(call build-configuration)
+modules        := $(call build-modules)
 
 prepare        := $(builddir)/.prepare.stamp
 
 .PHONY: all
 all: $(FAND) $(FANCTL)
 
-ifneq ($(configuration),)
+$(call set-config-specific-vars)
+
+ifneq ($(modules),)
     $(call include-module,src)
 endif
 
-$(call set-config-specific-vars)
 $(call override-implicit-vars)
 
 $(prepare): $(prepare_deps)
 	$(QUIET)$(TOUCH) $@
 
-$(FAND): $(fand_objs)
+$(FAND): $(fand_objs) | $(link_deps)
 	$(call echo-ld,$@)
 	$(QUIET)$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
-$(FANCTL): $(fanctl_objs)
+$(FANCTL): $(fanctl_objs) | $(link_deps)
 	$(call echo-ld,$@)
 	$(QUIET)$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
-$(FAND_TEST): $(test_objs)
+$(FAND_TEST): $(test_objs) | $(link_deps)
 	$(call echo-ld,$@)
 	$(QUIET)$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
@@ -243,7 +281,7 @@ $(FAND_FUZZ): CC       := clang
 $(FAND_FUZZ): CFLAGS   += $(fuzzinstr)
 $(FAND_FUZZ): CPPFLAGS := -DFAND_FUZZ_CONFIG $(CPPFLAGS)
 $(FAND_FUZZ): LDFLAGS  += $(fuzzinstr)
-$(FAND_FUZZ): $(fuzz_objs)
+$(FAND_FUZZ): $(fuzz_objs) | $(link_deps)
 	$(call echo-ld,$@)
 	$(QUIET)$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 

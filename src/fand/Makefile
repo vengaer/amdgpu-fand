@@ -1,7 +1,7 @@
-trivial_module  := y
-required_by     := fand
+trivial_module := y
+required_by    := fand fuzz
 
-cond_objs       := drm_support:drm
+cond_objs      := drm_support:drm fand_main:main
 
 ifeq ($(module_name),)
 target := $(if $(MAKECMDGOALS),$(MAKECMDGOALS),recurse)

@@ -1,5 +1,7 @@
 trivial_module := y
-required_by    := fand fanctl fuzz
+required_by    := fuzz
+mock_module    := y
+
 
 ifeq ($(module_name),)
 target := $(if $(MAKECMDGOALS),$(MAKECMDGOALS),recurse)
