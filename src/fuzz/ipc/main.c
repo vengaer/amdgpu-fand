@@ -1,5 +1,6 @@
 #include "config.h"
 #include "ipc.h"
+#include "mock_fanctrl.h"
 #include "server.h"
 #include "strutils.h"
 
@@ -20,6 +21,14 @@
 #include <unistd.h>
 
 static int clientfd;
+
+int get_temp(void) {
+    return -1;
+}
+
+int get_speed(void) {
+    return -1;
+}
 
 ssize_t sockput_raw(unsigned char const *data, size_t size) {
     union unsockaddr srvaddr;;
@@ -84,6 +93,9 @@ int LLVMFuzzerTestOneInput(uint8_t const *data, size_t size) {
         .interval = 2,
         .matrix = { 0 }
     };
+
+    mock_fanctrl_get_temp(get_temp);
+    mock_fanctrl_get_speed(get_speed);
 
     if(server_init()) {
         fputs("Error starting server\n", stderr);

@@ -177,7 +177,7 @@ $(strip
 $(eval __cfg := )
 $(if $(MAKECMDGOALS),
     $(if $(or $(findstring $(FAND_TEST),$(MAKECMDGOALS)), $(findstring test,$(MAKECMDGOALS))),
-        $(eval __cfg := fand fanctl test),
+        $(eval __cfg := fand fanctl test mock),
       $(if $(or $(findstring $(FAND_FUZZ),$(MAKECMDGOALS)), $(findstring fuzz,$(MAKECMDGOALS))),
           $(eval __cfg := fand fuzz mock),
         $(if $(or $(findstring $(prepare),$(MAKECMDGOALS)), $(findstring prepare,$(MAKECMDGOALS))),

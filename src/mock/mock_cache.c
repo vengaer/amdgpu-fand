@@ -1,22 +1,31 @@
 #include "mock_cache.h"
-#include "regutils.h"
 
-#include <regex.h>
+#include <stdio.h>
+
+static bool(*is_padded)(void) = 0;
+static bool(*exists_in_sysfs)(char const *) = 0;
+
+void mock_cache_struct_is_padded(bool(*mock)(void)) {
+    is_padded = mock;
+}
+
+void mock_cache_file_exists_in_sysfs(bool(*mock)(char const *)) {
+    exists_in_sysfs = mock;
+}
 
 bool cache_struct_is_padded(void) {
-    return true;
+    if(!is_padded) {
+        fputs("cache_struct_is_padded not mocked\n", stderr);
+        return false;
+    }
+    return is_padded();
 }
 
 bool cache_file_exists_in_sysfs(char const *file) {
-    regex_t regex;
-    bool exists;
-
-    if(regcomp_info(&regex, "^/sys/devices/pci[0-9:]+(/[a-zA-Z0-9:.]+){4}/hwmon/hwmon[0-9]+/(pwm[0-9]+(_input)?|temp[0-9]+_input)", REG_EXTENDED, "sysfs mock")) {
+    if(!exists_in_sysfs) {
+        fputs("cache_file_exists_in_sysfs not mocked\n", stderr);
         return false;
     }
 
-    exists = regexec(&regex, file, 0, 0, 0) == 0;
-
-    regfree(&regex);
-    return exists;
+    return exists_in_sysfs(file);
 }
