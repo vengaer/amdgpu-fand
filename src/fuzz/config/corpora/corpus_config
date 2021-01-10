@@ -1,0 +1,18 @@
+# The interval with which the fan speed is to be adjusted
+interval = 2 #seconds
+
+# Hysteresis threshold
+hysteresis = 3 # degrees celsius
+
+# Whether to attempt to turn the fan(s) off
+# if the temperature falls below the lowest
+# temperature threshold specified in the
+# matrix
+aggressive_throttle = true
+
+# Temperature (deg celsius)- fan speed (percent) matrix
+matrix=('50::5'
+        '55::10'
+        '65::30'
+        '75::60'
+        '80::100')
