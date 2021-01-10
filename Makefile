@@ -195,7 +195,8 @@ define set-config-specific-vars
 $(if $(findstring fuzz,$(modules)),
     $(eval export LLVM_PROFILE_FILE=$(builddir)/ipc.profraw))
 $(if $(or $(findstring test,$(modules)),$(findstring fuzz,$(modules))),
-    $(eval fand_main := n))
+    $(eval fand_main := n)
+    $(eval fanctl_main := n))
 endef
 
 # $(call override-implicit-vars)

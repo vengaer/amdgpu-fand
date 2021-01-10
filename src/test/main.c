@@ -1,7 +1,9 @@
 #include "fanctrl_test.h"
 #include "interpolation_test.h"
 #include "sha1_test.h"
+#include "request_test.h"
 #include "serialize_test.h"
+#include "strutils_test.h"
 #include "test.h"
 
 int main(void) {
@@ -32,6 +34,9 @@ int main(void) {
     run(test_strsncpy_result);
     run(test_strsncpy_return_value);
     run(test_strsncpy_null_termination);
+
+    section(request);
+    run(test_request_convert);
 
     return test_summary();;
 }
