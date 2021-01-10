@@ -32,9 +32,7 @@ int request_process_get(ipc_request request) {
     union unpack_result result;
     ipc_response rsp;
 
-    if(request != ipc_req_inval) {
-        rsplen = client_send_and_recv(rspbuffer, sizeof(rspbuffer), request);
-    }
+    rsplen = client_send_and_recv(rspbuffer, sizeof(rspbuffer), request);
 
     switch(request) {
         case ipc_req_speed:
