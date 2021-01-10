@@ -63,7 +63,7 @@ digraph     := $(docdir)/serialize.png
 
 fand_objs   :=
 fanctl_objs :=
-test_objs    = $(filter-out %/main.$(oext),$(fand_objs) $(fanctl_objs))
+test_objs   :=
 fuzz_objs   :=
 
 drm_support := $(if $(wildcard /usr/*/libdrm/amdgpu_drm.h),y,n)
@@ -194,7 +194,8 @@ endef
 # $(call set-config-specific-vars)
 define set-config-specific-vars
 $(if $(findstring fuzz,$(modules)),
-    $(eval export LLVM_PROFILE_FILE=$(builddir)/ipc.profraw)
+    $(eval export LLVM_PROFILE_FILE=$(builddir)/ipc.profraw))
+$(if $(or $(findstring test,$(modules)),$(findstring fuzz,$(modules))),
     $(eval fand_main := n))
 endef
 

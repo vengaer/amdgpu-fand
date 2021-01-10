@@ -1,5 +1,5 @@
 trivial_module := y
-required_by    := fand fuzz
+required_by    := fand fuzz test
 
 cond_objs      := drm_support:drm fand_main:main
 
