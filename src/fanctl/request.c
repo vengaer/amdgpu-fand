@@ -34,6 +34,10 @@ int request_process_get(ipc_request request) {
 
     rsplen = client_send_and_recv(rspbuffer, sizeof(rspbuffer), request);
 
+    if(rsplen < 0) {
+        return rsplen;
+    }
+
     switch(request) {
         case ipc_req_speed:
             rsp = unpack_speed(rspbuffer, rsplen, &result);
