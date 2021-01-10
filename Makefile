@@ -47,7 +47,7 @@ FUZZFLAGS    = -max_len=$(FUZZLEN) -max_total_time=$(FUZZTIME) -use_value_profil
 # CORPUS_ARTIFACTS should be passed when invoking make
 MERGEFLAGS  := -merge=1 $(FUZZCORPUS) $(CORPUS_ARTIFACTS)
 
-PROFDATA    := $(builddir)/ipc.profdata
+PROFDATA    := $(builddir)/fuzz.profdata
 PROFFLAGS    = merge -sparse $(LLVM_PROFILE_FILE) -o $(PROFDATA)
 
 # covsymbs set in fuzz module Makefiles
