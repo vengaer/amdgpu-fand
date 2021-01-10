@@ -291,9 +291,9 @@ pipeline {
                 echo 'Creating fuzz directory'
                 sh 'mkdir -p ${FUZZ_DIR}'
 
-                echo 'Build: CC=clang fuzz ipc'
+                echo 'Build: CC=clang fuzz server'
                 sh '''
-                    export FUZZIFACE=ipc
+                    export FUZZIFACE=server
                     export FAND_FUZZ=${FUZZ_DIR}/${FUZZ_STEM}.${BUILD_NUMBER}-${FUZZIFACE}-clang-${LIBC}
                     make fuzz -j$(nproc) -B
                 '''
@@ -328,9 +328,9 @@ pipeline {
                     if(fileExists("${ARTIFACT_DIR}/corpora.zip")) {
                         unzip zipFile: "${ARTIFACT_DIR}/corpora.zip", dir: "${FUZZ_DIR}"
 
-                        echo 'Merging ipc corpora'
+                        echo 'Merging server corpora'
                         sh '''
-                            export FUZZIFACE=ipc
+                            export FUZZIFACE=server
                             export FAND_FUZZ=${FUZZ_DIR}/${FUZZ_STEM}.${BUILD_NUMBER}-${FUZZIFACE}-clang-${LIBC}
                             make fuzzmerge CORPUS_ARTIFACTS=${FUZZ_DIR}/${FUZZIFACE}_corpora
                         '''
@@ -363,9 +363,9 @@ pipeline {
                 LIBC='glibc'
             }
             steps {
-                echo '-- Starting fuzzing of ipc interface --'
+                echo '-- Starting fuzzing of server interface --'
                 sh '''
-                    export FUZZIFACE=ipc
+                    export FUZZIFACE=server
                     export FAND_FUZZ=${FUZZ_DIR}/${FUZZ_STEM}.${BUILD_NUMBER}-${FUZZIFACE}-clang-${LIBC}
                     make fuzzrun
                 '''
@@ -399,7 +399,7 @@ pipeline {
             node(null) {
                 sh '''
                     mkdir -p ${ARTIFACT_DIR}/fuzz
-                    cp -r src/fuzz/ipc/corpora ${ARTIFACT_DIR}/fuzz/ipc_corpora
+                    cp -r src/fuzz/server/corpora ${ARTIFACT_DIR}/fuzz/server_corpora
                     cp -r src/fuzz/cache/corpora ${ARTIFACT_DIR}/fuzz/cache_corpora
                     cp -r src/fuzz/config/corpora ${ARTIFACT_DIR}/fuzz/config_corpora
                 '''

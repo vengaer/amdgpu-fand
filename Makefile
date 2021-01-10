@@ -32,7 +32,7 @@ builddir    := $(root)/build
 # Generated during prepare step, provides variable libc
 config_mk   := $(builddir)/config.mk
 
-FUZZIFACE   ?= ipc
+FUZZIFACE   ?= server
 
 FUZZTIME    := 240
 FUZZVALPROF := 1
@@ -193,7 +193,7 @@ endef
 # $(call set-config-specific-vars)
 define set-config-specific-vars
 $(if $(findstring fuzz,$(modules)),
-    $(eval export LLVM_PROFILE_FILE=$(builddir)/ipc.profraw))
+    $(eval export LLVM_PROFILE_FILE=$(builddir)/fuzz.profraw))
 $(if $(or $(findstring test,$(modules)),$(findstring fuzz,$(modules))),
     $(eval fand_main := n)
     $(eval fanctl_main := n))
