@@ -17,15 +17,10 @@
 
 #define FAND_CACHE_FILE "/tmp/amdgpu-fand.cache"
 
-bool cache_struct_is_padded(void) {
-    return true;
-}
-
 int LLVMFuzzerTestOneInput(uint8_t const *data, size_t size) {
     if(!size) {
         return 0;
     }
-    cache_struct_is_padded();
 
     unsigned char *buffer = malloc(size + SHA1_DIGESTSIZE);
     if(!buffer) {
