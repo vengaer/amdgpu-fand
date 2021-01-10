@@ -6,10 +6,9 @@ FANCTL      ?= amdgpu-fanctl
 FAND_TEST   ?= amdgpu-testd
 FAND_FUZZ   ?= amdgpu-fuzzd
 
-cflags      := -std=c11 -Wall -Wextra -Wpedantic -Waggregate-return -Wbad-function-cast               \
-               -Wcast-qual -Wfloat-equal -Wmissing-include-dirs -Wnested-externs -Wpointer-arith      \
-               -Wredundant-decls -Wshadow -Wunknown-pragmas -Wswitch -Wundef -Wunused -Wwrite-strings \
-               -MD -MP -c -g
+cflags      := -std=c11 -Wall -Wextra -Wpedantic -Waggregate-return -Wcast-qual -Wfloat-equal     \
+               -Wmissing-include-dirs -Wnested-externs -Wpointer-arith -Wredundant-decls -Wshadow \
+               -Wunknown-pragmas -Wswitch -Wundef -Wunused -Wwrite-strings -MD -MP -c -g
 cppflags    := -D_GNU_SOURCE
 
 ldflags     :=

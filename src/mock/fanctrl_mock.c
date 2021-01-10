@@ -1,4 +1,4 @@
-#include "mock_fanctrl.h"
+#include "fanctrl_mock.h"
 
 #include <stdio.h>
 

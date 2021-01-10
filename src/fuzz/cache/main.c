@@ -1,5 +1,5 @@
 #include "cache.h"
-#include "mock_cache.h"
+#include "cache_mock.h"
 #include "regutils.h"
 #include "sha1.h"
 
@@ -20,7 +20,7 @@
 
 #define FAND_CACHE_FILE "/tmp/amdgpu-fand.cache"
 
-bool is_padded(void) {
+static bool is_padded(void) {
     return true;
 }
 

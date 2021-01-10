@@ -1,6 +1,6 @@
 #include "config.h"
 #include "ipc.h"
-#include "mock_fanctrl.h"
+#include "fanctrl_mock.h"
 #include "server.h"
 #include "strutils.h"
 
@@ -22,11 +22,11 @@
 
 static int clientfd;
 
-int get_temp(void) {
+static int get_temp(void) {
     return -1;
 }
 
-int get_speed(void) {
+static int get_speed(void) {
     return -1;
 }
 

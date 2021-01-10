@@ -1,8 +1,8 @@
-#include "mock_hwmon.h"
+#include "hwmon_mock.h"
 
 #include <stdio.h>
 
-static int(*write_pwm)(unsigned long);
+static int(*write_pwm)(unsigned long) = 0;
 
 void mock_hwmon_write_pwm(int(*mock)(unsigned long)) {
     write_pwm = mock;
