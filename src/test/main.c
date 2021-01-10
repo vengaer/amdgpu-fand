@@ -1,3 +1,4 @@
+#include "fanctrl_test.h"
 #include "interpolation_test.h"
 #include "sha1_test.h"
 #include "serialize_test.h"
@@ -20,6 +21,9 @@ int main(void) {
     run(test_unpackf_insufficient_bufsize);
     run(test_unpackf_invalid_fmtstring);
     run(test_unpackf_repeat);
+
+    section(fanctrl);
+    run(test_fanctrl_adjust);
 
     return test_summary();;
 }
