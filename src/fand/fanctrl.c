@@ -121,13 +121,12 @@ int fanctrl_adjust(void) {
         speed = matrix.speeds[matrix.rows - 1];
     }
 
-    if(current_threshold > -1 && threshold < current_threshold) {
-        if(temp + hysteresis > matrix.speeds[current_threshold]) {
-            speed = matrix.speeds[current_threshold];
-        }
-        else {
-            current_threshold = threshold;
-        }
+    if(current_threshold > -1 && threshold < current_threshold && temp + hysteresis > matrix.temps[current_threshold]) {
+        /* Hysteresis not yet surpassed */
+        speed = matrix.speeds[current_threshold];
+    }
+    else {
+        current_threshold = threshold;
     }
 
     return hwmon_write_pwm(fanctrl_percentage_to_pwm(speed));
