@@ -412,6 +412,9 @@ pipeline {
                 zip zipFile: "${ARTIFACT_DIR}/corpora.zip", archive: true, dir: "${ARTIFACT_DIR}/fuzz", overwrite: true
                 archiveArtifacts artifacts: "${ARTIFACT_DIR}/corpora.zip", fingerprint: true
 
+                echo 'Removing dangling Docker images'
+                sh 'docker system prune -f'
+
                 echo 'Cleaning up'
                 deleteDir()
             }
