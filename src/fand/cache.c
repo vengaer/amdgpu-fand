@@ -13,7 +13,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#ifndef FAND_FUZZ_CONFIG
+#ifndef FAND_TEST_CONFIG
 #define FAND_CACHE_DIR "/var/cache/amdgpu-fand"
 #else
 #define FAND_CACHE_DIR "/tmp"
@@ -31,7 +31,7 @@ enum {
                  sizeof(((struct fand_cache *)0)->checksum)
 };
 
-#ifndef FAND_FUZZ_CONFIG
+#ifndef FAND_TEST_CONFIG
 static inline
 #endif
 bool cache_struct_is_padded(void) {

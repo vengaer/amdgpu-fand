@@ -1,7 +1,7 @@
 #ifndef DEFS_H
 #define DEFS_H
 
-#ifndef FAND_FUZZ_CONFIG
+#ifndef FAND_TEST_CONFIG
 #define DAEMON_WORKING_DIR "/var/run/amdgpu-fand"
 #else
 #define DAEMON_WORKING_DIR "/tmp"

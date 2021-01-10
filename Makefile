@@ -272,13 +272,14 @@ $(FANCTL): $(fanctl_objs) | $(link_deps)
 	$(call echo-ld,$@)
 	$(QUIET)$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
+$(FAND_TEST): CPPFLAGS := -DFAND_TEST_CONFIG $(CPPFLAGS)
 $(FAND_TEST): $(test_objs) | $(link_deps)
 	$(call echo-ld,$@)
 	$(QUIET)$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
 $(FAND_FUZZ): CC       := clang
 $(FAND_FUZZ): CFLAGS   += $(fuzzinstr)
-$(FAND_FUZZ): CPPFLAGS := -DFAND_FUZZ_CONFIG $(CPPFLAGS)
+$(FAND_FUZZ): CPPFLAGS := -DFAND_FUZZ_CONFIG -DFAND_TEST_CONFIG $(CPPFLAGS)
 $(FAND_FUZZ): LDFLAGS  += $(fuzzinstr)
 $(FAND_FUZZ): $(fuzz_objs) | $(link_deps)
 	$(call echo-ld,$@)
