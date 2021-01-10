@@ -1,3 +1,4 @@
+#include "ctlio.h"
 #include "format.h"
 #include "regutils.h"
 
@@ -67,12 +68,12 @@ void format_speed(int speed) {
 
 int format(union unpack_result const *result, ipc_request req, ipc_response rsp) {
     if(rsp == ipc_rsp_err) {
-        fprintf(stderr, "%s\n", strerror(result->error));
+        ctl_fprintf(stderr, "%s\n", strerror(result->error));
         return -1;
     }
 
     if(rsp != ipc_rsp_ok) {
-        fprintf(stderr, "Invalid response %hhu\n", rsp);
+        ctl_fprintf(stderr, "Invalid response %hhu\n", rsp);
         return -1;
     }
 

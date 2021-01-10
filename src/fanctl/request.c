@@ -1,4 +1,5 @@
 #include "client.h"
+#include "ctlio.h"
 #include "format.h"
 #include "ipc.h"
 #include "macro.h"
@@ -18,7 +19,7 @@ int request_convert(char const *target, ipc_request *request) {
     }
 
     if(*request == ipc_req_inval) {
-        fprintf(stderr, "Invalid request: %s\n", target);
+        ctl_fprintf(stderr, "Invalid request: %s\n", target);
         return -1;
     }
 
@@ -27,10 +28,13 @@ int request_convert(char const *target, ipc_request *request) {
 
 int request_process_get(ipc_request request) {
     unsigned char rspbuffer[IPC_MAX_MSG_LENGTH];
-    ssize_t rsplen;
+    ssize_t rsplen = -1;
     union unpack_result result;
-    rsplen = client_send_and_recv(rspbuffer, sizeof(rspbuffer), request);
     ipc_response rsp;
+
+    if(request != ipc_req_inval) {
+        rsplen = client_send_and_recv(rspbuffer, sizeof(rspbuffer), request);
+    }
 
     switch(request) {
         case ipc_req_speed:
@@ -43,7 +47,7 @@ int request_process_get(ipc_request request) {
             rsp = unpack_matrix(rspbuffer, rsplen, &result);
             break;
         default:
-            fprintf(stderr, "Invalid request %hhu", request);
+            ctl_fprintf(stderr, "Invalid request %hhu\n", request);
             return -1;
     }
 
@@ -64,7 +68,7 @@ int request_process_exit(void) {
     rsp = unpack_exit_rsp(rspbuffer, rsplen, &result);
 
     if(rsp) {
-        fprintf(stderr, "%s\n", strerror(result.error));
+        ctl_fprintf(stderr, "%s\n", strerror(result.error));
         return -1;
     }
 

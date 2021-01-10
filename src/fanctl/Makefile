@@ -1,5 +1,5 @@
 trivial_module := y
-required_by    := fanctl test
+required_by    := fanctl fuzz test
 
 cond_objs      := fanctl_main:main
 

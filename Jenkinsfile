@@ -308,7 +308,14 @@ pipeline {
                 echo 'Build: CC=clang fuzz config'
                 sh '''
                     export FUZZIFACE=config
-                    export FAND_FUZZ=${FUZZ_DIR}/${FUZZ_STEM}.${BUILD_NUMBER°-${FUZZIFACE}-clang-${LIBC}
+                    export FAND_FUZZ=${FUZZ_DIR}/${FUZZ_STEM}.${BUILD_NUMBER}-${FUZZIFACE}-clang-${LIBC}
+                    make fuzz -j$(nproc) -B
+                '''
+
+                echo 'Build: CC=clang fuzz client'
+                sh '''
+                    export FUZZIFACE=client
+                    export FAND_FUZZ=${FUZZ_DIR}/${FUZZ_STEM}.${BUILD_NUMBER}-${FUZZIFACE}-clang-${LIBC}
                     make fuzz -j$(nproc) -B
                 '''
             }
@@ -348,6 +355,13 @@ pipeline {
                             export FAND_FUZZ=${FUZZ_DIR}/${FUZZ_STEM}.${BUILD_NUMBER}-${FUZZIFACE}-clang-${LIBC}
                             make fuzzmerge CORPUS_ARTIFACTS=${FUZZ_DIR}/${FUZZIFACE}_corpora
                         '''
+
+                        echo 'Merging client corpora'
+                        sh '''
+                            export FUZZIFACE=client
+                            export FAND_FUZZ=${FUZZ_DIR}/${FUZZ_STEM}.${BUILD_NUMBER}-${FUZZIFACE}-clang-${LIBC}
+                            make fuzzmerge CORPUS_ARTIFACTS=${FUZZ_DIR}/${FUZZIFACE}_corpora
+                        '''
                     }
                     else {
                         echo 'No corpora found'
@@ -382,6 +396,13 @@ pipeline {
                     export FAND_FUZZ=${FUZZ_DIR}/${FUZZ_STEM}.${BUILD_NUMBER}-${FUZZIFACE}-clang-${LIBC}
                     make fuzzrun
                 '''
+
+                echo '-- Starting fuzzing of client interface --'
+                sh '''
+                    export FUZZIFACE=client
+                    export FAND_FUZZ=${FUZZ_DIR}/${FUZZ_STEM}.${BUILD_NUMBER}-${FUZZIFACE}-clang-${LIBC}
+                    make fuzzrun
+                '''
             }
         }
         stage('Gitlab Success') {
@@ -402,6 +423,7 @@ pipeline {
                     cp -r src/fuzz/server/corpora ${ARTIFACT_DIR}/fuzz/server_corpora
                     cp -r src/fuzz/cache/corpora ${ARTIFACT_DIR}/fuzz/cache_corpora
                     cp -r src/fuzz/config/corpora ${ARTIFACT_DIR}/fuzz/config_corpora
+                    cp -r src/fuzz/client/corpora ${ARTIFACT_DIR}/fuzz/client_corpora
                 '''
                 zip zipFile: "${ARTIFACT_DIR}/corpora.zip", archive: true, dir: "${ARTIFACT_DIR}/fuzz", overwrite: true
                 archiveArtifacts artifacts: "${ARTIFACT_DIR}/corpora.zip", fingerprint: true

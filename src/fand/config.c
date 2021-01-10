@@ -3,6 +3,7 @@
 #include "regutils.h"
 #include "strutils.h"
 
+#include <errno.h>
 #include <limits.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -270,6 +271,7 @@ int config_parse(char const *path, struct fand_config *data) {
 
     FILE *fp = fopen(path, "r");
     if(!fp) {
+        syslog(LOG_ERR, "Could not open config file %s: %s", path, strerror(errno));
         status = -1;
         goto cleanup;
     }

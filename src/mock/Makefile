@@ -17,6 +17,11 @@ $(module_name)_mockobjs  := $(builddir)/fand/hwmon.o
 
 $(call ldmock,$($(module_name)_mocksymbs),$($(module_name)_mockobjs))
 
+$(module_name)_mocksymbs := client_send_and_recv
+$(module_name)_mockobjs  := $(builddir)/fanctl/client.o
+
+$(call ldmock,$($(module_name)_mocksymbs),$($(module_name)_mockobjs))
+
 ifeq ($(module_name),)
 target := $(if $(MAKECMDGOALS),$(MAKECMDGOALS),recurse)
 
