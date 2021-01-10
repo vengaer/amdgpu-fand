@@ -1,5 +1,4 @@
 #include "config.h"
-#include "filesystem.h"
 #include "macro.h"
 #include "strutils.h"
 
@@ -111,53 +110,63 @@ static int config_set_hysteresis(struct fand_config *data, char const *value) {
 static int config_set_matrix(struct fand_config *data, char const *value) {
     regex_t matv_regex;
     regmatch_t pmatch[3];
-    int status = -1;
-    unsigned char matrix_rows = 0;
+    int status = 0;
+    unsigned char matrix_rows;
     char numbuf[CONFIG_NUMBUF_SIZE];
     unsigned long ul;
     unsigned char temp;
 
     if(config_regcomp(&matv_regex, "[;(]'([0-9]+)::([0-9]+)'.*[;)]", REG_EXTENDED, "matrix value")) {
-        return status;
+        return -1;
     }
 
-    while(value) {
+    for(matrix_rows = 0; matrix_rows < MAX_TEMP_THRESHOLDS && value; matrix_rows++) {
         if(regexec(&matv_regex, value, array_size(pmatch), pmatch, 0)) {
             syslog(LOG_ERR, "Error while parsing matrix, offending segment: %s", value);
+            status = -1;
             goto cleanup;
         }
 
         if(strsncpy(numbuf, value + pmatch[1].rm_so, sizeof(numbuf), regmatch_length(&pmatch[1])) < 0) {
             syslog(LOG_ERR, "Temperature %.*s exceeds allowed limit", regmatch_length(&pmatch[1]), value + pmatch[1].rm_so);
+            status = -1;
             goto cleanup;
         }
 
         if(strstoul_range(numbuf, &ul, 0, UCHAR_MAX)) {
             syslog(LOG_ERR, "Invalid temperature %s, must be a number between 0 and %hhu", numbuf, (unsigned char)UCHAR_MAX);
+            status = -1;
             goto cleanup;
         }
         temp = (unsigned char)ul;
 
         if(strsncpy(numbuf, value + pmatch[2].rm_so, sizeof(numbuf), regmatch_length(&pmatch[2])) < 0) {
             syslog(LOG_ERR, "Percentage %.*s exceeds allowed limit", regmatch_length(&pmatch[2]), value + pmatch[2].rm_so);
+            status = -1;
             goto cleanup;
         }
         if(strstoul_range(numbuf, &ul, 0, 100)) {
             syslog(LOG_ERR, "Invalid percentage %s, must be a number between 0 and 100", numbuf);
+            status = -1;
             goto cleanup;
         }
 
         data->matrix[matrix_rows * 2] = temp;
         data->matrix[matrix_rows * 2 + 1] = (unsigned char)ul;
-        ++matrix_rows;
 
         value = strchr(value + 1, ';');
+    }
+
+    if(matrix_rows == MAX_TEMP_THRESHOLDS) {
+        syslog(LOG_ERR, "Matrix may contain at most %d rows", MAX_TEMP_THRESHOLDS);
+        status = -1;
+        goto cleanup;
     }
 
     data->matrix_rows = matrix_rows;
 cleanup:
     regfree(&matv_regex);
-    return 0;
+    return status;
 }
 
 static int config_set_throttle(struct fand_config *data, char const *value) {
