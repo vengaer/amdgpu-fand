@@ -216,7 +216,7 @@ endef
 # listed in $(2)
 #$(call ldmock,mock_symbols,mock_objects)
 define ldmock
-$(if $(and $(1),$(2)),
+$(if $(and $(findstring mock,$(modules)),$(1),$(2)),
     $(eval __objcopy_flags := $(addprefix -W ,$(1)))
 
     .PHONY: ldmock
