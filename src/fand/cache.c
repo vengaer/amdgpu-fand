@@ -1,5 +1,6 @@
 #include "cache.h"
 #include "filesystem.h"
+#include "mock.h"
 #include "serialize.h"
 
 #include <errno.h>
@@ -31,15 +32,17 @@ enum {
                  sizeof(((struct fand_cache *)0)->checksum)
 };
 
-#ifndef FAND_TEST_CONFIG
-static inline
-#endif
+MOCKABLE(static inline)
 bool cache_struct_is_padded(void) {
     return sizeof(fand_cache) > CACHE_SIZE;
 }
 
-static inline bool cached_file_in_sys_tree(char const *file) {
-    return strncmp(file, "/sys/", strlen("/sys/")) == 0;
+MOCKABLE(static inline)
+bool cache_file_exists_in_sysfs(char const *file) {
+    static char const *sysfs_stem = "/sys/";
+    static size_t stem_len = strlen(sysfs_stem);
+
+    return fsys_file_exists(file) && strncpy(file, sysfs_stem, stem_len) == 0;
 }
 
 static int cache_validate(unsigned char *buffer, size_t nbytes) {
@@ -61,28 +64,16 @@ static int cache_validate(unsigned char *buffer, size_t nbytes) {
         return -1;
     }
 
-    if(!fsys_file_exists(fand_cache.pwm)) {
-        syslog(LOG_WARNING, "Cached pwm file %s does not exist", fand_cache.pwm);
+    if(!cache_file_exists_in_sysfs(fand_cache.pwd)) {
+        syslog(LOG_WARNING, "Cached pwm file %s does not exist in /sys tree", fand_cache.pwm);
         status = -1;
     }
-    else if(!cached_file_in_sys_tree(fand_cache.pwm)) {
-        syslog(LOG_WARNING, "Cached pwm file %s is not in /sys tree", fand_cache.pwm);
+    else if(!cache_file_exists_in_sysfs(fand_cache.pwm_enable)) {
+        syslog(LOG_WARNING, "Cached pwm enable file %s does not exist in /sys tree", fand_cache.pwm_enable);
         status = -1;
     }
-    else if(!fsys_file_exists(fand_cache.pwm_enable)) {
-        syslog(LOG_WARNING, "Cached pwm enable file %s does not exist", fand_cache.pwm_enable);
-        status = -1;
-    }
-    else if(!cached_file_in_sys_tree(fand_cache.pwm_enable)) {
-        syslog(LOG_WARNING, "Cached pwm enable file %s is not in /sys tree", fand_cache.pwm_enable);
-        status = -1;
-    }
-    else if(!fsys_file_exists(fand_cache.temp_input)) {
-        syslog(LOG_WARNING, "Cached temp input file %s does not exist", fand_cache.temp_input);
-        status = -1;
-    }
-    else if(!cached_file_in_sys_tree(fand_cache.temp_input)) {
-        syslog(LOG_WARNING, "Cached temp input file %s is not in /sys tree", fand_cache.temp_input);
+    else if(!cache_file_exists_in_sysfs(fand_cache.temp_input)) {
+        syslog(LOG_WARNING, "Cached temp input file %s does not exist in /sys tree", fand_cache.temp_input);
         status = -1;
     }
 
