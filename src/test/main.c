@@ -25,5 +25,13 @@ int main(void) {
     section(fanctrl);
     run(test_fanctrl_adjust);
 
+    section(strutils);
+    run(test_strscpy_result);
+    run(test_strscpy_return_value);
+    run(test_strscpy_null_termination);
+    run(test_strsncpy_result);
+    run(test_strsncpy_return_value);
+    run(test_strsncpy_null_termination);
+
     return test_summary();;
 }
