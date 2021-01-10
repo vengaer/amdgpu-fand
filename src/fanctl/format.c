@@ -1,4 +1,5 @@
 #include "format.h"
+#include "regutils.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -10,19 +11,13 @@
 #define DEGC_ASCII "'C"
 #define DEGC_UTF8  "°C"
 
-enum { FMT_ERRBUF_SIZE = 64 };
 enum { MATRIX_CELL_WIDTH = 9 };
 
 static inline bool format_utf8_support(void) {
-    char errbuf[FMT_ERRBUF_SIZE];
     regex_t utf8rgx;
     bool status = false;
 
-    int reti = regcomp(&utf8rgx, "UTF-8$", REG_EXTENDED);
-
-    if(reti) {
-        regerror(reti, &utf8rgx, errbuf, sizeof(errbuf));
-        fprintf(stderr, "Failed to compile utf8 regex: %s", errbuf);
+    if(regcomp_info(&utf8rgx, "UTF-8$", REG_EXTENDED, "utf8")) {
         return false;
     }
 

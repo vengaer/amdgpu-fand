@@ -1,6 +1,7 @@
 #include "drm.h"
 #include "fandcfg.h"
 #include "macro.h"
+#include "regutils.h"
 #include "strutils.h"
 
 #include <errno.h>
@@ -35,11 +36,7 @@ int drm_open(unsigned card_idx) {
         return pos;
     }
 
-    int reti = regcomp(&devregex, "^renderD([0-9]+)", REG_EXTENDED);
-
-    if(reti) {
-        regerror(reti, &devregex, buffer, sizeof(buffer));
-        syslog(LOG_ERR, "Failed to compile dri regex: %s", buffer);
+    if(regcomp_info(&devregex, "^renderD([0-9]+)", REG_EXTENDED, "dri")) {
         return -1;
     }
 

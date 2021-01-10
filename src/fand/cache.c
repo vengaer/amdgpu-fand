@@ -40,9 +40,9 @@ bool cache_struct_is_padded(void) {
 MOCKABLE(static inline)
 bool cache_file_exists_in_sysfs(char const *file) {
     static char const *sysfs_stem = "/sys/";
-    static size_t stem_len = strlen(sysfs_stem);
+    static size_t const stem_len = 5u;
 
-    return fsys_file_exists(file) && strncpy(file, sysfs_stem, stem_len) == 0;
+    return fsys_file_exists(file) && strncmp(file, sysfs_stem, stem_len) == 0;
 }
 
 static int cache_validate(unsigned char *buffer, size_t nbytes) {
@@ -64,7 +64,7 @@ static int cache_validate(unsigned char *buffer, size_t nbytes) {
         return -1;
     }
 
-    if(!cache_file_exists_in_sysfs(fand_cache.pwd)) {
+    if(!cache_file_exists_in_sysfs(fand_cache.pwm)) {
         syslog(LOG_WARNING, "Cached pwm file %s does not exist in /sys tree", fand_cache.pwm);
         status = -1;
     }

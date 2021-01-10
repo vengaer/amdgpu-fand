@@ -1,5 +1,6 @@
 #include "config.h"
 #include "macro.h"
+#include "regutils.h"
 #include "strutils.h"
 
 #include <limits.h>
@@ -20,7 +21,6 @@
 enum { CONFIG_BUFFER_SIZE = 256 };
 enum { CONFIG_KEY_SIZE = 64 };
 enum { CONFIG_NUMBUF_SIZE = 4 };
-enum { REGEX_ERRBUF_SIZE = 64 };
 
 struct config_pair {
     char const *key;
@@ -41,19 +41,6 @@ static struct config_pair config_map[] = {
 
 static inline int regmatch_length(regmatch_t *match) {
     return match->rm_eo - match->rm_so;
-}
-
-static inline int config_regcomp(regex_t *regex, char const *pat, int cflags, char const *desc) {
-    char errbuf[REGEX_ERRBUF_SIZE];
-    int reti = regcomp(regex, pat, cflags);
-
-    if(reti) {
-        regerror(reti, regex, errbuf, sizeof(errbuf));
-        syslog(LOG_ERR, "Failed to compile %s regex: %s", desc, errbuf);
-        return -1;
-    }
-
-    return 0;
 }
 
 static inline void config_replace_char(char *buffer, char from, char to) {
@@ -116,7 +103,7 @@ static int config_set_matrix(struct fand_config *data, char const *value) {
     unsigned long ul;
     unsigned char temp;
 
-    if(config_regcomp(&matv_regex, "[;(]'([0-9]+)::([0-9]+)'.*[;)]", REG_EXTENDED, "matrix value")) {
+    if(regcomp_info(&matv_regex, "[;(]'([0-9]+)::([0-9]+)'.*[;)]", REG_EXTENDED, "matrix value")) {
         return -1;
     }
 
@@ -192,14 +179,14 @@ static int config_append_matrix_rows(char *value, size_t valsize, FILE *fp , uns
     int mid_reti, end_reti;
     unsigned matrix_rows = 0;
 
-    if(config_regcomp(&mpat_start, "\\s*(\\('[0-9]+::[0-9]+')\\s*$", REG_EXTENDED, "matrix start")) {
+    if(regcomp_info(&mpat_start, "\\s*(\\('[0-9]+::[0-9]+')\\s*$", REG_EXTENDED, "matrix start")) {
         return status;
     }
-    if(config_regcomp(&mpat_mid, "\\s*('[0-9]+::[0-9]+')\\s*$", REG_EXTENDED, "matrix middle")) {
+    if(regcomp_info(&mpat_mid, "\\s*('[0-9]+::[0-9]+')\\s*$", REG_EXTENDED, "matrix middle")) {
         regfree(&mpat_start);
         return status;
     }
-    if(config_regcomp(&mpat_end, "\\s*('[0-9]+::[0-9]+'\\))\\s*$", REG_EXTENDED, "matrix end")) {
+    if(regcomp_info(&mpat_end, "\\s*('[0-9]+::[0-9]+'\\))\\s*$", REG_EXTENDED, "matrix end")) {
         regfree(&mpat_start);
         regfree(&mpat_mid);
         return status;
@@ -276,7 +263,7 @@ int config_parse(char const *path, struct fand_config *data) {
     char key[CONFIG_KEY_SIZE];
     char value[CONFIG_BUFFER_SIZE];
 
-    int reti = config_regcomp(&valregex, "^\\s*(\\S+)\\s*=\\s*\"?([^\" ]+)\"?\\s*$", REG_EXTENDED, "config value");
+    int reti = regcomp_info(&valregex, "^\\s*(\\S+)\\s*=\\s*\"?([^\" ]+)\"?\\s*$", REG_EXTENDED, "config value");
     if(reti) {
         return reti;
     }

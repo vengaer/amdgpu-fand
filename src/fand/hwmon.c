@@ -3,6 +3,7 @@
 #include "file.h"
 #include "filesystem.h"
 #include "hwmon.h"
+#include "regutils.h"
 #include "strutils.h"
 
 #include <errno.h>
@@ -72,11 +73,7 @@ static ssize_t hwmon_detect_iface_dir(char *dst, unsigned card_idx, size_t dstsi
     }
 
     regex_t hwmon_regex;
-    int reti = regcomp(&hwmon_regex, "hwmon[0-9]+", REG_EXTENDED);
-
-    if(reti) {
-        regerror(reti, &hwmon_regex, buffer, sizeof(buffer));
-        syslog(LOG_ERR, "Failed to compile hwmon regex: %s", buffer);
+    if(regcomp_info(&hwmon_regex, "hwmon[0-9]+", REG_EXTENDED, "hwmon")) {
         return -1;
     }
 
