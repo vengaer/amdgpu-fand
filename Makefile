@@ -221,7 +221,7 @@ $(if $(and $(1),$(2)),
 
     .PHONY: ldmock
 
-    $(eval link_deps += ldmock)
+    $(if $(findstring ldmock,$(link_deps)),,$(eval link_deps += ldmock))
 
     $(foreach __obj,$(2),
         $(eval
@@ -232,8 +232,7 @@ $(if $(and $(1),$(2)),
 	            $(QUIET)$(TOUCH) $$@
 
             ldmock: $(__target)
-            __ldmock_weak_ctr := _ $(__ldmock_weak_ctr)
-)))
+            __ldmock_weak_ctr := _ $(__ldmock_weak_ctr))))
 endef
 
 mk-build-root  := $(shell $(MKDIR) $(builddir))
