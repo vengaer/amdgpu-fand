@@ -28,11 +28,9 @@ int LLVMFuzzerTestOneInput(uint8_t const *data, size_t size) {
         goto cleanup;
     }
 
-    struct fand_config config;
-
     setlogmask(0);
     openlog(0, 0, LOG_DAEMON);
-    config_parse(FAND_CONFIG, &config);
+    config_parse(FAND_CONFIG, &(struct fand_config){ 0 });
     closelog();
 
 cleanup:
