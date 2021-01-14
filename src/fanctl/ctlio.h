@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 
-#ifdef FAND_FUZZ_CONFIG
+#ifdef FAND_TEST_CONFIG
 #define ctl_perror(...) do { } while(0)
 #define ctl_fprintf(...) do { } while(0)
 #define ctl_fputs(...) do { }  while(0)
