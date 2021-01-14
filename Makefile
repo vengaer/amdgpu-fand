@@ -32,8 +32,6 @@ builddir    := $(root)/build
 # Generated during prepare step, provides variable libc
 config_mk   := $(builddir)/config.mk
 
-FUZZIFACE   ?= server
-
 FUZZTIME    := 240
 FUZZVALPROF := 1
 FUZZTIMEOUT := 30
@@ -236,6 +234,7 @@ $(if $(and $(findstring mock,$(modules)),$(1),$(2)),
             __ldmock_weak_ctr := _ $(__ldmock_weak_ctr))))
 endef
 
+last-word       = $(if $(1),$(call last-word,$(filter-out $(firstword $(1)),$(1)),$(firstword $(1))),$(2))
 mk-build-root  := $(shell $(MKDIR) $(builddir))
 module_mk      := Makefile
 module_path    := $(root)
