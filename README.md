@@ -1,94 +1,131 @@
 # amdgpu-fand
 
-A daemon that automatically manages the fan speed of Radeon graphics cards. 
+A daemon managing the fan speed of AMD Radeon graphics cards. Supports both glibc- and musl based systems.  
 
-Provides the daemon itself, `amdgpu-fand`, and its control interface `amdgpu-fanctl`.
+## Dependencies
 
-[![Build Status](https://gitlab.com/vilhelmengstrom/amdgpu-fand/badges/master/pipeline.svg)](https://gitlab.com/vilhelmengstrom/amdgpu-fand/commits/master)
+- mesa
+- clang (optional, for testing)
+- llvm toolchain (optional, for testing)
+- graphviz (optional, for documentation)
 
-## Dependencies  
+## Installation
 
-- AMDGPU -- The open source AMD Radeon graphics driver. On Arch-based distros this is part of the mesa package  
+The daemon may be installed either by building it manually or, for Arch-based distros, by using the supplied PKGBUILD. No matter which approach
+is chosen, the daemon itself, `amdgpu-fand`, its control interface `amdgpu-fanctl`, a default config file `/etc/amdgpu-fand.conf` and a systemd
+service `/etc/systemd/system/amdgpu-fand.service` are installed.    
 
-## Installation  
+Once installed, the systemd service may be started and/or enabled using `systemctl start/enable amdgpu-fand`.  
 
+#### Building Manually
+
+```sh
+git clone https://gitlab.com/vilhelmengstrom/amdgpu-fand
+cd amdgpu-fand
+make release
+sudo make install
 ```
-./configure
-make
-sudo make install   
+
+#### PKGBUILD
+
+```sh
+git clone https://gitlab.com/vilhelmengstrom/amdgpu-fand
+cd amdgpu-fand/config/pkg
+makepkg -si
 ```
 
-The configure script attempts to find the persistent location of the card's hardware monitor in sysfs. If 
-multiple cards are present, the user is prompted to choose one.
+Compared to building manually, this has the advantage of making the binaries managed by pacman. It will also avoid overwriting modified
+configuration files.  
 
-The daemon is copied to `/usr/local/bin/amdgpu-fand`, the control interface to `/usr/local/bin/amdgpu-fanctl`, 
-the default config to `/etc/amdgpu-fand.conf` and the systemd service to `/etc/systemd/system/amdgpu-fand.service`  
 
-## Daemon
+## Configuration
 
-`amdgpu-fand` will continuously monitor the temperature of the chip and adjust the fan speed accordingly. Settings 
-are read primarily from the config but some may be overridden using the control interface.
+The daemon is configured via `/etc/amdgpu-fand.conf`. The options themselves are fairly simple and describe only how the daemon should manage
+the fans, no info is required to detect the graphics card itself.  
 
-### Configuration
+#### Interval
 
-Configurations are read from `/etc/amdgpu-fand.conf` unless overridden with the `-c` switch (see amdgpu-fand --help). 
-Most options should hopefully be self-explanatory but some may require a bit of explanation.
+The interval in seconds with which the fan speed should be updated based on the card's temperature.   
 
-##### Persistent Path
+Valid settings: 0-65535  
 
-The persistent path is the location of the graphics card's hardware monitors in sysfs. The configure script sets this by following the
-symlink `/sys/class/drm/card0`. This, and other symlinks in sysfs, may change between boots, hence why the persistent path is used. The 
-option can be left empty, in which case the program will itself follow the `card0` symlink.   
+#### Hysteresis
 
-To get the persistent path for card0, run `readlink -f /sys/class/drm/card0`.
+The hysteresis setting provides a means of delaying the reduction of fan speed until the temperature has fallen far enough. This allows for avoiding the
+fan speed rapidly fluctuating around a threshold in the speed matrix.    
 
-##### Hwmon
+As an example, assume there is a threshold at 60 degrees Celsius specified in the speed matrix and that a hysteresis of 3 is used. Once the temperature
+is increasing and reaches 60 degrees, the daemon will immediately (subject only to the interval) set the fan speed according to what is specified in the
+speed matrix. If the temperature then falls below 60 degrees, the daemon will delay slowing the fan(s) down until the temperature has hit 57 (60 - 3) 
+degrees. Instead, it will keep the fan(s) spinning with the speed specified for the 60-degree threshold until the temperature has fallen far enough.  
 
-Here the desired hardware monitor of the card can be specified. If left blank, the daemon will attempt to detect it by itself. As, in my somewhat limited experience,
-most cards seem to have only one, this is likely not something that needs to be tweaked by most people.  
+Valid settings: 0-255  
 
-To list available hardware monitors for card0, run `ls /sys/class/drm/card0/device/hwmon | grep hwmon[0-9]`.
+#### Aggressive Throttle
 
-##### Speed Interface
+This allows for minimizing the fan speed as soon as the temperature falls below the lowest threshold specified in the speed matrix. If the card supports
+turning the fan(s) off completely, the daemon will do so. When set to false, the fan(s) will instead spin with the speed specified for the lowest threshold 
+of the speed matrix.  
 
-The daemon provides two methods of reading the fan speed on the GPU. One relies on the tachometer interface provided in sysfs whereas the other
-simply returns the last speed request made by the daemon. Most people will be fine with keeping the tachometer for speed readings. There have, however,
-been a few cases such as [this](https://www.reddit.com/r/Amd/comments/9b0nmy/linuxamdgpu_rx_580_fan_always_on_windows_usually/e4zqah0/?utm_source=share&utm_medium=web2x)
-where the tachometer readings are incorrect. If this is the case, it might be more accurate to rely on the requests made by the daemon.
+Valid settings: true, false  
 
-##### Fan Curves
+#### Matrix
 
-The fan curves can be customized via discrete points set in `/etc/amdgpu-fand.conf`. The values are interpolated with respect to the temperature of the card. Temperatures and speeds are given in a matrix whose first column contains the temperature and the second the desired speed percentage. The columns are separated by 2 colons (::). The max number of rows is 16.
+The matrix defines the temperature-speed relation for the fan curve. The first column contains the temperature and the second the speed. At most 16 rows
+may be supplied. The start of the matrix is denoted using an opening parenthesis [(] and the end by a closing one [)]. Temperature-speed pairs are
+given as single-quoted strings, the values separated by two colons [::].
 
-In addition to specifying sample points, the interpolation used can also be chosen. The options are linear and cosine. Additionally, aggressive throttling may be set. If the latter it enabled, the fan speed will be set to the lowest speed in the matrix as soon as the temperature falls below the second lowest.
+<pre>
+Valid setting (example): ('50::0'  
+                          '60::30'  
+                          '70::70')  
+</pre>
 
+The numeric limits supported by the daemon for temperatures are 0-255 degrees Celsius (although the card would obviously melt far below the upper limit). The speeds
+are given as percentages (0-100).  
 
 ## Control Interface
 
-The daemon may be interacted with using its control interface `amdgpu-fanctl`. This allows for fetching values such as current temperature and fan speed without
-having to find them in sysfs. Additionally, the fan speed may be overridden using the set command. See amdgpu-fanctl --help for a full list of available options.
+The daemon comes with a separate control interface, `amdgpu-fanctl`. This may be used to query the daemon for the current speed, temperature and matrix using the
+`-g speed`, `-g temp` and `-g matrix` options, respectively. It may also be used to terminate the daemon using the `-e` switch. For security reasons, the latter
+requires root access.  
 
-#### The Get Command
+If the daemon is terminated, it will first relinquish control of the fans to the kernel.  
 
-Using the control interface's get command to get e.g. temperature and fan speed has one significant advantage over finding them in sysfs manually. In my experience, the sysfs interface seems to handle multiple processes interfacing with it poorly (I have yet to find a conclusive reason as to why but it is seemingly tied to concurrent access). This may manifest itself as the processes being unable to open the files which will cause a deadlock. Using `amdgpu-fanctl`, all accesses to the relevant files are sequentialized, avoiding the issues. Alternatively, `amdgpu-fand` places exclusive advisory locks on the sysfs files it opens, meaning that `flock` should be another option if wanting to interface with sysfs directly.
+## Build Options
 
-#### The Set Command
+There are a number of slightly more obscure options that can be specified, both for building the binaries and for testing them.  
 
-The control interface allows you to override the fan speed using `amdgpu-fanctl set speed VALUE`. VALUE may be substituted for a either a pwm value (on my card a value in [0,255]) or a percentage (distinguished by a trailing %-sign). For safety reasons, such an override is, by default, tied to the process (i.e. the shell instance) that invoked the `amdgpu-fanctl` command. Once that process is killed, the speed override will be reset. This is to avoid potential issues such as forcing the speed to 0%, forgetting that this has been done and starting up something GPU-intensive only to have the card melt. This behaviour can be overridden using the `--detach` switch to `amdgpu-fanctl`, in which case the fan speed will remain what was set via the control interface until either the daemon is restarted or either of `amdgpu-fanctl reset speed` or `amdgpu-fanctl reset` is run.
+*NOTE*: The unit test and fuzzing code relies on modifying symbols in relocatable ELF objects in order to mock out certain functions. By modifying the
+compiler and/or linker flags, the original symbols may unintentionally end up being linked into the binary instead, causing some of the tests to fail.
 
-Setting the speed via `amdgpu-fanctl set speed` requires that the user invoking the command has access to the relevant files in sysfs.
+#### DRM 
 
-The set command may also be used to set the speed interface on the fly from the command line. The syntax is `amdgpu-fanctl set speed-iface IFACE` where IFACE is one of tacho[meter], daemon or fand (alias for daemon). The speed interface may be changed without having access to sysfs and it will not be reset when the parent process exits.
+By default, the daemon uses the DRM subsystem of the kernel for querying the card for its temperature. This is done assuming that the `libdrm/amdgpu_drm.h` header can be
+found on the system when building. If this is not the case, the daemon will instead use files under sysfs for reading the temperature. If wanting to use sysfs even
+if DRM is available, the behavior may be overwritten by passing `drm_support=n` to `make` when building.  
 
-#### The Reset Command
+#### Unit Tests
 
-The reset command allows for restoring the options specified in the config without restarting the daemon. The syntax is `amdgpu-fanctl reset [speed|speed-iface]`. Resetting the speed via either `amdgpu-fanctl reset speed` or `amdgpu-fanctl reset` requires access to sysfs whereas `amdgpu-fanctl reset speed-iface` does not.
+The unit tests can be built and run using  
 
-## Disclaimer  
-This piece of software is not affiliated with AMD in any way. Radeon is a trademark of AMD.
+```sh
+make testrun -B
+```
 
-## Other Options  
-These repos contain projects achieving the same goal:
+#### Fuzzing
 
-- [amdgpu-fan](https://github.com/chestm007/amdgpu-fan)
-- [amdgpu-fancontrol](https://github.com/grmat/amdgpu-fancontrol)
+There are currently four different interfaces that are fuzzed, three of which are exposed by `amdgpu-fand` and one by `amdgpu-fanctl`. If wanting to fuzz an interface,
+firstly ensure that clang and the llvm toolchain are installed. Then run    
+
+```sh
+make fuzzrun FUZZIFACE=INTERFACE FUZZTIME=TIME -B
+```
+
+INTERFACE may be one of `client`, `server`, `cache` and `config` which correspond to fuzzing of fanctl's IPC client code and the daemon's IPC server, caching and config parsing code,
+respectively. TIME is the number of seconds the fuzzer is to be run.  
+
+## Disclaimer
+
+This project is in no way associated with AMD.
+
