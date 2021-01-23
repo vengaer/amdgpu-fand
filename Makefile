@@ -23,6 +23,7 @@ ECHO        := @echo
 cext        := c
 oext        := o
 depext      := d
+mock_suffix := _mock
 
 root        := $(abspath $(CURDIR))
 
@@ -225,6 +226,8 @@ $(if $(and $(findstring mock,$(modules)),$(1),$(2)),
     $(foreach __obj,$(2),
         $(eval
             $(eval __target := $(builddir)/.__ldmock_weaken$(words $(__ldmock_weak_ctr)))
+            $(__obj): $(builddir)/mock/$(patsubst %.$(oext),%$(mock_suffix).$(oext),$(notdir $(__obj)))
+
             $(__target): $(__obj)
 	            $(call echo-objcopy,$(__obj))
 	            $(QUIET)$(OBJCOPY) $(__objcopy_flags) $$^
@@ -288,7 +291,7 @@ $(FAND_FUZZ): $(fuzz_objs) | $(link_deps)
 
 $(builddir)/%.$(oext): $(srcdir)/%.$(cext) | $(prepare) $(build_deps)
 	$(call echo-cc,$@)
-	$(QUIET)$(CC) -o $@ $^ $(CFLAGS) $(CPPFLAGS)
+	$(QUIET)$(CC) -o $@ $(filter-out %.$(oext),$^) $(CFLAGS) $(CPPFLAGS)
 
 $(audot):
 	$(QUIET)git submodule update --init
