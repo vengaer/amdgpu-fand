@@ -120,6 +120,12 @@ static ssize_t cache_unpack(unsigned char const *buffer, size_t bufsize) {
                                                                     &fand_cache.card_idx,
                                                                     sizeof(fand_cache.checksum), fand_cache.checksum);
     }
+
+    /* Prevent overrun in case of cache corruption */
+    fand_cache.pwm[sizeof(fand_cache.pwm) - 1] = '\0';
+    fand_cache.pwm_enable[sizeof(fand_cache.pwm_enable) - 1] = '\0';
+    fand_cache.temp_input[sizeof(fand_cache.temp_input) - 1] = '\0';
+
     return nbytes;
 }
 
