@@ -95,6 +95,13 @@ int LLVMFuzzerTestOneInput(uint8_t const *data, size_t size) {
         .matrix = { 0 }
     };
 
+    if(stat(DAEMON_SERVER_SOCKET, &(struct stat){ 0 }) == 0) {
+        if(unlink(DAEMON_SERVER_SOCKET) == -1) {
+            perror("Could not unlink socket");
+            return 0;
+        }
+    }
+
 
     if(server_init()) {
         fputs("Error starting server\n", stderr);
