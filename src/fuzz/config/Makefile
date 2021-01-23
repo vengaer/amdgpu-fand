@@ -9,9 +9,6 @@ covsymbs                 := config_parse regmatch_length config_regcomp \
                             config_set_throttle config_append_matrix    \
                             strscpy strstoul_range strsncpy
 
-$(module_name)_mocksymbs := cache_struct_is_padded
-$(module_name)_mockobjs  := $(builddir)/fand/cache.o
-
 $(call ldmock,$($(module_name)_mocksymbs), $($(module_name)_mockobjs))
 
 ifeq ($(module_name),)
