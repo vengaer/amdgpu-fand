@@ -179,9 +179,9 @@ $(if $(MAKECMDGOALS),
           $(eval __cfg := fand fanctl fuzz mock),
         $(if $(or $(findstring $(prepare),$(MAKECMDGOALS)), $(findstring prepare,$(MAKECMDGOALS))),
             $(eval __cfg := prepare),
-          $(if $(or $(findstring $(FAND),$(MAKECMDGOALS)), $(findstring fand,$(MAKECMDGOALS))),
+          $(if $(or $(findstring $(FAND),$(MAKECMDGOALS)), $(findstring fand,$(MAKECMDGOALS)), $(findstring release,$(MAKECMDGOALS))),
               $(eval __cfg += fand))
-          $(if $(or $(findstring $(FANCTL),$(MAKECMDGOALS)), $(findstring fanctl,$(MAKECMDGOALS))),
+          $(if $(or $(findstring $(FANCTL),$(MAKECMDGOALS)), $(findstring fanctl,$(MAKECMDGOALS)), $(findstring release,$(MAKECMDGOALS))),
               $(eval __cfg += fanctl))))),
   $(eval __cfg += fand fanctl))
 $(__cfg)
@@ -300,6 +300,10 @@ $(digraph): $(graphsrc) | $(docdir) $(audot)
 $(docdir):
 	$(QUIET)mkdir -p $@
 
+.PHONY: release
+release: CFLAGS := $(filter-out -g,$(CFLAGS)) -O3
+release: $(FAND) $(FANCTL)
+
 .PHONY: prepare
 prepare: $(prepare)
 
@@ -328,8 +332,19 @@ fuzzmerge: $(if $(findstring fuzzmerge,$(MAKECMDGOALS)),\
 fuzzmerge: $(FAND_FUZZ)
 	$(QUIET)./$^ $(MERGEFLAGS)
 
+.PHONY: testrun
+testrun: $(FAND_TEST)
+	$(QUIET)./$^
+
 .PHONY: doc
 doc: $(digraph)
+
+.PHONY: install
+install: release
+	$(QUIET)install -m644 config/$(FAND).conf /etc/
+	$(QUIET)install -m644 config/$(FAND).service /etc/systemd/system
+	$(QUIET)install $(FAND) /usr/bin
+	$(QUIET)install $(FANCTL) /usr/bin
 
 .PHONY: clean
 clean:
