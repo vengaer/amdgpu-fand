@@ -272,6 +272,8 @@ $(FANCTL): $(fanctl_objs) | $(link_deps)
 	$(QUIET)$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
 $(FAND_TEST): CPPFLAGS := -DFAND_TEST_CONFIG $(CPPFLAGS)
+$(FAND_TEST): CFLAGS   += -fsanitize=address,undefined
+$(FAND_TEST): LDFLAGS  += -fsanitize=address,undefined
 $(FAND_TEST): $(test_objs) | $(link_deps)
 	$(call echo-ld,$@)
 	$(QUIET)$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
