@@ -3,6 +3,7 @@
 #include "fanctrl_test.h"
 #include "fanctrl_mock.h"
 #include "hwmon_mock.h"
+#include "mock.h"
 #include "interpolation.h"
 #include "test.h"
 
@@ -30,51 +31,53 @@ static int write_pwm(unsigned long value) {
 }
 
 void test_fanctrl_adjust(void) {
-    mock_fanctrl_get_speed(get_speed);
-    mock_fanctrl_get_temp(get_temp);
-    mock_hwmon_write_pwm(write_pwm);
+    mock_guard {
+        mock_fanctrl_get_speed(get_speed);
+        mock_fanctrl_get_temp(get_temp);
+        mock_hwmon_write_pwm(write_pwm);
 
-    struct fand_config config = {
-        .throttle = true,
-        .matrix_rows = 3,
-        .hysteresis = 3,
-        .interval = 2,
-        .matrix = {
-            50, 20, 60, 50, 80, 100
-        }
-    };
+        struct fand_config config = {
+            .throttle = true,
+            .matrix_rows = 3,
+            .hysteresis = 3,
+            .interval = 2,
+            .matrix = {
+                50, 20, 60, 50, 80, 100
+            }
+        };
 
-    fand_assert(fanctrl_configure(&config) == 0);
+        fand_assert(fanctrl_configure(&config) == 0);
 
-    temp = 40;
+        temp = 40;
 
-    fand_assert(fanctrl_adjust() == 0);
-    fand_assert(pwm == 0);
+        fand_assert(fanctrl_adjust() == 0);
+        fand_assert(pwm == 0);
 
-    temp = 55;
+        temp = 55;
 
-    fand_assert(fanctrl_adjust() == 0);
-    fand_assert(pwm == (unsigned long)round(MAX_PWM * 0.35f));
+        fand_assert(fanctrl_adjust() == 0);
+        fand_assert(pwm == (unsigned long)round(MAX_PWM * 0.35f));
 
-    temp = 70;
+        temp = 70;
 
-    fand_assert(fanctrl_adjust() == 0);
-    fand_assert(pwm == (unsigned long)round(MAX_PWM * 0.75f));
+        fand_assert(fanctrl_adjust() == 0);
+        fand_assert(pwm == (unsigned long)round(MAX_PWM * 0.75f));
 
-    temp = 58;
+        temp = 58;
 
-    fand_assert(fanctrl_adjust() == 0);
-    fand_assert(pwm == (unsigned long)round(MAX_PWM * 0.5f));
+        fand_assert(fanctrl_adjust() == 0);
+        fand_assert(pwm == (unsigned long)round(MAX_PWM * 0.5f));
 
-    temp = 57;
+        temp = 57;
 
-    fand_assert(fanctrl_adjust() == 0);
-    fand_assert(pwm == (unsigned long)round(MAX_PWM * 0.41f));
+        fand_assert(fanctrl_adjust() == 0);
+        fand_assert(pwm == (unsigned long)round(MAX_PWM * 0.41f));
 
-    config.throttle = false;
-    fand_assert(fanctrl_configure(&config) == 0);
+        config.throttle = false;
+        fand_assert(fanctrl_configure(&config) == 0);
 
-    temp = 45;
-    fand_assert(fanctrl_adjust() == 0);
-    fand_assert(pwm == (unsigned long)round(MAX_PWM * 0.2f));
+        temp = 45;
+        fand_assert(fanctrl_adjust() == 0);
+        fand_assert(pwm == (unsigned long)round(MAX_PWM * 0.2f));
+    }
 }

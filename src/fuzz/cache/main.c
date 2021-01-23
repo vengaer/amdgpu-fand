@@ -1,5 +1,6 @@
 #include "cache.h"
 #include "cache_mock.h"
+#include "mock.h"
 #include "regutils.h"
 #include "sha1.h"
 
@@ -43,9 +44,6 @@ int LLVMFuzzerTestOneInput(uint8_t const *data, size_t size) {
     if(!size) {
         return 0;
     }
-    mock_cache_struct_is_padded(is_padded);
-    mock_cache_file_exists_in_sysfs(exists_in_sysfs);
-
 
     unsigned char *buffer = malloc(size + SHA1_DIGESTSIZE);
     if(!buffer) {
@@ -77,7 +75,12 @@ int LLVMFuzzerTestOneInput(uint8_t const *data, size_t size) {
     setlogmask(0);
     openlog(0, 0, LOG_DAEMON);
 
-    cache_load();
+    mock_guard {
+        mock_cache_struct_is_padded(is_padded);
+        mock_cache_file_exists_in_sysfs(exists_in_sysfs);
+
+        cache_load();
+    }
 
     closelog();
 

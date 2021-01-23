@@ -1,5 +1,6 @@
 #include "client_mock.h"
 #include "ipc.h"
+#include "mock.h"
 #include "request.h"
 
 #include <stddef.h>
@@ -22,8 +23,6 @@ int LLVMFuzzerTestOneInput(uint8_t const *data, size_t size) {
         return 0;
     }
 
-    mock_client_send_and_recv(send_and_recv);
-
     ipc_request request;
 
     char *buffer = malloc(size + 1);
@@ -36,11 +35,12 @@ int LLVMFuzzerTestOneInput(uint8_t const *data, size_t size) {
     memcpy(buffer, data, size);
     buffer[size] = '\0';
 
-    if(request_convert(buffer, &request)) {
-        goto freemem;
-    }
-    if(request_process_get(request)) {
-        goto freemem;
+    mock_guard {
+        mock_client_send_and_recv(send_and_recv);
+
+        if(request_convert(buffer, &request)) {
+            request_process_get(request);
+        }
     }
 
 

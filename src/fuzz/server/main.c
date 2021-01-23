@@ -1,6 +1,7 @@
 #include "config.h"
-#include "ipc.h"
 #include "fanctrl_mock.h"
+#include "ipc.h"
+#include "mock.h"
 #include "server.h"
 #include "strutils.h"
 
@@ -94,8 +95,6 @@ int LLVMFuzzerTestOneInput(uint8_t const *data, size_t size) {
         .matrix = { 0 }
     };
 
-    mock_fanctrl_get_temp(get_temp);
-    mock_fanctrl_get_speed(get_speed);
 
     if(server_init()) {
         fputs("Error starting server\n", stderr);
@@ -110,7 +109,11 @@ int LLVMFuzzerTestOneInput(uint8_t const *data, size_t size) {
         goto cleanup;
     }
 
-    server_poll(&config);
+    mock_guard {
+        mock_fanctrl_get_temp(get_temp);
+        mock_fanctrl_get_speed(get_speed);
+        server_poll(&config);
+    }
 
 cleanup:
     sock_consume_and_close();
