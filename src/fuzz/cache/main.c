@@ -88,6 +88,9 @@ close_fd:
     if(close(fd) == -1) {
         perror("close");
     }
+    if(unlink(FAND_CACHE_FILE) == -1) {
+        perror("unlink");
+    }
 free_mem:
     free(buffer);
     return 0;
