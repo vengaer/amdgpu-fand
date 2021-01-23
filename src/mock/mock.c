@@ -23,6 +23,7 @@ void mock_guard_init(void) {
         exit(1);
     }
     addr_cap = ADDR_BLOCK_SIZE;
+    naddrs = 0;
 }
 
 void mock_guard_add(void *addr, size_t size) {
