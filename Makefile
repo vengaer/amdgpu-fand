@@ -344,10 +344,8 @@ doc: $(digraph)
 
 .PHONY: install
 install: release
-	$(QUIET)install -m644 config/$(FAND).conf /etc/
-	$(QUIET)install -m644 config/$(FAND).service /etc/systemd/system
-	$(QUIET)install $(FAND) /usr/bin
-	$(QUIET)install $(FANCTL) /usr/bin
+	$(QUIET)install -D $(FAND) $(DESTDIR)/usr/bin/$(FAND)
+	$(QUIET)install -D $(FANCTL) $(DESTDIR)/usr/bin/$(FANCTL)
 
 .PHONY: clean
 clean:
