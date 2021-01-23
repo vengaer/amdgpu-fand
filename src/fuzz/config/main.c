@@ -17,7 +17,7 @@ int LLVMFuzzerTestOneInput(uint8_t const *data, size_t size) {
         return 0;
     }
 
-    int fd = open(FAND_CONFIG, O_CREAT | O_WRONLY);
+    int fd = open(FAND_CONFIG, O_CREAT | O_WRONLY, S_IWUSR | S_IRUSR);
     if(fd == -1) {
         perror("open");
         return 0;

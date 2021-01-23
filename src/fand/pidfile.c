@@ -58,7 +58,7 @@ int pidfile_write(void) {
     ssize_t nwritten;
     int status = 0;
 
-    fd = open(FAND_PIDFILE_PATH, O_CREAT | O_EXCL | O_WRONLY);
+    fd = open(FAND_PIDFILE_PATH, O_CREAT | O_EXCL | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 
     if(fd == -1) {
         if(errno == EEXIST) {
