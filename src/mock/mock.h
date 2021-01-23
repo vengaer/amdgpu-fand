@@ -14,15 +14,6 @@
 #define MOCKABLE(...) __VA_ARGS__
 #endif
 
-#ifdef FAND_MOCK_TEST
-#define validate_mock(function, mock)                           \
-    do {                                                        \
-        if(!mock) {                                             \
-            abort();                                            \
-        }                                                       \
-    } while(0)
-
-#else
 #define validate_mock(function, mock)                           \
     do {                                                        \
         if(!mock) {                                             \
@@ -30,7 +21,6 @@
             abort();                                            \
         }                                                       \
     } while(0)
-#endif
 
 
 void mock_guard_init(void);

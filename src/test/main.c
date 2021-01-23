@@ -1,8 +1,9 @@
 #include "fanctrl_test.h"
 #include "interpolation_test.h"
-#include "sha1_test.h"
+#include "mock_test.h"
 #include "request_test.h"
 #include "serialize_test.h"
+#include "sha1_test.h"
 #include "strutils_test.h"
 #include "test.h"
 
@@ -37,6 +38,9 @@ int main(void) {
 
     section(request);
     run(test_request_convert);
+
+    section(mock);
+    run(test_validate_mock);
 
     return test_summary();;
 }
