@@ -1,0 +1,42 @@
+# Maintainer: Vilhelm Engström  <vilhelm.engstrom@tuta.io>
+_pkgname=amdgpu-fand
+pkgname="${_pkgname}-git"
+pkgver=0.4
+pkgrel=1
+pkgdesc="Daemon managing fan speed of Radeon cards"
+arch=('x86_64')
+url="git+https://gitlab.com/vilhelmengstrom/${_pkgname}"
+license=('custom:MIT')
+depends=('mesa')
+makedepends=('git')
+optdepends=('graphviz')
+checkdepends=('clang' 'llvm')
+provides=('amdgpu-fand' 'amdgpu-fanctl')
+backup=("etc/${_pkgname}.conf" "etc/systemd/system/${_pkgname}.service")
+install=amdgpu-fand.install
+source=("${_pkgname}::${url}.git")
+md5sums=('SKIP')
+
+pkgver() {
+    git -C "${_pkgname}" describe --long --tags | sed 's/-/.r/;s/-/./g'
+}
+
+build() {
+    make -C "${_pkgname}" release
+}
+
+check() {
+    export CFLAGS=
+    export CPPFLAGS=
+    export LDFLAGS=
+    make -C "${_pkgname}" builddir=check testrun -B
+    make -C "${_pkgname}" builddir=check fuzzrun FUZZIFACE=server FUZZTIME=15 -B
+    make -C "${_pkgname}" builddir=check fuzzrun FUZZIFACE=client FUZZTIME=15 -B
+    make -C "${_pkgname}" builddir=check fuzzrun FUZZIFACE=config FUZZTIME=15 -B
+    make -C "${_pkgname}" builddir=check fuzzrun FUZZIFACE=cache  FUZZTIME=15 -B
+}
+
+package() {
+    install -Dm644 "${_pkgname}/LICENSE" "${pkgdir}/usr/share/licenses/${_pkgname}/LICENCE"
+    make -C "${_pkgname}" DESTDIR="${pkgdir}" install
+}
