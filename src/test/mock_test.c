@@ -1,6 +1,7 @@
 #define FAND_MOCK_TEST
 #include "fanctrl.h"
 #include "fanctrl_mock.h"
+#include "mock.h"
 #include "mock_test.h"
 #include "mock.h"
 #include "test.h"
