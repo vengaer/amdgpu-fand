@@ -43,9 +43,6 @@ int LLVMFuzzerTestOneInput(uint8_t const *data, size_t size) {
         }
     }
 
-
-freemem:
     free(buffer);
-
     return 0;
 }
