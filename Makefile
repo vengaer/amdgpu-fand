@@ -5,11 +5,12 @@ FAND        ?= amdgpu-fand
 FANCTL      ?= amdgpu-fanctl
 FAND_TEST   ?= amdgpu-testd
 FAND_FUZZ   ?= amdgpu-fuzzd
+VERSION     := 0.4
 
 cflags      := -std=c11 -Wall -Wextra -Wpedantic -Waggregate-return -Wcast-qual -Wfloat-equal     \
                -Wmissing-include-dirs -Wnested-externs -Wpointer-arith -Wredundant-decls -Wshadow \
                -Wunknown-pragmas -Wswitch -Wundef -Wunused -Wwrite-strings -MD -MP -c -g
-cppflags    := -D_GNU_SOURCE
+cppflags    := -D_GNU_SOURCE -DFAND_VERSION=$(VERSION)
 
 ldflags     :=
 ldlibs      := -lm
@@ -210,6 +211,9 @@ endef
 define set-libc-flags
 $(if $(findstring musl,$(libc)),
     $(eval override LDLIBS += -largp))
+$(if $(and $(findstring glibc,$(libc)), $(findstring test,$(modules))),
+    $(eval override CFLAGS  += -fsanitize=undefined,address)
+    $(eval override LDFLAGS += -fsanitize=undefined,address))
 endef
 
 # Make symbols listed in $(1) weak in ELF object files
@@ -275,8 +279,6 @@ $(FANCTL): $(fanctl_objs) | $(link_deps)
 	$(QUIET)$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
 $(FAND_TEST): CPPFLAGS := -DFAND_TEST_CONFIG $(CPPFLAGS)
-$(FAND_TEST): CFLAGS   += -fsanitize=address,undefined
-$(FAND_TEST): LDFLAGS  += -fsanitize=address,undefined
 $(FAND_TEST): $(test_objs) | $(link_deps)
 	$(call echo-ld,$@)
 	$(QUIET)$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
