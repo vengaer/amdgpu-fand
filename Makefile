@@ -30,6 +30,9 @@ root        := $(abspath $(CURDIR))
 
 srcdir      := $(root)/src
 builddir    := $(root)/build
+confdir     := $(root)/config
+conffile    := $(confdir)/amdgpu-fand.conf
+servicefile := $(confdir)/amdgpu-fand.service
 
 # Generated during prepare step, provides variable libc
 config_mk   := $(builddir)/config.mk
@@ -346,6 +349,8 @@ doc: $(digraph)
 
 .PHONY: install
 install: release
+	$(QUIET)install -Dm644 $(conffile) $(DESTDIR)/etc/$(notdir $(conffile))
+	$(QUIET)install -Dm644 $(servicefile) $(DESTDIR)/etc/systemd/system/$(notdir $(servicefile))
 	$(QUIET)install -D $(FAND) $(DESTDIR)/usr/bin/$(FAND)
 	$(QUIET)install -D $(FANCTL) $(DESTDIR)/usr/bin/$(FANCTL)
 
