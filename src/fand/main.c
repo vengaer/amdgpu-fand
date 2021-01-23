@@ -1,11 +1,12 @@
 #include "config.h"
 #include "daemon.h"
+#include "macro.h"
 
 #include <stdbool.h>
 
 #include <argp.h>
 
-char const *argp_program_version = "amdgpu-fand 0.4";
+char const *argp_program_version = "amdgpu-fand " STR_EXPAND(FAND_VERSION) ;
 char const *argp_program_bug_address = "<vilhelm.engstrom@tuta.io>";
 
 static char doc[] = "amdgpu-fand -- A daemon controlling the fan speed of AMD Radeon GPUs";
