@@ -85,7 +85,7 @@ int fanctrl_configure(struct fand_config *config) {
 int fanctrl_adjust(void) {
     int temp, speed;
     float frac;
-    short threshold;
+    short threshold = -1;
 
     if(matrix.rows == 0) {
         syslog(LOG_ERR, "Matrix is empty");
