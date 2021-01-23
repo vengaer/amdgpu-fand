@@ -1,0 +1,171 @@
+pipeline {
+    agent none
+    environment {
+        CC='gcc'
+        CFLAGS='-Werror'
+        ARTIFACT_DIR='artifacts'
+        FUZZ_DIR='fuzz'
+        FUZZ_STEM='amdgpu-fuzzd-0.4'
+        DOCKER_IMAGE='fand/glibc'
+        NFUZZRUNS=30
+    }
+    stages {
+        stage('Docker Image') {
+            agent any
+            steps {
+                echo '-- Docker glibc image --'
+                sh '''
+                    docker build -f docker/glibc/Dockerfile -t ${DOCKER_IMAGE} .
+                '''
+            }
+        }
+        stage('Fetch Corpora') {
+            agent {
+                docker { image "${DOCKER_IMAGE}" }
+            }
+            steps {
+                echo 'Copying existing corpora'
+                sh 'mkdir -p ${ARTIFACT_DIR}'
+                copyArtifacts filter: "${ARTIFACT_DIR}/corpora.zip", projectName: "${JOB_NAME}", fingerprintArtifacts: true, optional: true
+                script {
+                    if(fileExists("${ARTIFACT_DIR}/corpora.zip")) {
+                        unzip zipFile: "${ARTIFACT_DIR}/corpora.zip", dir: "${FUZZ_DIR}"
+                    }
+                    else {
+                        echo 'No corpora found'
+                    }
+                }
+            }
+        }
+        stage('Server Fuzzer') {
+            agent {
+                docker { image "${DOCKER_IMAGE}" }
+            }
+            environment {
+                FUZZIFACE='server'
+            }
+            steps {
+                echo "Build: CC=clang fuzz ${FUZZIFACE}"
+                sh 'make fuzz -j$(nproc)'
+                script {
+                    if(fileExists("${FUZZ_DIR}/${FUZZIFACE}_corpora")) {
+                        echo 'Merging ${FUZZIFACE} corpora'
+                        sh 'make fuzzmerge CORPUS_ARTIFACTS=${FUZZ_DIR}/${FUZZIFACE}_corpora'
+                    }
+                    else {
+                        echo 'No corpora found'
+                    }
+                }
+                echo "-- Starting fuzzing of ${FUZZIFACE} interface --"
+                sh '''
+                    for i in $(seq 1 ${NFUZZRUNS}) ; do
+                        make fuzzrun
+                    done
+                '''
+            }
+        }
+        stage('Cache Fuzzer') {
+            agent {
+                docker { image "${DOCKER_IMAGE}" }
+            }
+            environment {
+                FUZZIFACE='cache'
+            }
+            steps {
+                echo "Build: CC=clang fuzz ${FUZZIFACE}"
+                sh 'make fuzz -j$(nproc)'
+                script {
+                    if(fileExists("${FUZZ_DIR}/${FUZZIFACE}_corpora")) {
+                        echo 'Merging ${FUZZIFACE} corpora'
+                        sh 'make fuzzmerge CORPUS_ARTIFACTS=${FUZZ_DIR}/${FUZZIFACE}_corpora'
+                    }
+                    else {
+                        echo 'No corpora found'
+                    }
+                }
+                echo "-- Starting fuzzing of ${FUZZIFACE} interface --"
+                sh '''
+                    for i in $(seq 1 ${NFUZZRUNS}) ; do
+                        make fuzzrun
+                    done
+                '''
+            }
+        }
+        stage('Config Fuzzer') {
+            agent {
+                docker { image "${DOCKER_IMAGE}" }
+            }
+            environment {
+                FUZZIFACE='config'
+            }
+            steps {
+                echo "Build: CC=clang fuzz ${FUZZIFACE}"
+                sh 'make fuzz -j$(nproc)'
+                script {
+                    if(fileExists("${FUZZ_DIR}/${FUZZIFACE}_corpora")) {
+                        echo 'Merging ${FUZZIFACE} corpora'
+                        sh 'make fuzzmerge CORPUS_ARTIFACTS=${FUZZ_DIR}/${FUZZIFACE}_corpora'
+                    }
+                    else {
+                        echo 'No corpora found'
+                    }
+                }
+                echo "-- Starting fuzzing of ${FUZZIFACE} interface --"
+                sh '''
+                    for i in $(seq 1 ${NFUZZRUNS}) ; do
+                        make fuzzrun
+                    done
+                '''
+            }
+        }
+        stage('Client Fuzzer') {
+            agent {
+                docker { image "${DOCKER_IMAGE}" }
+            }
+            environment {
+                FUZZIFACE='client'
+            }
+            steps {
+                echo "Build: CC=clang fuzz ${FUZZIFACE}"
+                sh 'make fuzz -j$(nproc)'
+                script {
+                    if(fileExists("${FUZZ_DIR}/${FUZZIFACE}_corpora")) {
+                        echo 'Merging ${FUZZIFACE} corpora'
+                        sh 'make fuzzmerge CORPUS_ARTIFACTS=${FUZZ_DIR}/${FUZZIFACE}_corpora'
+                    }
+                    else {
+                        echo 'No corpora found'
+                    }
+                }
+                echo "-- Starting fuzzing of ${FUZZIFACE} interface --"
+                sh '''
+                    for i in $(seq 1 ${NFUZZRUNS}) ; do
+                        make fuzzrun
+                    done
+                '''
+            }
+        }
+    }
+    post {
+        always {
+            node(null) {
+                sh '''
+                    mkdir -p ${ARTIFACT_DIR}/fuzz
+                    cp -r src/fuzz/server/corpora ${ARTIFACT_DIR}/fuzz/server_corpora
+                    cp -r src/fuzz/cache/corpora ${ARTIFACT_DIR}/fuzz/cache_corpora
+                    cp -r src/fuzz/config/corpora ${ARTIFACT_DIR}/fuzz/config_corpora
+                    cp -r src/fuzz/client/corpora ${ARTIFACT_DIR}/fuzz/client_corpora
+                '''
+                zip zipFile: "${ARTIFACT_DIR}/corpora.zip", archive: true, dir: "${ARTIFACT_DIR}/fuzz", overwrite: true
+                archiveArtifacts artifacts: "${ARTIFACT_DIR}/corpora.zip", fingerprint: true
+
+                echo 'Removing dangling Docker images'
+                sh 'docker system prune -f'
+
+                echo 'Cleaning up'
+                deleteDir()
+            }
+        }
+    }
+}
+
