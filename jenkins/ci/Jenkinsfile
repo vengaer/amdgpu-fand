@@ -408,8 +408,9 @@ pipeline {
                     cp -r src/fuzz/cache/corpora ${ARTIFACT_DIR}/fuzz/cache_corpora
                     cp -r src/fuzz/config/corpora ${ARTIFACT_DIR}/fuzz/config_corpora
                     cp -r src/fuzz/client/corpora ${ARTIFACT_DIR}/fuzz/client_corpora
+                    rm -rf "${ARTIFACT_DIR}/corpora.zip"
                 '''
-                zip zipFile: "${ARTIFACT_DIR}/corpora.zip", archive: true, dir: "${ARTIFACT_DIR}/fuzz", overwrite: true
+                zip zipFile: "${ARTIFACT_DIR}/corpora.zip", archive: true, dir: "${ARTIFACT_DIR}/fuzz", overwrite: false
                 archiveArtifacts artifacts: "${ARTIFACT_DIR}/corpora.zip", fingerprint: true
 
                 echo 'Removing dangling Docker images'
