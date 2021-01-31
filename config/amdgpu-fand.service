@@ -1,5 +1,6 @@
 [Unit]
-Description=amdgpu-fand -- Daemon controlling the fan speed on Radeon cards
+Description=amdgpu-fand -- Daemon controlling the fan speed of Radeon cards
+RequiresMountsFor=/sys /var
 
 [Service]
 Type=forking
