@@ -5,7 +5,7 @@ FAND        ?= amdgpu-fand
 FANCTL      ?= amdgpu-fanctl
 FAND_TEST   ?= amdgpu-testd
 FAND_FUZZ   ?= amdgpu-fuzzd
-VERSION     := 0.4
+VERSION     := 0.4.1
 
 cflags      := -std=c11 -Wall -Wextra -Wpedantic -Waggregate-return -Wcast-qual -Wfloat-equal     \
                -Wmissing-include-dirs -Wnested-externs -Wpointer-arith -Wredundant-decls -Wshadow \
