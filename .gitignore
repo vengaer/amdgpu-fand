@@ -7,3 +7,4 @@ amdgpu-testd*
 src/fuzz/**/corpora/*
 !src/fuzz/**/corpora/corpus_*
 tags
+!config/**

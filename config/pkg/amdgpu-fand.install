@@ -1,0 +1,5 @@
+post_install() {
+    cat <<- EOF
+		For more information, see https://gitlab.com/vilhelmengstrom/amdgpu-fand/-/blob/master/README.md
+	EOF
+}
