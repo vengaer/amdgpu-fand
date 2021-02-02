@@ -5,9 +5,7 @@
 
 #include <syslog.h>
 
-sig_atomic_t volatile sigbits = 0;
-
-int sigutil_sethandler(int signal, int flags, sighandler_function handler) {
+int sigutil_sethandler(int signal, int flags, sighandler handler) {
 
     struct sigaction sa;
 
